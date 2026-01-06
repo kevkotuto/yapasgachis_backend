@@ -1,0 +1,1259 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== ENUMS ====================
+
+enum UserRole {
+  CLIENT
+  SUPPLIER_FOOD
+  SUPPLIER_DEALS
+  ASSOCIATION
+  ADVERTISER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum UserStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum SupplierType {
+  RESTAURANT
+  BAKERY
+  PASTRY_SHOP
+  SUPERMARKET
+  HOTEL
+  LEISURE
+  BEAUTY
+  TRANSPORT
+  OTHER
+}
+
+enum SubscriptionTier {
+  BASIC
+  PRO
+  PREMIUM
+}
+
+enum ProductCategory {
+  FOOD_PREPARED
+  BAKERY
+  PASTRY
+  GROCERIES
+  FRUITS_VEGETABLES
+  MEAT_FISH
+  DAIRY
+  HOTEL_ROOM
+  SPA_WELLNESS
+  LEISURE
+  TRANSPORT
+  OTHER
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  SOLD_OUT
+  EXPIRED
+  ARCHIVED
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  PREPARING
+  READY_FOR_PICKUP
+  IN_DELIVERY
+  DELIVERED
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+enum DeliveryMethod {
+  PICKUP
+  DELIVERY
+}
+
+enum DonationType {
+  FOOD
+  FINANCIAL
+}
+
+enum DonationStatus {
+  PENDING
+  SCHEDULED
+  COLLECTED
+  DISTRIBUTED
+  COMPLETED
+  CANCELLED
+}
+
+enum CampaignStatus {
+  DRAFT
+  PENDING_APPROVAL
+  ACTIVE
+  PAUSED
+  COMPLETED
+  REJECTED
+}
+
+enum AdFormat {
+  BANNER
+  CARD
+  INTERSTITIAL
+}
+
+enum NotificationType {
+  // Order lifecycle
+  ORDER_CONFIRMED
+  ORDER_PAID
+  ORDER_PREPARING
+  ORDER_READY
+  ORDER_IN_DELIVERY
+  ORDER_DELIVERED
+  ORDER_CANCELLED
+  ORDER_REFUNDED
+
+  // Payment & Escrow
+  PAYMENT_RECEIVED
+  PAYMENT_FAILED
+  ESCROW_RELEASED
+  ESCROW_DISPUTED
+  PAYOUT_FAILED
+
+  // Products
+  NEW_PRODUCT_NEARBY
+  PRODUCT_EXPIRING_SOON
+
+  // Donations
+  DONATION_CONFIRMED
+
+  // Subscriptions & Deals
+  SUBSCRIPTION_EXPIRING
+  DEAL_BOOKING_CONFIRMED
+  DEAL_BOOKING_REMINDER
+
+  // Campaigns & System
+  CAMPAIGN_APPROVED
+  SYSTEM_ANNOUNCEMENT
+  PROMOTION_ALERT
+  WELCOME
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum DeviceType {
+  IOS
+  ANDROID
+  WEB
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  WAVE
+  CASH_ON_DELIVERY
+}
+
+enum EscrowStatus {
+  PENDING           // En attente de paiement
+  FUNDS_HELD        // Fonds bloqués sur le compte de l'app
+  RELEASED          // Fonds transférés au fournisseur
+  REFUNDED          // Remboursé au client
+  DISPUTED          // En litige
+  CANCELLED         // Annulé
+}
+
+// ==================== PHASE 5: SUBSCRIPTIONS & DEALS ====================
+
+enum DealStatus {
+  DRAFT
+  PENDING_APPROVAL
+  ACTIVE
+  PAUSED
+  EXPIRED
+  REJECTED
+  ARCHIVED
+}
+
+enum DealCategory {
+  HOTEL_ROOM
+  SPA_WELLNESS
+  POOL_ACCESS
+  GYM_FITNESS
+  RESTAURANT_SPECIAL
+  LEISURE_ACTIVITY
+  BEAUTY_SERVICE
+  TRANSPORT
+  EVENT_TICKET
+  OTHER
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  USED
+  CANCELLED
+  EXPIRED
+  NO_SHOW
+}
+
+enum PromoCodeType {
+  PERCENTAGE       // Réduction en pourcentage
+  FIXED_AMOUNT     // Réduction montant fixe
+  FREE_MONTHS      // Mois gratuits sur abonnement
+}
+
+enum PromoCodeStatus {
+  ACTIVE
+  EXPIRED
+  DISABLED
+  FULLY_USED
+}
+
+// ==================== MODELS ====================
+
+model User {
+  id            String     @id @default(uuid())
+  phoneNumber   String?    @unique
+  email         String?    @unique
+  firstName     String
+  lastName      String?
+  role          UserRole
+  status        UserStatus @default(PENDING_VERIFICATION)
+  passwordHash  String?
+  avatar        String?
+  language      String     @default("fr")
+
+  // OAuth providers
+  googleId      String?    @unique
+  authProvider  String     @default("local") // "local", "google"
+
+  // Location
+  city       String?
+  commune    String?
+  neighborhood String?
+  latitude   Float?
+  longitude  Float?
+
+  // Verification
+  emailVerified Boolean @default(false)
+  phoneVerified Boolean @default(false)
+  kycVerified   Boolean @default(false)
+
+  // Gamification
+  contributorBadge Boolean @default(false)
+  saverBadge       Boolean @default(false)
+  donorBadge       Boolean @default(false)
+
+  // Relations
+  supplierProfile    SupplierProfile?
+  associationProfile AssociationProfile?
+  advertiserProfile  AdvertiserProfile?
+
+  orders        Order[]
+  reviews       Review[]
+  donations     Donation[]
+  favorites     Favorite[]
+  notifications Notification[]
+  refreshTokens RefreshToken[]
+
+  // Notification system
+  deviceTokens           DeviceToken[]
+  notificationPreference NotificationPreference?
+
+  // Timestamps
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([phoneNumber, email])
+  @@index([latitude, longitude])
+  @@index([role, status])
+  @@index([googleId])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+  @@map("refresh_tokens")
+}
+
+model SupplierProfile {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Business Info
+  businessName String
+  supplierType SupplierType
+  description  String?
+  logo         String?
+  coverImage   String?
+
+  // Legal
+  rccm           String? // Registry number
+  niu            String? // Tax ID
+  legalDocuments Json?   // Array of document URLs
+
+  // Siège social / Adresse principale (si pas de magasins)
+  address        String?
+  latitude       Float?
+  longitude      Float?
+  operatingHours Json?   // {monday: {open: "08:00", close: "20:00"}, ...}
+  deliveryEnabled Boolean @default(false)
+  pickupEnabled   Boolean @default(true)
+  deliveryRadius  Float?  // km
+
+  // Subscription
+  subscriptionTier      SubscriptionTier @default(BASIC)
+  subscriptionPlanId    String?          // Lien vers le plan d'abonnement
+  subscriptionPlan      SubscriptionPlan? @relation(fields: [subscriptionPlanId], references: [id])
+  subscriptionStartDate DateTime?
+  subscriptionEndDate   DateTime?
+  subscriptionActive    Boolean          @default(false)
+
+  // Code promo utilisé à l'inscription
+  usedPromoCodeId       String?
+  usedPromoCode         PromoCode?       @relation("SupplierUsedPromoCode", fields: [usedPromoCodeId], references: [id])
+
+  // Payment Settings
+  acceptCashPayment     Boolean          @default(false)
+  waveAccountId         String?
+  commissionRate        Float            @default(0.10)
+
+  // Stats globaux (agrégés de tous les magasins)
+  totalSales    Int   @default(0)
+  totalRevenue  Float @default(0)
+  averageRating Float?
+  totalReviews  Int   @default(0)
+  wasteReduced  Float @default(0) // kg
+
+  // Vérification
+  isVerified    Boolean @default(false)
+  verifiedAt    DateTime?
+  rejectionReason String?
+
+  // Relations
+  stores               SupplierStore[]        // Multi-magasins (Kayzer, Ushigo, etc.)
+  products             Product[]              // Produits (liés au supplier ou à un store)
+  orders               Order[]
+  subscriptionPayments SubscriptionPayment[]
+  deals                Deal[]                 // Bons plans
+  promoCodes           PromoCode[]            // Codes promo créés par admin pour ce fournisseur
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([latitude, longitude])
+  @@index([supplierType])
+  @@index([subscriptionTier, subscriptionActive])
+  @@index([isVerified])
+  @@map("supplier_profiles")
+}
+
+// Magasin/Point de vente d'un fournisseur (ex: Kayzer Cocody, Kayzer Marcory, etc.)
+model SupplierStore {
+  id         String          @id @default(uuid())
+  supplierId String
+  supplier   SupplierProfile @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  // Store Info
+  name           String          // "Kayzer Cocody", "Ushigo Plateau"
+  description    String?
+  images         Json?           // Photos du magasin
+
+  // Location
+  address        String
+  city           String
+  commune        String?
+  neighborhood   String?
+  latitude       Float
+  longitude      Float
+
+  // Contact
+  phoneNumber    String?
+  email          String?
+
+  // Operating Hours
+  operatingHours Json            // {monday: {open: "08:00", close: "20:00"}, ...}
+
+  // Delivery/Pickup Settings (peut être différent du supplier principal)
+  deliveryEnabled Boolean @default(false)
+  pickupEnabled   Boolean @default(true)
+  deliveryRadius  Float?  // km
+
+  // Payment Settings spécifiques au magasin
+  acceptCashPayment Boolean @default(false)
+  waveAccountId     String? // Compte Wave spécifique au magasin
+
+  // Status
+  isActive       Boolean  @default(true)
+  isTemporarilyClosed Boolean @default(false)
+  closureReason  String?
+
+  // Stats du magasin
+  totalSales     Int   @default(0)
+  totalRevenue   Float @default(0)
+  averageRating  Float?
+  totalReviews   Int   @default(0)
+
+  // Relations
+  products       Product[]       // Produits de ce magasin
+  orders         Order[]         // Commandes de ce magasin
+  deals          Deal[]          // Deals de ce magasin
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([supplierId])
+  @@index([latitude, longitude])
+  @@index([city, commune])
+  @@index([isActive])
+  @@map("supplier_stores")
+}
+
+model Product {
+  id         String          @id @default(uuid())
+  supplierId String
+  supplier   SupplierProfile @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  // Optionnel: lié à un magasin spécifique
+  storeId    String?
+  store      SupplierStore?  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  // Product Info
+  title       String
+  description String
+  category    ProductCategory
+  images      Json // Array of image URLs
+
+  // Pricing
+  originalPrice   Float
+  discountedPrice Float
+  commission      Float @default(0)
+
+  // Inventory
+  quantity          Int
+  quantityAvailable Int
+  unit              String @default("piece") // piece, kg, portion
+
+  // Food Safety
+  expiryDate       DateTime? // DLC/DLUO
+  isSurpriseBasket Boolean   @default(false)
+
+  // Availability
+  status         ProductStatus @default(DRAFT)
+  availableFrom  DateTime?
+  availableUntil DateTime?
+
+  // Pickup/Delivery
+  pickupSlots       Json?   // Available time slots
+  deliveryAvailable Boolean @default(false)
+
+  // Promotion
+  isSponsored      Boolean   @default(false)
+  sponsorStartDate DateTime?
+  sponsorEndDate   DateTime?
+
+  // Stats
+  views      Int @default(0)
+  clicks     Int @default(0)
+  orderCount Int @default(0)
+
+  // Relations
+  orderItems OrderItem[]
+  favorites  Favorite[]
+  reviews    Review[]
+  donations  Donation[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([supplierId, status])
+  @@index([storeId, status])
+  @@index([category, status])
+  @@index([expiryDate])
+  @@map("products")
+}
+
+model Order {
+  id          String          @id @default(uuid())
+  orderNumber String          @unique @default(uuid())
+  clientId    String
+  client      User            @relation(fields: [clientId], references: [id])
+  supplierId  String
+  supplier    SupplierProfile @relation(fields: [supplierId], references: [id])
+
+  // Optionnel: lié à un magasin spécifique
+  storeId     String?
+  store       SupplierStore?  @relation(fields: [storeId], references: [id])
+
+  // Order Details
+  status         OrderStatus    @default(PENDING_PAYMENT)
+  deliveryMethod DeliveryMethod
+
+  // Amounts
+  subtotal       Float
+  deliveryFee    Float @default(0)
+  commission     Float // Commission prélevée par la plateforme
+  supplierAmount Float // Montant à reverser au fournisseur (total - commission)
+  total          Float
+
+  // Pickup/Delivery
+  pickupCode String?   // QR code / PIN
+  pickupSlot DateTime?
+
+  deliveryAddress   String?
+  deliveryLatitude  Float?
+  deliveryLongitude Float?
+  deliveryNotes     String?
+
+  // Payment
+  paymentMethod    PaymentMethod  // WAVE ou CASH_ON_DELIVERY
+  paymentReference String?        // Référence Wave
+  paidAt           DateTime?
+
+  // Delivery Confirmation
+  deliveredAt            DateTime?
+  deliveryConfirmedByClient Boolean @default(false)
+
+  // Relations
+  items            OrderItem[]
+  tracking         DeliveryTracking[]
+  escrowTransaction EscrowTransaction?
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+  cancelledAt DateTime?
+  cancelReason String?
+
+  @@index([clientId])
+  @@index([supplierId, status])
+  @@index([status])
+  @@index([createdAt])
+  @@index([paymentMethod])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  quantity   Int
+  unitPrice  Float
+  totalPrice Float
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+model Favorite {
+  id        String  @id @default(uuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
+  @@map("favorites")
+}
+
+model AssociationProfile {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String
+  logo        String?
+
+  // Legal
+  registrationNumber String
+  legalDocuments     Json?
+
+  // Location
+  address     String
+  latitude    Float
+  longitude   Float
+  serviceArea Json // Array of zones served
+
+  // Acceptance
+  acceptedFoodTypes  Json // [dry, fresh, prepared]
+  collectionSchedule Json // Weekly schedule
+  collectionPoints   Json?
+
+  // Banking
+  mobileMoney String?
+  bankAccount Json?
+
+  // Stats
+  totalDonationsReceived Int   @default(0)
+  totalValueReceived     Float @default(0)
+
+  // Relations
+  donations Donation[]
+  reports   AssociationReport[]
+
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([latitude, longitude])
+  @@map("association_profiles")
+}
+
+model Donation {
+  id            String             @id @default(uuid())
+  donorId       String
+  donor         User               @relation(fields: [donorId], references: [id])
+  associationId String
+  association   AssociationProfile @relation(fields: [associationId], references: [id])
+
+  type   DonationType
+  status DonationStatus @default(PENDING)
+
+  // Food Donation
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
+  quantity  Float?
+  unit      String?
+
+  // Financial Donation
+  amount           Float?
+  currency         String  @default("XOF")
+  paymentReference String?
+
+  // Logistics
+  pickupScheduled DateTime?
+  pickupCompleted DateTime?
+
+  // Proof & Receipt
+  receiptUrl     String?
+  certificateUrl String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([donorId])
+  @@index([associationId, status])
+  @@map("donations")
+}
+
+model AdvertiserProfile {
+  id          String       @id @default(uuid())
+  userId      String       @unique
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName String
+  logo        String?
+  campaigns   AdCampaign[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("advertiser_profiles")
+}
+
+model AdCampaign {
+  id           String            @id @default(uuid())
+  advertiserId String
+  advertiser   AdvertiserProfile @relation(fields: [advertiserId], references: [id], onDelete: Cascade)
+
+  name   String
+  status CampaignStatus @default(DRAFT)
+
+  // Creative
+  format      AdFormat
+  imageUrl    String
+  title       String
+  description String?
+  ctaText     String?
+  targetUrl   String?
+
+  // Targeting
+  targetCities     Json?
+  targetCategories Json?
+  targetAgeRange   Json?
+
+  // Budget & Pricing
+  budget    Float
+  spent     Float  @default(0)
+  costModel String @default("CPM") // CPM or CPC
+  bidAmount Float
+
+  // Schedule
+  startDate DateTime
+  endDate   DateTime
+
+  // Performance
+  impressions Int @default(0)
+  clicks      Int @default(0)
+  conversions Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, startDate, endDate])
+  @@index([advertiserId])
+  @@map("ad_campaigns")
+}
+
+model Review {
+  id        String  @id @default(uuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  orderId String?
+  rating  Int // 1-5
+  comment String?
+  images  Json?
+
+  helpful  Int     @default(0)
+  reported Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId, rating])
+  @@index([userId])
+  @@map("reviews")
+}
+
+model Notification {
+  id      String           @id @default(uuid())
+  userId  String
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type    NotificationType
+  title   String
+  message String
+  data    Json?            // Additional payload (orderId, productId, etc.)
+
+  read    Boolean   @default(false)
+  readAt  DateTime?
+
+  // Push notification tracking
+  pushSent     Boolean   @default(false)
+  pushSentAt   DateTime?
+  pushReceipts Json?     // Store Expo push receipts for debugging
+
+  // Email tracking (for admin notifications)
+  emailSent    Boolean   @default(false)
+  emailSentAt  DateTime?
+
+  // Priority and scheduling
+  priority     NotificationPriority @default(NORMAL)
+  scheduledFor DateTime?            // For scheduled notifications
+  expiresAt    DateTime?            // Auto-expire notifications
+
+  // Grouping
+  groupKey     String?              // Group related notifications
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+  @@index([userId, type])
+  @@index([createdAt])
+  @@index([scheduledFor])
+  @@map("notifications")
+}
+
+// Device tokens for push notifications (Expo Push)
+model DeviceToken {
+  id         String     @id @default(uuid())
+  userId     String
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  token      String     @unique  // Expo Push Token (ExponentPushToken[xxx])
+  deviceType DeviceType
+  deviceName String?              // "iPhone 12", "Samsung Galaxy S21"
+  deviceId   String?              // Unique device identifier
+
+  // Token validity
+  isActive   Boolean    @default(true)
+  lastUsedAt DateTime   @default(now())
+
+  // Metadata
+  appVersion String?
+  osVersion  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, isActive])
+  @@index([token])
+  @@map("device_tokens")
+}
+
+// User notification preferences
+model NotificationPreference {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Global toggles
+  pushEnabled   Boolean @default(true)
+  emailEnabled  Boolean @default(true)
+  smsEnabled    Boolean @default(false)
+
+  // Per notification category
+  orderUpdates        Boolean @default(true)  // Order status changes
+  paymentAlerts       Boolean @default(true)  // Payment confirmations, refunds
+  promotions          Boolean @default(true)  // Deals, discounts, promotions
+  productAlerts       Boolean @default(true)  // New products nearby, expiring products
+  systemAnnouncements Boolean @default(true)  // System-wide announcements
+
+  // Quiet hours (optional)
+  quietHoursEnabled Boolean @default(false)
+  quietHoursStart   String? // "22:00"
+  quietHoursEnd     String? // "07:00"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("notification_preferences")
+}
+
+model SubscriptionPayment {
+  id         String          @id @default(uuid())
+  supplierId String
+  supplier   SupplierProfile @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  tier             SubscriptionTier
+  amount           Float
+  currency         String           @default("XOF")
+  paymentMethod    String
+  paymentProvider  String?
+  paymentReference String?
+
+  periodStart DateTime
+  periodEnd   DateTime
+
+  status PaymentStatus @default(PENDING)
+  paidAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([supplierId])
+  @@index([status])
+  @@map("subscription_payments")
+}
+
+model DeliveryTracking {
+  id      String @id @default(uuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  status    String // preparing, picked_up, in_transit, delivered
+  latitude  Float?
+  longitude Float?
+  notes     String?
+
+  timestamp DateTime @default(now())
+
+  @@index([orderId])
+  @@map("delivery_tracking")
+}
+
+model AnalyticsEvent {
+  id        String @id @default(uuid())
+  userId    String?
+  eventType String // product_view, search, add_to_cart, etc.
+  eventData Json
+
+  userAgent String?
+  ipAddress String?
+
+  timestamp DateTime @default(now())
+
+  @@index([eventType, timestamp])
+  @@index([userId, timestamp])
+  @@map("analytics_events")
+}
+
+model AssociationReport {
+  id            String             @id @default(uuid())
+  associationId String
+  association   AssociationProfile @relation(fields: [associationId], references: [id], onDelete: Cascade)
+
+  title         String
+  description   String
+  images        Json?
+  donationsUsed Json? // Array of donation IDs
+  beneficiaries Int?
+  impactMetrics Json?
+
+  publishedAt DateTime @default(now())
+
+  @@index([associationId])
+  @@map("association_reports")
+}
+
+// ==================== PAYMENT & ESCROW ====================
+
+model EscrowTransaction {
+  id        String       @id @default(uuid())
+  orderId   String       @unique
+  order     Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  // Montants
+  amount           Float   // Montant total payé par le client
+  commission       Float   // Commission de la plateforme
+  supplierAmount   Float   // Montant à verser au fournisseur
+
+  // Status
+  status           EscrowStatus @default(PENDING)
+
+  // Wave Payment Info
+  waveCheckoutId   String?      // ID du checkout Wave
+  wavePaymentId    String?      // ID du paiement Wave confirmé
+  waveTransferId   String?      // ID du transfert Wave vers le fournisseur
+
+  // Supplier Info
+  supplierId       String
+  supplierWaveId   String?      // Compte Wave du fournisseur
+
+  // Timestamps
+  paidAt           DateTime?    // Date de réception du paiement
+  releasedAt       DateTime?    // Date de transfert au fournisseur
+  refundedAt       DateTime?    // Date de remboursement si applicable
+
+  // Dispute handling
+  disputeReason    String?
+  disputeOpenedAt  DateTime?
+  disputeResolvedAt DateTime?
+  disputeResolution String?     // Description de la résolution
+
+  // Admin actions
+  adminActions     AdminPaymentAction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([supplierId])
+  @@index([createdAt])
+  @@map("escrow_transactions")
+}
+
+model AdminPaymentAction {
+  id                  String            @id @default(uuid())
+  escrowTransactionId String
+  escrowTransaction   EscrowTransaction @relation(fields: [escrowTransactionId], references: [id], onDelete: Cascade)
+
+  adminId     String              // ID de l'admin qui a effectué l'action
+  actionType  String              // REFUND, RELEASE, DISPUTE_OPEN, DISPUTE_CLOSE, MANUAL_TRANSFER
+  description String?             // Description de l'action
+  amount      Float?              // Montant si applicable (remboursement partiel, etc.)
+
+  // Metadata
+  previousStatus String?          // Status avant l'action
+  newStatus      String?          // Status après l'action
+  metadata       Json?            // Données additionnelles
+
+  createdAt DateTime @default(now())
+
+  @@index([escrowTransactionId])
+  @@index([adminId])
+  @@index([createdAt])
+  @@map("admin_payment_actions")
+}
+
+// ==================== PHASE 5: SUBSCRIPTIONS & DEALS MODELS ====================
+
+// Plans d'abonnement définis par l'admin
+model SubscriptionPlan {
+  id          String           @id @default(uuid())
+
+  // Plan Info
+  name        String           // "Basic", "Pro", "Premium"
+  tier        SubscriptionTier @unique
+  description String?
+
+  // Pricing
+  monthlyPrice    Float        // Prix mensuel en XOF
+  yearlyPrice     Float?       // Prix annuel (avec réduction)
+  currency        String       @default("XOF")
+
+  // Limites et fonctionnalités
+  maxStores       Int          @default(1)    // Nombre max de magasins
+  maxProducts     Int          @default(10)   // Nombre max de produits
+  maxDeals        Int          @default(0)    // Nombre max de deals (0 = illimité)
+  canCreateDeals  Boolean      @default(false) // Peut créer des deals
+  priorityListing Boolean      @default(false) // Mise en avant dans les résultats
+  analyticsAccess Boolean      @default(false) // Accès aux analytics avancées
+
+  // Commission
+  commissionRate  Float        @default(0.10) // Taux de commission sur les ventes
+
+  // Promo options
+  trialDays       Int          @default(0)    // Jours d'essai gratuit
+
+  // Status
+  isActive        Boolean      @default(true)
+  isPublic        Boolean      @default(true) // Visible publiquement ou sur invitation
+
+  // Relations
+  suppliers       SupplierProfile[]
+  promoCodes      PromoCode[]  // Codes promo applicables à ce plan
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tier, isActive])
+  @@map("subscription_plans")
+}
+
+// Codes promo créés par l'admin pour fournisseurs particuliers
+model PromoCode {
+  id              String          @id @default(uuid())
+
+  // Code Info
+  code            String          @unique // "KAYZER2024", "USHIGO50"
+  description     String?
+
+  // Type de réduction
+  type            PromoCodeType   // PERCENTAGE, FIXED_AMOUNT, FREE_MONTHS
+  value           Float           // Valeur (%, montant, ou nombre de mois)
+
+  // Applicabilité
+  applicablePlanId String?        // Si null, applicable à tous les plans
+  applicablePlan   SubscriptionPlan? @relation(fields: [applicablePlanId], references: [id])
+
+  // Fournisseur spécifique (si réservé à un fournisseur)
+  reservedForSupplierId String?
+  reservedForSupplier   SupplierProfile? @relation(fields: [reservedForSupplierId], references: [id])
+
+  // Limites d'utilisation
+  maxUses         Int?            // Nombre max d'utilisations (null = illimité)
+  currentUses     Int             @default(0)
+  maxUsesPerUser  Int             @default(1) // Utilisations max par fournisseur
+
+  // Validité
+  validFrom       DateTime        @default(now())
+  validUntil      DateTime?       // null = pas d'expiration
+
+  // Status
+  status          PromoCodeStatus @default(ACTIVE)
+
+  // Créé par admin
+  createdByAdminId String
+
+  // Relations - fournisseurs ayant utilisé ce code
+  usedBySuppliers SupplierProfile[] @relation("SupplierUsedPromoCode")
+  usages          PromoCodeUsage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([code])
+  @@index([status, validFrom, validUntil])
+  @@index([reservedForSupplierId])
+  @@map("promo_codes")
+}
+
+// Historique d'utilisation des codes promo
+model PromoCodeUsage {
+  id           String     @id @default(uuid())
+  promoCodeId  String
+  promoCode    PromoCode  @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
+
+  supplierId   String     // Fournisseur qui a utilisé le code
+
+  // Détails de l'utilisation
+  discountAmount Float    // Montant économisé
+  appliedTo      String   // "SUBSCRIPTION", "FIRST_MONTH", etc.
+
+  // Paiement associé
+  subscriptionPaymentId String?
+
+  usedAt DateTime @default(now())
+
+  @@index([promoCodeId])
+  @@index([supplierId])
+  @@map("promo_code_usages")
+}
+
+// Deals / Bons Plans (ex: entrée piscine gratuite, chambre d'hôtel -50%)
+model Deal {
+  id          String          @id @default(uuid())
+  supplierId  String
+  supplier    SupplierProfile @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  // Optionnel: lié à un magasin spécifique
+  storeId     String?
+  store       SupplierStore?  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  // Deal Info
+  title       String          // "Entrée piscine gratuite", "Chambre double -50%"
+  description String
+  category    DealCategory
+  images      Json            // Array of image URLs
+
+  // Pricing
+  originalPrice   Float       // Prix original
+  dealPrice       Float       // Prix avec réduction
+  discountPercent Float?      // Pourcentage de réduction calculé
+  currency        String      @default("XOF")
+
+  // Ce qui est inclus
+  includes        Json?       // ["Serviette", "Casier", "Accès vestiaires"]
+  excludes        Json?       // ["Repas", "Boissons"]
+  terms           String?     // Conditions d'utilisation
+
+  // Disponibilité
+  status          DealStatus  @default(DRAFT)
+  availableFrom   DateTime    // Date de début de validité
+  availableUntil  DateTime    // Date de fin de validité
+
+  // Créneaux disponibles
+  availableSlots  Json?       // Créneaux horaires disponibles
+  // Ex: [{"day": "monday", "slots": ["09:00-12:00", "14:00-18:00"]}]
+
+  // Limites
+  totalQuantity     Int       // Nombre total disponible
+  quantityAvailable Int       // Nombre restant
+  maxPerUser        Int       @default(1) // Max par utilisateur
+
+  // Période creuse (optionnel)
+  isOffPeakOnly     Boolean   @default(false)
+  offPeakDays       Json?     // ["monday", "tuesday", "wednesday"]
+  offPeakHours      Json?     // {"start": "09:00", "end": "17:00"}
+
+  // Réservation requise
+  requiresBooking   Boolean   @default(true)
+  bookingLeadTime   Int       @default(0) // Heures à l'avance pour réserver
+  cancellationHours Int       @default(24) // Heures avant pour annuler gratuitement
+
+  // Contact pour le deal
+  contactPhone      String?
+  contactEmail      String?
+
+  // Stats
+  views             Int       @default(0)
+  bookingsCount     Int       @default(0)
+  usedCount         Int       @default(0)
+
+  // Modération
+  moderatedAt       DateTime?
+  moderatedByAdminId String?
+  rejectionReason   String?
+
+  // Relations
+  bookings          DealBooking[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([supplierId, status])
+  @@index([storeId, status])
+  @@index([category, status])
+  @@index([availableFrom, availableUntil])
+  @@index([status])
+  @@map("deals")
+}
+
+// Réservations de deals
+model DealBooking {
+  id        String        @id @default(uuid())
+  dealId    String
+  deal      Deal          @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  userId    String
+
+  // Booking Info
+  bookingNumber   String    @unique @default(uuid())
+  quantity        Int       @default(1)
+
+  // Date et créneau réservés
+  bookingDate     DateTime  // Date de la réservation
+  bookingSlot     String?   // Créneau horaire "14:00-18:00"
+
+  // Prix
+  unitPrice       Float
+  totalPrice      Float
+
+  // Status
+  status          BookingStatus @default(PENDING)
+
+  // Code de validation
+  validationCode  String    @unique // Code QR / PIN pour valider
+
+  // Payment
+  paymentMethod   PaymentMethod
+  paymentReference String?
+  paidAt          DateTime?
+
+  // Utilisation
+  usedAt          DateTime?
+  usedByStaffId   String?   // Staff qui a validé
+
+  // Annulation
+  cancelledAt     DateTime?
+  cancelReason    String?
+  refundedAt      DateTime?
+  refundAmount    Float?
+
+  // Notes
+  userNotes       String?   // Notes du client
+  supplierNotes   String?   // Notes du fournisseur
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dealId])
+  @@index([userId])
+  @@index([status])
+  @@index([bookingDate])
+  @@index([validationCode])
+  @@map("deal_bookings")
+}
+
+// Add latitude/longitude to Product for geolocation search
+// Note: In production, use PostGIS extension for better geospatial queries

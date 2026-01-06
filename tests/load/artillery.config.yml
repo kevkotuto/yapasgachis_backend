@@ -1,0 +1,194 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    # Warm-up phase
+    - duration: 60
+      arrivalRate: 5
+      name: "Warm up"
+
+    # Ramp-up phase
+    - duration: 120
+      arrivalRate: 5
+      rampTo: 50
+      name: "Ramp up load"
+
+    # Sustained load
+    - duration: 300
+      arrivalRate: 50
+      name: "Sustained load"
+
+    # Spike test
+    - duration: 60
+      arrivalRate: 100
+      name: "Spike test"
+
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+  plugins:
+    expect: {}
+
+  variables:
+    testPhone: "+221771234567"
+    testPassword: "TestPassword123!"
+
+scenarios:
+  - name: "Health Check"
+    weight: 10
+    flow:
+      - get:
+          url: "/health"
+          expect:
+            - statusCode: 200
+            - contentType: json
+            - hasProperty: success
+
+  - name: "API Root"
+    weight: 5
+    flow:
+      - get:
+          url: "/api/v1"
+          expect:
+            - statusCode: 200
+
+  - name: "User Registration Flow"
+    weight: 5
+    flow:
+      - post:
+          url: "/api/v1/auth/register"
+          json:
+            phone: "{{ $randomNumber(221770000000, 221779999999) }}"
+            password: "{{ testPassword }}"
+            firstName: "Load"
+            lastName: "Test"
+          capture:
+            - json: "$.data.userId"
+              as: "userId"
+          expect:
+            - statusCode:
+                - 201
+                - 409  # May already exist
+
+  - name: "Login Flow"
+    weight: 30
+    flow:
+      - post:
+          url: "/api/v1/auth/login"
+          json:
+            phone: "{{ testPhone }}"
+            password: "{{ testPassword }}"
+          capture:
+            - json: "$.data.accessToken"
+              as: "accessToken"
+            - json: "$.data.refreshToken"
+              as: "refreshToken"
+          expect:
+            - statusCode:
+                - 200
+                - 401
+                - 404
+
+      - get:
+          url: "/api/v1/auth/me"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          ifTrue: "accessToken"
+          expect:
+            - statusCode: 200
+
+  - name: "Product Browsing"
+    weight: 40
+    flow:
+      - get:
+          url: "/api/v1/products"
+          qs:
+            page: 1
+            limit: 20
+          expect:
+            - statusCode: 200
+            - contentType: json
+
+      - get:
+          url: "/api/v1/products"
+          qs:
+            category: "BAKERY"
+            page: 1
+            limit: 10
+          expect:
+            - statusCode: 200
+
+      - get:
+          url: "/api/v1/products"
+          qs:
+            latitude: 14.6937
+            longitude: -17.4441
+            radius: 5
+          expect:
+            - statusCode: 200
+
+  - name: "Deals Browsing"
+    weight: 15
+    flow:
+      - get:
+          url: "/api/v1/deals"
+          qs:
+            page: 1
+            limit: 20
+          expect:
+            - statusCode: 200
+
+      - get:
+          url: "/api/v1/deals"
+          qs:
+            category: "FOOD"
+          expect:
+            - statusCode: 200
+
+  - name: "Stores Browsing"
+    weight: 10
+    flow:
+      - get:
+          url: "/api/v1/stores"
+          qs:
+            page: 1
+            limit: 20
+          expect:
+            - statusCode: 200
+
+      - get:
+          url: "/api/v1/stores/nearby"
+          qs:
+            latitude: 14.6937
+            longitude: -17.4441
+            radius: 10
+          expect:
+            - statusCode: 200
+
+  - name: "Authenticated User Actions"
+    weight: 20
+    flow:
+      - post:
+          url: "/api/v1/auth/login"
+          json:
+            phone: "{{ testPhone }}"
+            password: "{{ testPassword }}"
+          capture:
+            - json: "$.data.accessToken"
+              as: "token"
+
+      - get:
+          url: "/api/v1/notifications"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          ifTrue: "token"
+          expect:
+            - statusCode: 200
+
+      - get:
+          url: "/api/v1/notifications/unread-count"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          ifTrue: "token"
+          expect:
+            - statusCode: 200
