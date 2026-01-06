@@ -288,16 +288,22 @@ export class PromoCodeRepository {
     try {
       return await prisma.promoCode.findMany({
         where: {
-          OR: [
-            { reservedForSupplierId: supplierId },
-            { reservedForSupplierId: null }, // Public codes
+          AND: [
+            {
+              OR: [
+                { reservedForSupplierId: supplierId },
+                { reservedForSupplierId: null }, // Public codes
+              ],
+            },
+            {
+              OR: [
+                { validUntil: null },
+                { validUntil: { gte: new Date() } },
+              ],
+            },
           ],
           status: 'ACTIVE',
           validFrom: { lte: new Date() },
-          OR: [
-            { validUntil: null },
-            { validUntil: { gte: new Date() } },
-          ],
         },
         include: {
           applicablePlan: true,

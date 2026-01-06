@@ -27,10 +27,11 @@ export class ProductController {
    * POST /api/v1/products
    */
   createProduct = asyncHandler(
-    async (req: Request<{}, {}, CreateProductInput>, res: Response) => {
+    async (req: Request, res: Response) => {
       const userId = req.user!.id;
+      const body = req.body as CreateProductInput;
 
-      const product = await productService.createProduct(userId, req.body);
+      const product = await productService.createProduct(userId, body as Required<CreateProductInput>);
 
       logger.info('Product created via API', {
         userId,

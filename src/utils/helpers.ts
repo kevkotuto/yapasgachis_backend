@@ -41,6 +41,18 @@ export const generatePickupCode = (): string => {
 };
 
 /**
+ * Generate a random alphanumeric code
+ */
+export const generateRandomCode = (length: number = 8): string => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < length; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+};
+
+/**
  * Format phone number to international format
  */
 export const formatPhoneNumber = (phone: string, countryCode: string = '+225'): string => {

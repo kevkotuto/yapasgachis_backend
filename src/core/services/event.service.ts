@@ -191,6 +191,7 @@ export interface EventPayload {
     donorId: string;
     associationId: string;
     type: string;
+    amount?: number;
   };
   [AppEvent.DONATION_STATUS_UPDATED]: {
     donationId: string;
@@ -210,6 +211,7 @@ export interface EventPayload {
     donorId: string;
     associationId: string;
     reason?: string;
+    cancelledBy?: string;
   };
 }
 

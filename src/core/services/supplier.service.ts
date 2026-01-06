@@ -1,10 +1,8 @@
-import { SupplierProfile, SubscriptionTier, SupplierType } from '@prisma/client';
+import { SupplierProfile, SubscriptionTier, SupplierType, UserRole } from '@prisma/client';
 import supplierRepository, {
   SupplierRepository,
 } from '@/core/repositories/supplier.repository';
-import userRepository, {
-  UserRepository,
-} from '@/core/repositories/user.repository';
+import UserRepository from '@/core/repositories/user.repository';
 import geocodingService from '@/infrastructure/geolocation/geocoding.service';
 import { AppError } from '@/middleware/error-handler.middleware';
 import logger from '@/infrastructure/monitoring/logger';
@@ -45,7 +43,7 @@ export class SupplierService {
         throw new AppError(404, 'Utilisateur non trouvé', 'USER_NOT_FOUND');
       }
 
-      if (user.role !== 'SUPPLIER') {
+      if (user.role !== UserRole.SUPPLIER_FOOD && user.role !== UserRole.SUPPLIER_DEALS) {
         throw new AppError(
           403,
           'Seuls les fournisseurs peuvent créer un profil fournisseur',
@@ -82,18 +80,16 @@ export class SupplierService {
       }
 
       // Create supplier profile
+      // Note: phoneNumber, email are on User, not SupplierProfile
+      // registrationNumber -> rccm, taxId -> niu in Prisma schema
       const profile = await this.supplierRepo.create(userId, {
         businessName: data.businessName,
-        type: data.type,
+        supplierType: data.type,
         description: data.description,
         address: data.address,
-        city: data.city || user.city,
-        phoneNumber: data.phoneNumber || user.phoneNumber,
-        email: data.email || user.email,
-        registrationNumber: data.registrationNumber,
-        taxId: data.taxId,
-        bankAccountNumber: data.bankAccountNumber,
-        subscriptionTier: data.subscriptionTier || SubscriptionTier.FREE,
+        rccm: data.registrationNumber,
+        niu: data.taxId,
+        subscriptionTier: data.subscriptionTier || SubscriptionTier.BASIC,
         latitude,
         longitude,
         user: { connect: { id: userId } },
@@ -186,7 +182,7 @@ export class SupplierService {
       let longitude = profile.longitude;
 
       if (data.address && data.address !== profile.address) {
-        const fullAddress = `${data.address}, ${data.city || profile.city || ''}`;
+        const fullAddress = `${data.address}, ${data.city || ''}`;
         const geocoded = await geocodingService.geocodeAddress(fullAddress);
 
         if (geocoded) {
@@ -376,8 +372,8 @@ export class SupplierService {
 
     // Check subscription status
     if (
-      profile.subscriptionExpiresAt &&
-      profile.subscriptionExpiresAt < new Date()
+      profile.subscriptionEndDate &&
+      profile.subscriptionEndDate < new Date()
     ) {
       return {
         allowed: false,
@@ -387,10 +383,9 @@ export class SupplierService {
 
     // Get product limits based on subscription tier
     const limits: Record<SubscriptionTier, number> = {
-      FREE: 5,
       BASIC: 20,
+      PRO: 50,
       PREMIUM: 100,
-      ENTERPRISE: Infinity,
     };
 
     const maxProducts = limits[profile.subscriptionTier];
@@ -408,4 +403,4 @@ export class SupplierService {
   }
 }
 
-export default new SupplierService(supplierRepository, userRepository);
+export default new SupplierService(supplierRepository, new UserRepository());

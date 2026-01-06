@@ -19,10 +19,11 @@ export class ReviewController {
    * POST /api/v1/reviews
    */
   createReview = asyncHandler(
-    async (req: Request<{}, {}, CreateReviewInput>, res: Response) => {
+    async (req: Request, res: Response) => {
       const userId = req.user!.id;
+      const body = req.body as CreateReviewInput;
 
-      const review = await reviewService.createReview(userId, req.body);
+      const review = await reviewService.createReview(userId, body as Required<CreateReviewInput>);
 
       logger.info('Review created via API', {
         userId,
@@ -42,12 +43,10 @@ export class ReviewController {
    * GET /api/v1/reviews/product/:productId
    */
   getProductReviews = asyncHandler(
-    async (
-      req: Request<{ productId: string }, {}, {}, GetProductReviewsQuery>,
-      res: Response
-    ) => {
+    async (req: Request, res: Response) => {
       const { productId } = req.params;
-      const result = await reviewService.getProductReviews(productId, req.query);
+      const query = req.query as unknown as GetProductReviewsQuery;
+      const result = await reviewService.getProductReviews(productId, query);
 
       res.json({
         success: true,
@@ -61,12 +60,10 @@ export class ReviewController {
    * GET /api/v1/reviews/supplier/:supplierId
    */
   getSupplierReviews = asyncHandler(
-    async (
-      req: Request<{ supplierId: string }, {}, {}, GetSupplierReviewsQuery>,
-      res: Response
-    ) => {
+    async (req: Request, res: Response) => {
       const { supplierId } = req.params;
-      const { page, limit } = req.query;
+      const query = req.query as unknown as GetSupplierReviewsQuery;
+      const { page, limit } = query;
       const result = await reviewService.getSupplierReviews(supplierId, page, limit);
 
       res.json({

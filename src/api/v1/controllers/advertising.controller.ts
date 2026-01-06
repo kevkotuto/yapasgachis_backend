@@ -25,13 +25,11 @@ export class AdvertisingController {
    * POST /api/v1/advertising/profile
    */
   createProfile = asyncHandler(
-    async (
-      req: Request<{}, {}, CreateAdvertiserProfileInput>,
-      res: Response
-    ) => {
+    async (req: Request, res: Response) => {
       const userId = req.user!.id;
+      const body = req.body as CreateAdvertiserProfileInput;
 
-      const profile = await advertisingService.createProfile(userId, req.body);
+      const profile = await advertisingService.createProfile(userId, body as Required<CreateAdvertiserProfileInput>);
 
       logger.info('Advertiser profile created via API', {
         userId,
@@ -94,10 +92,12 @@ export class AdvertisingController {
    * POST /api/v1/advertising/campaigns
    */
   createCampaign = asyncHandler(
-    async (req: Request<{}, {}, CreateCampaignInput>, res: Response) => {
+    async (req: Request, res: Response) => {
       const userId = req.user!.id;
+      const body = req.body as CreateCampaignInput;
 
-      const campaign = await advertisingService.createCampaign(userId, req.body);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const campaign = await advertisingService.createCampaign(userId, body as any);
 
       logger.info('Campaign created via API', {
         userId,

@@ -510,7 +510,7 @@ export class AdminController {
    * GET /api/v1/admin/analytics/top-products
    */
   getTopProducts = asyncHandler(async (req: Request, res: Response) => {
-    const { startDate, endDate, limit } = req.query as {
+    const { startDate, endDate, limit } = req.query as unknown as {
       startDate: string;
       endDate: string;
       limit?: number;
@@ -533,7 +533,7 @@ export class AdminController {
    * GET /api/v1/admin/analytics/top-searches
    */
   getTopSearchTerms = asyncHandler(async (req: Request, res: Response) => {
-    const { startDate, endDate, limit } = req.query as {
+    const { startDate, endDate, limit } = req.query as unknown as {
       startDate: string;
       endDate: string;
       limit?: number;

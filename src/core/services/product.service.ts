@@ -76,34 +76,26 @@ export class ProductService {
         );
       }
 
-      // Calculate discount percentage
-      const discountPercentage = Math.round(
-        ((data.originalPrice - data.price) / data.originalPrice) * 100
-      );
-
       // Create product
       const product = await this.productRepo.create({
-        name: data.name,
+        title: data.name,
         description: data.description,
         category: data.category,
         originalPrice: data.originalPrice,
-        price: data.price,
-        discountPercentage,
+        discountedPrice: data.price,
         quantity: data.quantity,
-        unit: data.unit || 'unité',
-        expiresAt: data.expiresAt,
-        status: ProductStatus.AVAILABLE,
+        quantityAvailable: data.quantity,
+        unit: data.unit || 'piece',
+        expiryDate: data.expiresAt,
+        status: ProductStatus.ACTIVE,
         images: data.images || [],
-        tags: data.tags || [],
-        pickupLocation: data.pickupLocation,
-        pickupInstructions: data.pickupInstructions,
         supplier: { connect: { id: supplier.id } },
       });
 
       logger.info('Product created', {
         userId,
         productId: product.id,
-        name: product.name,
+        title: product.title,
       });
 
       return product;
@@ -170,8 +162,8 @@ export class ProductService {
 
       // Validate prices if provided
       if (data.price || data.originalPrice) {
-        const originalPrice = data.originalPrice || product.originalPrice;
-        const price = data.price || product.price;
+        const originalPrice = data.originalPrice || Number(product.originalPrice);
+        const price = data.price || Number(product.discountedPrice);
 
         if (price >= originalPrice) {
           throw new AppError(
@@ -182,21 +174,23 @@ export class ProductService {
         }
       }
 
-      // Recalculate discount if prices changed
-      let discountPercentage = product.discountPercentage;
-      if (data.originalPrice || data.price) {
-        const originalPrice = data.originalPrice || product.originalPrice;
-        const price = data.price || product.price;
-        discountPercentage = Math.round(
-          ((originalPrice - price) / originalPrice) * 100
-        );
+      // Prepare update data
+      const updateData: any = { ...data };
+      if (data.price) {
+        updateData.discountedPrice = data.price;
+        delete updateData.price;
+      }
+      if (data.name) {
+        updateData.title = data.name;
+        delete updateData.name;
+      }
+      if (data.expiresAt) {
+        updateData.expiryDate = data.expiresAt;
+        delete updateData.expiresAt;
       }
 
       // Update product
-      const updated = await this.productRepo.update(productId, {
-        ...data,
-        discountPercentage,
-      });
+      const updated = await this.productRepo.update(productId, updateData);
 
       logger.info('Product updated', {
         userId,
@@ -235,8 +229,9 @@ export class ProductService {
       }
 
       // Delete product images from Cloudinary
-      if (product.images && product.images.length > 0) {
-        const publicIds = product.images
+      const images = product.images as string[] | null;
+      if (images && images.length > 0) {
+        const publicIds = images
           .map((url) => cloudinaryService.extractPublicId(url))
           .filter((id): id is string => id !== null);
 
@@ -424,7 +419,7 @@ export class ProductService {
       const imageUrls = uploadResults.map((result) => result.secureUrl);
 
       // Update product with new images
-      const existingImages = product.images || [];
+      const existingImages = (product.images as string[] | null) || [];
       const updatedImages = [...existingImages, ...imageUrls];
 
       await this.productRepo.update(productId, {
@@ -473,8 +468,9 @@ export class ProductService {
       }
 
       // Remove image URL from product
-      const images = (product.images || []).filter((url) => url !== imageUrl);
-      await this.productRepo.update(productId, { images });
+      const currentImages = (product.images as string[] | null) || [];
+      const updatedImages = currentImages.filter((url) => url !== imageUrl);
+      await this.productRepo.update(productId, { images: updatedImages });
 
       // Delete from Cloudinary
       const publicId = cloudinaryService.extractPublicId(imageUrl);

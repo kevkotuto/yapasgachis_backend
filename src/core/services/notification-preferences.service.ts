@@ -36,13 +36,13 @@ class NotificationPreferencesService {
    * Get user's notification preferences
    */
   async getPreferences(userId: string): Promise<NotificationPreferenceData> {
-    let prefs = await prisma.notificationPreference.findUnique({
+    const prefs = await prisma.notificationPreference.findUnique({
       where: { userId },
     });
 
     // Create default preferences if not exist
     if (!prefs) {
-      prefs = await this.createDefaultPreferences(userId);
+      return this.createDefaultPreferences(userId);
     }
 
     return {

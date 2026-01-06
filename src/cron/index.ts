@@ -1,7 +1,7 @@
 import cron from 'node-cron';
 import { PrismaClient, ProductStatus, DonationStatus } from '@prisma/client';
-import { logger } from '@infrastructure/monitoring/logger';
-import { config } from '@config/index';
+import logger from '@infrastructure/monitoring/logger';
+import config from '@config/index';
 
 const prisma = new PrismaClient();
 
@@ -11,7 +11,7 @@ const prisma = new PrismaClient();
  * Marks products as EXPIRED if their expiryDate has passed
  */
 const expireProductsJob = () => {
-  const schedule = config.cron?.expireProducts || '0 */6 * * *';
+  const schedule = config.cron?.schedules?.expireProducts || '0 */6 * * *';
 
   cron.schedule(schedule, async () => {
     const jobName = 'EXPIRE_PRODUCTS';
@@ -108,7 +108,7 @@ const expireProductsJob = () => {
  * Checks for expiring subscriptions and sends reminders
  */
 const subscriptionRenewalJob = () => {
-  const schedule = config.cron?.subscriptionRenewal || '0 0 * * *';
+  const schedule = config.cron?.schedules?.subscriptionRenewal || '0 0 * * *';
 
   cron.schedule(schedule, async () => {
     const jobName = 'SUBSCRIPTION_RENEWAL';
@@ -244,7 +244,7 @@ const subscriptionRenewalJob = () => {
  * Aggregates daily analytics data for reporting
  */
 const analyticsAggregationJob = () => {
-  const schedule = config.cron?.analyticsAggregation || '0 1 * * *';
+  const schedule = config.cron?.schedules?.analyticsAggregation || '0 1 * * *';
 
   cron.schedule(schedule, async () => {
     const jobName = 'ANALYTICS_AGGREGATION';

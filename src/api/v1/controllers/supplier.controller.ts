@@ -21,13 +21,11 @@ export class SupplierController {
    * POST /api/v1/suppliers/profile
    */
   createProfile = asyncHandler(
-    async (
-      req: Request<{}, {}, CreateSupplierProfileInput>,
-      res: Response
-    ) => {
+    async (req: Request, res: Response) => {
       const userId = req.user!.id;
+      const body = req.body as CreateSupplierProfileInput;
 
-      const profile = await supplierService.createProfile(userId, req.body);
+      const profile = await supplierService.createProfile(userId, body as Required<CreateSupplierProfileInput>);
 
       logger.info('Supplier profile created via API', {
         userId,

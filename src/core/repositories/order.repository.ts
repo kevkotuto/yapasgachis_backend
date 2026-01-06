@@ -127,7 +127,7 @@ export class OrderRepository {
               email: true,
             },
           },
-          deliveryTracking: true,
+          tracking: true,
         },
       });
     } catch (error) {
@@ -404,7 +404,7 @@ export class OrderRepository {
         .filter((o) => o.status === OrderStatus.COMPLETED)
         .reduce((sum, order) => {
           const supplierItemsTotal = order.items.reduce(
-            (itemSum, item) => itemSum + Number(item.subtotal),
+            (itemSum, item) => itemSum + Number(item.totalPrice),
             0
           );
           return sum + supplierItemsTotal;
@@ -438,9 +438,7 @@ export class OrderRepository {
         data: {
           status: OrderStatus.CANCELLED,
           cancelledAt: new Date(),
-          notes: reason
-            ? `Annulé: ${reason}`
-            : 'Commande annulée par le client',
+          cancelReason: reason || 'Commande annulée par le client',
         },
         include: {
           items: {

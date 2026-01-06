@@ -3,18 +3,7 @@ import { Request, Response } from 'express';
 import AuthService from '@/core/services/auth.service';
 import { asyncHandler } from '@/middleware/error-handler.middleware';
 import { APP_CONSTANTS } from '@/utils/constants';
-import type {
-  RegisterInput,
-  LoginInput,
-  VerifyOTPInput,
-  ResendOTPInput,
-  ForgotPasswordInput,
-  ResetPasswordInput,
-  ChangePasswordInput,
-  RefreshTokenInput,
-  GoogleAuthInput,
-  LinkGoogleInput,
-} from '../validators/auth.validator';
+// Types used for JSDoc comments and type hints (validated by Zod middleware)
 
 export class AuthController {
   private authService: AuthService;
@@ -27,7 +16,8 @@ export class AuthController {
    * Register new user
    * POST /api/v1/auth/register
    */
-  register = asyncHandler(async (req: Request<{}, {}, RegisterInput>, res: Response) => {
+  register = asyncHandler(async (req: Request, res: Response) => {
+    // Body is validated by Zod middleware, safe to cast
     const result = await this.authService.register(req.body);
 
     res.status(APP_CONSTANTS.HTTP_STATUS.CREATED).json({
@@ -43,7 +33,7 @@ export class AuthController {
    * Login user
    * POST /api/v1/auth/login
    */
-  login = asyncHandler(async (req: Request<{}, {}, LoginInput>, res: Response) => {
+  login = asyncHandler(async (req: Request, res: Response) => {
     const result = await this.authService.login(req.body);
 
     res.status(APP_CONSTANTS.HTTP_STATUS.OK).json({
@@ -60,7 +50,7 @@ export class AuthController {
    * Verify OTP
    * POST /api/v1/auth/verify-otp
    */
-  verifyOTP = asyncHandler(async (req: Request<{}, {}, VerifyOTPInput>, res: Response) => {
+  verifyOTP = asyncHandler(async (req: Request, res: Response) => {
     const result = await this.authService.verifyOTP(req.body);
 
     res.status(APP_CONSTANTS.HTTP_STATUS.OK).json({
@@ -76,10 +66,10 @@ export class AuthController {
    * Resend OTP
    * POST /api/v1/auth/resend-otp
    */
-  resendOTP = asyncHandler(async (req: Request<{}, {}, ResendOTPInput>, res: Response) => {
+  resendOTP = asyncHandler(async (req: Request, res: Response) => {
     const result = await this.authService.resendOTP(
       req.body.phoneNumber,
-      req.body.purpose as any
+      req.body.purpose
     );
 
     res.status(APP_CONSTANTS.HTTP_STATUS.OK).json({
@@ -93,7 +83,7 @@ export class AuthController {
    * POST /api/v1/auth/forgot-password
    */
   forgotPassword = asyncHandler(
-    async (req: Request<{}, {}, ForgotPasswordInput>, res: Response) => {
+    async (req: Request, res: Response) => {
       const result = await this.authService.forgotPassword(req.body.phoneNumber);
 
       res.status(APP_CONSTANTS.HTTP_STATUS.OK).json({
@@ -108,7 +98,7 @@ export class AuthController {
    * POST /api/v1/auth/reset-password
    */
   resetPassword = asyncHandler(
-    async (req: Request<{}, {}, ResetPasswordInput>, res: Response) => {
+    async (req: Request, res: Response) => {
       const result = await this.authService.resetPassword(req.body);
 
       res.status(APP_CONSTANTS.HTTP_STATUS.OK).json({
@@ -124,7 +114,7 @@ export class AuthController {
    * Requires authentication
    */
   changePassword = asyncHandler(
-    async (req: Request<{}, {}, ChangePasswordInput>, res: Response) => {
+    async (req: Request, res: Response) => {
       if (!req.user) {
         throw new Error('User not authenticated');
       }
@@ -147,7 +137,7 @@ export class AuthController {
    * POST /api/v1/auth/refresh-token
    */
   refreshToken = asyncHandler(
-    async (req: Request<{}, {}, RefreshTokenInput>, res: Response) => {
+    async (req: Request, res: Response) => {
       const result = await this.authService.refreshToken(req.body.refreshToken);
 
       res.status(APP_CONSTANTS.HTTP_STATUS.OK).json({
@@ -199,7 +189,7 @@ export class AuthController {
    * Login or Register with Google
    * POST /api/v1/auth/google
    */
-  googleAuth = asyncHandler(async (req: Request<{}, {}, GoogleAuthInput>, res: Response) => {
+  googleAuth = asyncHandler(async (req: Request, res: Response) => {
     const result = await this.authService.googleAuth(req.body);
 
     res.status(APP_CONSTANTS.HTTP_STATUS.OK).json({
@@ -218,7 +208,7 @@ export class AuthController {
    * POST /api/v1/auth/google/link
    * Requires authentication
    */
-  linkGoogle = asyncHandler(async (req: Request<{}, {}, LinkGoogleInput>, res: Response) => {
+  linkGoogle = asyncHandler(async (req: Request, res: Response) => {
     if (!req.user) {
       throw new Error('User not authenticated');
     }

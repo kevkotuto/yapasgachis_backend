@@ -458,7 +458,7 @@ export class DealService {
 
       // Check off-peak restrictions
       if (deal.isOffPeakOnly && deal.offPeakDays) {
-        const dayName = bookingDate.toLocaleDateString('en-US', { weekday: 'lowercase' });
+        const dayName = bookingDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
         const offPeakDays = deal.offPeakDays as string[];
         if (!offPeakDays.includes(dayName)) {
           throw new AppError(
@@ -667,7 +667,7 @@ export class DealService {
         );
       }
 
-      const updated = await this.bookingRepo.updateStatus(bookingId, 'USED', {
+      const updated = await this.bookingRepo.updateStatus(booking.id, 'USED', {
         usedAt: new Date(),
         usedByStaffId: staffId,
       });

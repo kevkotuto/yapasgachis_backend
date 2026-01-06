@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '@/utils/helpers';
 import orderService from '@/core/services/order.service';
+import orderRepository from '@/core/repositories/order.repository';
 import mobileMoneyService from '@/infrastructure/payment/mobile-money.service';
 import supplierRepository from '@/core/repositories/supplier.repository';
 import {
@@ -24,18 +25,19 @@ export class OrderController {
    * POST /api/v1/orders
    */
   createOrder = asyncHandler(
-    async (req: Request<{}, {}, CreateOrderInput>, res: Response) => {
+    async (req: Request, res: Response) => {
       const userId = req.user!.id;
+      const body = req.body as CreateOrderInput;
 
-      const { order, paymentTransactionId } = await orderService.createOrder(
+      const { order, paymentUrl } = await orderService.createOrder({
         userId,
-        req.body
-      );
+        ...body,
+      } as import('@/core/services/order.service').CreateOrderParams);
 
       logger.info('Order created via API', {
         userId,
         orderId: order.id,
-        totalAmount: order.totalAmount,
+        total: order.total,
       });
 
       res.status(201).json({
@@ -44,8 +46,8 @@ export class OrderController {
         data: {
           order,
           payment: {
-            transactionId: paymentTransactionId,
-            status: 'SUCCESS',
+            paymentUrl,
+            status: order.status,
           },
         },
       });
@@ -61,7 +63,7 @@ export class OrderController {
       const userId = req.user!.id;
       const { id } = req.params;
 
-      const order = await orderService.getOrder(id, userId);
+      const order = await orderService.getOrderById(id, userId);
 
       res.json({
         success: true,
@@ -110,7 +112,7 @@ export class OrderController {
         req.query
       );
 
-      res.json({
+      return res.json({
         success: true,
         data: result,
       });
@@ -156,7 +158,7 @@ export class OrderController {
         status,
       });
 
-      res.json({
+      return res.json({
         success: true,
         message: 'Statut de la commande mis à jour',
         data: { order },
@@ -199,7 +201,7 @@ export class OrderController {
   getStatistics = asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user!.id;
 
-    const statistics = await orderService.getUserStatistics(userId);
+    const statistics = await orderRepository.getUserStatistics(userId);
 
     res.json({
       success: true,
@@ -224,9 +226,9 @@ export class OrderController {
       });
     }
 
-    const statistics = await orderService.getSupplierStatistics(supplier.id);
+    const statistics = await orderRepository.getSupplierStatistics(supplier.id);
 
-    res.json({
+    return res.json({
       success: true,
       data: { statistics },
     });

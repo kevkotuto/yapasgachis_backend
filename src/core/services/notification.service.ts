@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/infrastructure/database/prisma';
 import { notificationQueue } from '@/infrastructure/queue/queues/notification.queue';
 import socketService from '@/infrastructure/websocket/socket.service';
@@ -58,9 +59,12 @@ class NotificationService {
       );
 
       // Create notification in DB with scheduledFor
+      const { userId, data: notifData, ...restData } = notificationData;
       const notification = await prisma.notification.create({
         data: {
-          ...notificationData,
+          ...restData,
+          data: notifData as Prisma.InputJsonValue,
+          user: { connect: { id: userId } },
           priority: params.priority || NotificationPriority.NORMAL,
           scheduledFor,
         },
@@ -70,9 +74,12 @@ class NotificationService {
     }
 
     // Create notification in database
+    const { userId: userIdForNotif, data: notifDataForCreate, ...restNotifData } = notificationData;
     const notification = await prisma.notification.create({
       data: {
-        ...notificationData,
+        ...restNotifData,
+        data: notifDataForCreate as Prisma.InputJsonValue,
+        user: { connect: { id: userIdForNotif } },
         priority: params.priority || NotificationPriority.NORMAL,
       },
     });

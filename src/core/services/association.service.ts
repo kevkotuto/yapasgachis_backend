@@ -2,9 +2,7 @@ import { AssociationProfile, UserRole } from '@prisma/client';
 import associationRepository, {
   AssociationRepository,
 } from '@/core/repositories/association.repository';
-import userRepository, {
-  UserRepository,
-} from '@/core/repositories/user.repository';
+import UserRepository from '@/core/repositories/user.repository';
 import geocodingService from '@/infrastructure/geolocation/geocoding.service';
 import { AppError } from '@/middleware/error-handler.middleware';
 import logger from '@/infrastructure/monitoring/logger';
@@ -503,4 +501,4 @@ export class AssociationService {
   }
 }
 
-export default new AssociationService(associationRepository, userRepository);
+export default new AssociationService(associationRepository, new UserRepository());

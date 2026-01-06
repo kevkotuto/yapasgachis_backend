@@ -11,9 +11,7 @@ import donationRepository, {
 import associationRepository, {
   AssociationRepository,
 } from '@/core/repositories/association.repository';
-import userRepository, {
-  UserRepository,
-} from '@/core/repositories/user.repository';
+import UserRepository from '@/core/repositories/user.repository';
 import { AppError } from '@/middleware/error-handler.middleware';
 import logger from '@/infrastructure/monitoring/logger';
 import { prisma } from '@/infrastructure/database/prisma';
@@ -828,5 +826,5 @@ export class DonationService {
 export default new DonationService(
   donationRepository,
   associationRepository,
-  userRepository
+  new UserRepository()
 );

@@ -102,7 +102,9 @@ export const ownerOrAdmin = (getOwnerId: (req: Request) => string) => {
 
     const ownerId = getOwnerId(req);
     const isOwner = req.user.id === ownerId;
-    const isAdmin = [UserRole.ADMIN, UserRole.SUPER_ADMIN].includes(req.user.role);
+    const isAdmin = (
+      [UserRole.ADMIN, UserRole.SUPER_ADMIN] as string[]
+    ).includes(req.user.role);
 
     if (!isOwner && !isAdmin) {
       throw new AppError(

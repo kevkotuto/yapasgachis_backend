@@ -43,7 +43,7 @@ app.use(`/api/${config.app.apiVersion}`, apiLimiter);
 
 // Swagger Documentation (only in development and staging)
 if (config.app.env !== 'production' || process.env.ENABLE_SWAGGER === 'true') {
-  setupSwagger(app);
+  setupSwagger(app as unknown as import('express').Express);
   logger.info('Swagger documentation available at /api-docs');
 }
 

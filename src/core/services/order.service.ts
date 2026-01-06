@@ -531,7 +531,7 @@ export class OrderService {
     }
 
     // Vérifier si annulation possible
-    const cancellableStatuses = [
+    const cancellableStatuses: OrderStatus[] = [
       OrderStatus.PENDING_PAYMENT,
       OrderStatus.PAID,
       OrderStatus.PREPARING,

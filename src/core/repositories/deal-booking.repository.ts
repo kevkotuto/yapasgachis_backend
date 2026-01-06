@@ -6,6 +6,19 @@ import {
 } from '@prisma/client';
 import logger from '@/infrastructure/monitoring/logger';
 
+// Type for booking with deal relation included
+export type DealBookingWithDeal = DealBooking & {
+  deal?: {
+    id: string;
+    title: string;
+    supplierId: string;
+    storeId: string | null;
+    dealPrice?: number | null;
+    supplier?: { id: string; businessName: string };
+    store?: { id: string; name: string } | null;
+  } | null;
+};
+
 /**
  * Deal Booking Repository
  * Data access layer for deal bookings/reservations
@@ -144,7 +157,7 @@ export class DealBookingRepository {
   /**
    * Find booking by validation code
    */
-  async findByValidationCode(validationCode: string): Promise<DealBooking | null> {
+  async findByValidationCode(validationCode: string): Promise<DealBookingWithDeal | null> {
     try {
       return await prisma.dealBooking.findUnique({
         where: { validationCode },
@@ -396,6 +409,7 @@ export class DealBookingRepository {
     id: string,
     status: BookingStatus,
     additionalData?: {
+      paidAt?: Date;
       usedAt?: Date;
       usedByStaffId?: string;
       cancelledAt?: Date;

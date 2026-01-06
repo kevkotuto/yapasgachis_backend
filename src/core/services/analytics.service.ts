@@ -4,9 +4,6 @@ import CacheService from '@/infrastructure/database/redis/cache.service';
 import logger from '@/infrastructure/monitoring/logger';
 import { OrderStatus, ProductStatus } from '@prisma/client';
 
-// Get cache service instance
-const cacheService = new CacheService();
-
 /**
  * Analytics Service
  * Business logic for analytics and reporting
@@ -77,7 +74,7 @@ export class AnalyticsService {
     const cacheKey = 'admin:dashboard:stats';
 
     // Try to get from cache
-    const cached = await cacheService.get<any>(cacheKey);
+    const cached = await CacheService.get<any>(cacheKey);
     if (cached) {
       return cached;
     }
@@ -215,7 +212,7 @@ export class AnalyticsService {
     };
 
     // Cache for 5 minutes
-    await cacheService.set(cacheKey, stats, this.CACHE_TTL);
+    await CacheService.set(cacheKey, stats, this.CACHE_TTL);
 
     return stats;
   }
@@ -226,7 +223,7 @@ export class AnalyticsService {
   async getImpactMetrics(startDate?: Date, endDate?: Date) {
     const cacheKey = `admin:impact:${startDate?.toISOString() || 'all'}:${endDate?.toISOString() || 'all'}`;
 
-    const cached = await cacheService.get<any>(cacheKey);
+    const cached = await CacheService.get<any>(cacheKey);
     if (cached) {
       return cached;
     }
@@ -327,7 +324,7 @@ export class AnalyticsService {
       generatedAt: new Date().toISOString(),
     };
 
-    await cacheService.set(cacheKey, metrics, this.CACHE_TTL);
+    await CacheService.set(cacheKey, metrics, this.CACHE_TTL);
 
     return metrics;
   }

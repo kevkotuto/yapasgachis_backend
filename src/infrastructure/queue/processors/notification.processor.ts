@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { Worker, Job } from 'bullmq';
 import config from '@/config';
 import expoPushService from '@/infrastructure/messaging/push/expo-push.service';
@@ -37,7 +38,7 @@ async function handleSendPush(data: SendPushJobData): Promise<void> {
         data: {
           pushSent: tickets.length > 0 && tickets.some((t) => t.status === 'ok'),
           pushSentAt: new Date(),
-          pushReceipts: tickets as unknown as Record<string, unknown>,
+          pushReceipts: tickets as unknown as Prisma.InputJsonValue,
         },
       });
     }
@@ -116,7 +117,7 @@ async function handleBulkNotification(data: BulkNotificationJobData): Promise<vo
             type: notificationData.type as NotificationType,
             title: notificationData.title,
             message: notificationData.message,
-            data: notificationData.data,
+            data: notificationData.data as Prisma.InputJsonValue,
             priority: NotificationPriority.NORMAL,
           },
         })

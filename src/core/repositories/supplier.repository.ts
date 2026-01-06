@@ -68,7 +68,7 @@ export class SupplierRepository {
           products: {
             select: {
               id: true,
-              name: true,
+              title: true,
               status: true,
             },
             take: 10,
@@ -310,13 +310,14 @@ export class SupplierRepository {
             select: {
               id: true,
               status: true,
-              price: true,
+              discountedPrice: true,
               orderItems: {
                 include: {
                   order: {
                     select: {
+                      id: true,
                       status: true,
-                      totalAmount: true,
+                      total: true,
                     },
                   },
                 },
@@ -342,9 +343,21 @@ export class SupplierRepository {
         };
       }
 
-      const totalProducts = supplier.products.length;
-      const activeProducts = supplier.products.filter(
-        (p) => p.status === 'AVAILABLE'
+      const supplierWithProducts = supplier as typeof supplier & {
+        products: Array<{
+          id: string;
+          status: string;
+          discountedPrice: number;
+          orderItems: Array<{
+            order: { id: string; status: string; total: number };
+          }>;
+          reviews: Array<{ rating: number }>;
+        }>;
+      };
+
+      const totalProducts = supplierWithProducts.products.length;
+      const activeProducts = supplierWithProducts.products.filter(
+        (p) => p.status === 'ACTIVE'
       ).length;
 
       // Calculate orders and revenue
@@ -352,11 +365,11 @@ export class SupplierRepository {
       let totalRevenue = 0;
       const orderIds = new Set<string>();
 
-      supplier.products.forEach((product) => {
+      supplierWithProducts.products.forEach((product) => {
         product.orderItems.forEach((item) => {
           if (item.order.status === 'COMPLETED') {
             orderIds.add(item.order.id);
-            totalRevenue += Number(item.order.totalAmount);
+            totalRevenue += Number(item.order.total);
           }
         });
       });
@@ -367,7 +380,7 @@ export class SupplierRepository {
       let totalRatings = 0;
       let totalReviews = 0;
 
-      supplier.products.forEach((product) => {
+      supplierWithProducts.products.forEach((product) => {
         product.reviews.forEach((review) => {
           totalRatings += review.rating;
           totalReviews++;
@@ -406,7 +419,7 @@ export class SupplierRepository {
         where: { id },
         data: {
           subscriptionTier: tier,
-          subscriptionExpiresAt: expiresAt,
+          subscriptionEndDate: expiresAt,
         },
       });
     } catch (error) {

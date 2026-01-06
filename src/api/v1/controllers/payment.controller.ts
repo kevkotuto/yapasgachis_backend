@@ -58,13 +58,13 @@ export const handleWaveWebhook = async (
         logger.warn('Unknown webhook type', { type: webhookData.type });
     }
 
-    res.json({ received: true });
+    return res.json({ received: true });
   } catch (error) {
     logger.error('Webhook processing error', {
       error: (error as Error).message,
     });
     // Toujours retourner 200 pour éviter les retry de Wave
-    res.json({ received: true, error: (error as Error).message });
+    return res.json({ received: true, error: (error as Error).message });
   }
 };
 

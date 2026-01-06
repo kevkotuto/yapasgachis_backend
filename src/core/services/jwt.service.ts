@@ -25,7 +25,7 @@ export class JWTService {
    */
   static generateAccessToken(payload: TokenPayload): string {
     return jwt.sign(payload, config.jwt.secret, {
-      expiresIn: config.jwt.accessExpiration,
+      expiresIn: config.jwt.accessExpiration as jwt.SignOptions['expiresIn'],
       issuer: config.app.name,
       audience: config.app.url,
     });
@@ -36,7 +36,7 @@ export class JWTService {
    */
   static generateRefreshToken(payload: TokenPayload): string {
     return jwt.sign(payload, config.jwt.refreshSecret, {
-      expiresIn: config.jwt.refreshExpiration,
+      expiresIn: config.jwt.refreshExpiration as jwt.SignOptions['expiresIn'],
       issuer: config.app.name,
       audience: config.app.url,
     });

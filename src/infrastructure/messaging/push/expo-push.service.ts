@@ -251,7 +251,8 @@ class ExpoPushService {
     for (let i = 0; i < tickets.length; i++) {
       const ticket = tickets[i];
       if (ticket.status === 'error' && ticket.details?.error === 'DeviceNotRegistered') {
-        const token = Array.isArray(messages[i].to) ? messages[i].to[0] : messages[i].to;
+        const toField = messages[i].to;
+        const token = Array.isArray(toField) ? toField[0] : toField;
         await this.unregisterDeviceToken(token);
         logger.info('Deactivated invalid token', {
           token: token.substring(0, 30) + '...',

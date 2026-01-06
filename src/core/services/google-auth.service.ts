@@ -90,7 +90,15 @@ export class GoogleAuthService {
         );
       }
 
-      const userInfo = await response.json();
+      const userInfo = await response.json() as {
+        sub: string;
+        email: string;
+        given_name?: string;
+        family_name?: string;
+        name?: string;
+        picture?: string;
+        email_verified?: boolean;
+      };
 
       return {
         googleId: userInfo.sub,

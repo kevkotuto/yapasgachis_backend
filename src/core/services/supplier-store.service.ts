@@ -397,7 +397,7 @@ export class SupplierStoreService {
     }
 
     const now = new Date();
-    const dayName = now.toLocaleDateString('en-US', { weekday: 'lowercase' });
+    const dayName = now.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
     const operatingHours = store.operatingHours as Record<string, { open: string; close: string }>;
 
     const todayHours = operatingHours[dayName];
