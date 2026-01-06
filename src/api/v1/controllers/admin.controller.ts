@@ -608,6 +608,152 @@ export class AdminController {
       });
     }
   );
+
+  // ==================== ADMIN USER CREATION ====================
+
+  /**
+   * Create a new user
+   * POST /api/v1/admin/users
+   */
+  createUser = asyncHandler(async (req: Request, res: Response) => {
+    const adminId = req.user.id;
+    const {
+      firstName,
+      lastName,
+      email,
+      phoneNumber,
+      password,
+      role,
+      status,
+      emailVerified,
+      phoneVerified,
+    } = req.body;
+
+    const user = await adminService.createUser({
+      firstName,
+      lastName,
+      email,
+      phoneNumber,
+      password,
+      role,
+      status,
+      emailVerified,
+      phoneVerified,
+      adminId,
+    });
+
+    logger.info('User created via admin API', {
+      userId: user.id,
+      role,
+      adminId,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Utilisateur créé avec succès',
+      data: { user },
+    });
+  });
+
+  /**
+   * Force verify a user (bypass OTP)
+   * PATCH /api/v1/admin/users/:id/verify
+   */
+  forceVerifyUser = asyncHandler(
+    async (req: Request<{ id: string }>, res: Response) => {
+      const { id } = req.params;
+      const adminId = req.user.id;
+      const { verifyEmail, verifyPhone, verifyKyc, activateUser } = req.body;
+
+      const user = await adminService.forceVerifyUser(
+        id,
+        { verifyEmail, verifyPhone, verifyKyc, activateUser },
+        adminId
+      );
+
+      logger.info('User force-verified via admin API', {
+        userId: id,
+        verifications: { verifyEmail, verifyPhone, verifyKyc, activateUser },
+        adminId,
+      });
+
+      res.json({
+        success: true,
+        message: 'Utilisateur vérifié avec succès',
+        data: { user },
+      });
+    }
+  );
+
+  // ==================== KYC MANAGEMENT ====================
+
+  /**
+   * Get suppliers pending KYC verification
+   * GET /api/v1/admin/suppliers/kyc/pending
+   */
+  getPendingKyc = asyncHandler(async (req: Request, res: Response) => {
+    const { page, limit } = req.query as { page?: string; limit?: string };
+
+    const result = await adminService.getSuppliersWithPendingKyc({
+      page: Number(page) || 1,
+      limit: Number(limit) || 20,
+    });
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  });
+
+  /**
+   * Verify supplier KYC documents
+   * POST /api/v1/admin/suppliers/:id/kyc/verify
+   */
+  verifySupplierKyc = asyncHandler(
+    async (req: Request<{ id: string }>, res: Response) => {
+      const { id } = req.params;
+      const adminId = req.user.id;
+
+      const supplier = await adminService.verifySupplierKyc(id, adminId);
+
+      logger.info('Supplier KYC verified via admin API', {
+        supplierId: id,
+        adminId,
+      });
+
+      res.json({
+        success: true,
+        message: 'KYC vérifié avec succès',
+        data: { supplier },
+      });
+    }
+  );
+
+  /**
+   * Reject supplier KYC documents
+   * POST /api/v1/admin/suppliers/:id/kyc/reject
+   */
+  rejectSupplierKyc = asyncHandler(
+    async (req: Request<{ id: string }>, res: Response) => {
+      const { id } = req.params;
+      const adminId = req.user.id;
+      const { reason } = req.body;
+
+      const supplier = await adminService.rejectSupplierKyc(id, reason, adminId);
+
+      logger.info('Supplier KYC rejected via admin API', {
+        supplierId: id,
+        reason,
+        adminId,
+      });
+
+      res.json({
+        success: true,
+        message: 'KYC rejeté',
+        data: { supplier },
+      });
+    }
+  );
 }
 
 export default new AdminController();

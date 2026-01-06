@@ -287,6 +287,9 @@ model User {
   deviceTokens           DeviceToken[]
   notificationPreference NotificationPreference?
 
+  // Admin: Settings audit logs
+  settingsAuditLogs      PlatformSettingsAudit[] @relation("SettingsAudit")
+
   // Timestamps
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -328,6 +331,18 @@ model SupplierProfile {
   rccm           String? // Registry number
   niu            String? // Tax ID
   legalDocuments Json?   // Array of document URLs
+
+  // Pièce d'identité (KYC)
+  idCardFront    String? // URL de la pièce d'identité recto
+  idCardBack     String? // URL de la pièce d'identité verso
+  selfiePhoto    String? // URL du selfie pour vérification faciale
+  idCardType     String? // CNI, PASSPORT, DRIVING_LICENSE
+  idCardNumber   String? // Numéro de la pièce d'identité
+  idCardExpiry   DateTime? // Date d'expiration
+  kycStatus      String  @default("PENDING") // PENDING, SUBMITTED, VERIFIED, REJECTED
+  kycSubmittedAt DateTime?
+  kycVerifiedAt  DateTime?
+  kycRejectionReason String?
 
   // Siège social / Adresse principale (si pas de magasins)
   address        String?
@@ -1256,6 +1271,84 @@ model DealBooking {
   @@index([bookingDate])
   @@index([validationCode])
   @@map("deal_bookings")
+}
+
+// ==================== PLATFORM SETTINGS ====================
+
+// Paramètres de la plateforme modifiables par l'admin
+model PlatformSettings {
+  id        String   @id @default("default") // Single row with ID "default"
+
+  // ===== BUSINESS SETTINGS =====
+  // Commission
+  defaultCommissionRate   Float   @default(0.10)  // 10%
+  premiumCommissionRate   Float   @default(0.05)  // 5%
+
+  // Delivery
+  defaultDeliveryFee      Float   @default(1000)  // FCFA
+  deliveryFeePerKm        Float   @default(200)   // FCFA/km
+  maxDeliveryDistance     Float   @default(20)    // km
+
+  // ===== PAYMENT FEES =====
+  wavePaymentFeeRate      Float   @default(0.01)  // 1% - payé par le client
+  waveTransferFeeRate     Float   @default(0.01)  // 1% - déduit du fournisseur
+
+  // ===== FEATURE FLAGS =====
+  graphqlEnabled          Boolean @default(false)
+  websocketEnabled        Boolean @default(true)
+  analyticsEnabled        Boolean @default(false)
+  notificationsEnabled    Boolean @default(true)
+
+  // ===== RATE LIMITING =====
+  rateLimitWindowMs       Int     @default(900000)  // 15 minutes
+  rateLimitMaxRequests    Int     @default(100)
+  authRateLimitMaxRequests Int    @default(5)
+
+  // ===== SECURITY =====
+  bcryptRounds            Int     @default(12)
+  otpExpiration           Int     @default(600000)  // 10 minutes in ms
+  otpLength               Int     @default(6)
+
+  // ===== CACHE TTL (seconds) =====
+  cacheTtlShort           Int     @default(300)     // 5 min
+  cacheTtlMedium          Int     @default(1800)    // 30 min
+  cacheTtlLong            Int     @default(86400)   // 24h
+
+  // ===== PAGINATION =====
+  defaultPageSize         Int     @default(20)
+  maxPageSize             Int     @default(100)
+
+  // ===== UPLOAD LIMITS =====
+  maxFileSize             Int     @default(10485760) // 10MB
+
+  // ===== METADATA =====
+  updatedById             String? // ID de l'admin qui a fait la dernière mise à jour
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("platform_settings")
+}
+
+// Historique des modifications des paramètres
+model PlatformSettingsAudit {
+  id          String   @id @default(uuid())
+
+  settingKey  String   // Nom du paramètre modifié
+  oldValue    String?  // Ancienne valeur (JSON string)
+  newValue    String   // Nouvelle valeur (JSON string)
+
+  changedById String
+  changedBy   User     @relation("SettingsAudit", fields: [changedById], references: [id])
+
+  reason      String?  // Raison du changement (optionnel)
+
+  createdAt   DateTime @default(now())
+
+  @@index([settingKey])
+  @@index([changedById])
+  @@index([createdAt])
+  @@map("platform_settings_audit")
 }
 
 // Add latitude/longitude to Product for geolocation search

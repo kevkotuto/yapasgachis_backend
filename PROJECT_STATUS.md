@@ -1600,6 +1600,117 @@ npm run start:prod       # Démarrer en production
 
 ---
 
+---
+
+## 🚧 PHASE 11 : AMÉLIORATIONS ADMIN & KYC (En cours)
+
+### Fonctionnalités Implémentées
+
+#### Paramètres de Plateforme (PlatformSettings)
+- ✅ Modèle PlatformSettings dans Prisma (single-row)
+- ✅ Audit trail des modifications (PlatformSettingsAudit)
+- ⏳ Service PlatformSettingsService
+- ⏳ Routes admin pour modifier les paramètres
+- ⏳ Mise à jour order.service.ts pour utiliser les settings DB
+
+**Paramètres configurables :**
+- Commission : defaultCommissionRate, premiumCommissionRate
+- Livraison : defaultDeliveryFee, deliveryFeePerKm, maxDeliveryDistance
+- Frais Wave : wavePaymentFeeRate (1%), waveTransferFeeRate (1%)
+- Features : graphqlEnabled, websocketEnabled, analyticsEnabled, notificationsEnabled
+- Rate Limiting : rateLimitWindowMs, rateLimitMaxRequests, authRateLimitMaxRequests
+- Sécurité : bcryptRounds, otpExpiration, otpLength
+- Cache TTL : cacheTtlShort, cacheTtlMedium, cacheTtlLong
+- Pagination : defaultPageSize, maxPageSize
+- Upload : maxFileSize
+
+#### Frais de Paiement Wave
+- ✅ wavePaymentFee (1%) - payé par le client
+- ✅ waveTransferFee (1%) - déduit du fournisseur
+- ✅ Calcul intégré dans order.service.ts
+- ✅ Champs ajoutés dans Order et EscrowTransaction
+
+#### KYC Fournisseurs (Pièce d'identité)
+- ✅ Champs ajoutés dans SupplierProfile :
+  - `idCardFront` : URL recto de la pièce d'identité
+  - `idCardBack` : URL verso de la pièce d'identité
+  - `selfiePhoto` : URL du selfie pour vérification faciale
+  - `idCardType` : Type de document (CNI, PASSPORT, DRIVING_LICENSE)
+  - `idCardNumber` : Numéro de la pièce
+  - `idCardExpiry` : Date d'expiration
+  - `kycStatus` : PENDING, SUBMITTED, VERIFIED, REJECTED
+  - `kycSubmittedAt`, `kycVerifiedAt`, `kycRejectionReason`
+- ⏳ Routes pour upload des documents KYC
+- ⏳ Routes admin pour vérifier/rejeter le KYC
+
+#### Gestion Admin des Utilisateurs
+- ⏳ Route admin pour créer des utilisateurs directement
+- ⏳ Route admin pour valider un utilisateur (bypass OTP)
+- ⏳ Route admin pour forcer la vérification email/phone
+
+### Tâches Phase 11
+
+- [x] **Modèles Prisma**
+  - [x] PlatformSettings (paramètres plateforme)
+  - [x] PlatformSettingsAudit (historique modifications)
+  - [x] Champs KYC sur SupplierProfile
+  - [x] Champs frais Wave sur Order et EscrowTransaction
+
+- [ ] **Services**
+  - [ ] PlatformSettingsService (CRUD + cache)
+  - [ ] KYCService (upload, vérification)
+
+- [ ] **Routes Admin**
+  - [ ] GET/PATCH /api/v1/admin/settings
+  - [ ] GET /api/v1/admin/settings/audit
+  - [ ] POST /api/v1/admin/users (créer utilisateur)
+  - [ ] PATCH /api/v1/admin/users/:id/verify (valider sans OTP)
+  - [ ] POST /api/v1/admin/suppliers/:id/kyc/verify
+  - [ ] POST /api/v1/admin/suppliers/:id/kyc/reject
+
+- [ ] **Mise à jour Services**
+  - [ ] order.service.ts → utiliser settings DB
+  - [ ] escrow.service.ts → utiliser settings DB
+
+---
+
+## 🔮 PHASE 12 : VÉRIFICATION IA (Future)
+
+### Fonctionnalités Prévues
+
+#### Vérification Automatique KYC par IA
+- [ ] **OCR sur pièce d'identité**
+  - Extraction automatique des informations (nom, prénom, date de naissance)
+  - Vérification de la validité du document (date d'expiration)
+  - Détection des documents falsifiés
+
+- [ ] **Reconnaissance faciale**
+  - Comparaison selfie vs photo de la pièce d'identité
+  - Score de correspondance (0-100%)
+  - Détection de liveness (anti-spoofing)
+
+- [ ] **Workflow automatisé**
+  1. Fournisseur upload pièce d'identité (recto/verso) + selfie
+  2. IA extrait les informations et vérifie le document
+  3. IA compare le visage du selfie avec la photo ID
+  4. Si score > 80% → Vérification automatique
+  5. Si score 50-80% → Review manuel par admin
+  6. Si score < 50% → Rejet automatique
+
+#### Technologies Envisagées
+- **AWS Rekognition** : Reconnaissance faciale + comparaison
+- **AWS Textract** : OCR pour extraction de texte
+- **Google Cloud Vision** : Alternative à AWS
+- **Veriff / Onfido** : Solutions SaaS spécialisées KYC
+
+#### Intégration Prévue
+- Service `src/core/services/kyc-ai.service.ts`
+- Queue BullMQ pour traitement asynchrone
+- Webhook pour notification du résultat
+- Dashboard admin pour review manuel
+
+---
+
 **Créé avec ❤️ pour l'Afrique** 🌍
 
 **YapaGachis - Ensemble contre le gaspillage alimentaire**

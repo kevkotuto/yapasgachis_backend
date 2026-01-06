@@ -18,6 +18,10 @@ import {
   bulkApproveProductsSchema,
   bulkVerifySuppliersSchema,
   paginationSchema,
+  createUserSchema,
+  forceVerifyUserSchema,
+  rejectKycSchema,
+  getPendingKycSchema,
 } from '@/api/v1/validators/admin.validator';
 import {
   dateRangeSchema,
@@ -41,6 +45,7 @@ router.get('/dashboard/impact', adminController.getImpactMetrics);
 // ==================== USER MANAGEMENT ====================
 
 router.get('/users', validate(getUsersSchema), adminController.getUsers);
+router.post('/users', validate(createUserSchema), adminController.createUser);
 router.get('/users/:id', validate(userIdSchema), adminController.getUserById);
 router.patch(
   '/users/:id/status',
@@ -51,6 +56,11 @@ router.patch(
   '/users/:id/role',
   validate(updateUserRoleSchema),
   adminController.updateUserRole
+);
+router.patch(
+  '/users/:id/verify',
+  validate(forceVerifyUserSchema),
+  adminController.forceVerifyUser
 );
 router.delete('/users/:id', validate(userIdSchema), adminController.deleteUser);
 
@@ -85,6 +95,24 @@ router.post(
   '/suppliers/bulk-verify',
   validate(bulkVerifySuppliersSchema),
   adminController.bulkVerifySuppliers
+);
+
+// ==================== KYC MANAGEMENT ====================
+
+router.get(
+  '/suppliers/kyc/pending',
+  validate(getPendingKycSchema),
+  adminController.getPendingKyc
+);
+router.post(
+  '/suppliers/:id/kyc/verify',
+  validate(supplierIdSchema),
+  adminController.verifySupplierKyc
+);
+router.post(
+  '/suppliers/:id/kyc/reject',
+  validate(rejectKycSchema),
+  adminController.rejectSupplierKyc
 );
 
 // ==================== PRODUCT MODERATION ====================

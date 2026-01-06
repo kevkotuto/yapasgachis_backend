@@ -782,6 +782,288 @@ export class AdminService {
 
     return { count: result.count };
   }
+
+  // ==================== ADMIN USER CREATION ====================
+
+  /**
+   * Create a new user (admin only)
+   * Allows creating users with any role and bypassing OTP verification
+   */
+  async createUser(params: {
+    firstName: string;
+    lastName?: string;
+    email?: string;
+    phoneNumber?: string;
+    password?: string;
+    role: UserRole;
+    status?: UserStatus;
+    emailVerified?: boolean;
+    phoneVerified?: boolean;
+    adminId: string;
+  }) {
+    const {
+      firstName,
+      lastName,
+      email,
+      phoneNumber,
+      password,
+      role,
+      status = UserStatus.ACTIVE,
+      emailVerified = true,
+      phoneVerified = true,
+      adminId,
+    } = params;
+
+    // Check if email or phone already exists
+    if (email) {
+      const existingEmail = await prisma.user.findUnique({ where: { email } });
+      if (existingEmail) {
+        throw new AppError(400, 'Un utilisateur avec cet email existe déjà');
+      }
+    }
+
+    if (phoneNumber) {
+      const existingPhone = await prisma.user.findUnique({ where: { phoneNumber } });
+      if (existingPhone) {
+        throw new AppError(400, 'Un utilisateur avec ce numéro existe déjà');
+      }
+    }
+
+    // Hash password if provided
+    let passwordHash: string | undefined;
+    if (password) {
+      const bcrypt = await import('bcrypt');
+      passwordHash = await bcrypt.hash(password, 12);
+    }
+
+    const user = await prisma.user.create({
+      data: {
+        firstName,
+        lastName,
+        email,
+        phoneNumber,
+        passwordHash,
+        role,
+        status,
+        emailVerified,
+        phoneVerified,
+        kycVerified: role === UserRole.CLIENT,
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phoneNumber: true,
+        role: true,
+        status: true,
+        emailVerified: true,
+        phoneVerified: true,
+        createdAt: true,
+      },
+    });
+
+    logger.info('User created by admin', {
+      userId: user.id,
+      role,
+      adminId,
+    });
+
+    return user;
+  }
+
+  /**
+   * Force verify a user (bypass OTP)
+   */
+  async forceVerifyUser(
+    userId: string,
+    options: {
+      verifyEmail?: boolean;
+      verifyPhone?: boolean;
+      verifyKyc?: boolean;
+      activateUser?: boolean;
+    },
+    adminId: string
+  ) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new AppError(404, 'Utilisateur non trouvé');
+    }
+
+    const updates: any = {};
+    if (options.verifyEmail) updates.emailVerified = true;
+    if (options.verifyPhone) updates.phoneVerified = true;
+    if (options.verifyKyc) updates.kycVerified = true;
+    if (options.activateUser) updates.status = UserStatus.ACTIVE;
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: updates,
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phoneNumber: true,
+        role: true,
+        status: true,
+        emailVerified: true,
+        phoneVerified: true,
+        kycVerified: true,
+        updatedAt: true,
+      },
+    });
+
+    logger.info('User verified by admin', {
+      userId,
+      verifications: options,
+      adminId,
+    });
+
+    return updatedUser;
+  }
+
+  // ==================== KYC MANAGEMENT ====================
+
+  /**
+   * Verify supplier KYC documents
+   */
+  async verifySupplierKyc(supplierId: string, adminId: string) {
+    const supplier = await prisma.supplierProfile.findUnique({
+      where: { id: supplierId },
+      include: { user: true },
+    });
+
+    if (!supplier) {
+      throw new AppError(404, 'Fournisseur non trouvé');
+    }
+
+    if (supplier.kycStatus === 'VERIFIED') {
+      throw new AppError(400, 'Le KYC est déjà vérifié');
+    }
+
+    const updated = await prisma.supplierProfile.update({
+      where: { id: supplierId },
+      data: {
+        kycStatus: 'VERIFIED',
+        kycVerifiedAt: new Date(),
+        kycRejectionReason: null,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    // Also verify the user's KYC flag
+    await prisma.user.update({
+      where: { id: supplier.userId },
+      data: { kycVerified: true },
+    });
+
+    logger.info('Supplier KYC verified by admin', {
+      supplierId,
+      userId: supplier.userId,
+      adminId,
+    });
+
+    return updated;
+  }
+
+  /**
+   * Reject supplier KYC documents
+   */
+  async rejectSupplierKyc(
+    supplierId: string,
+    reason: string,
+    adminId: string
+  ) {
+    const supplier = await prisma.supplierProfile.findUnique({
+      where: { id: supplierId },
+    });
+
+    if (!supplier) {
+      throw new AppError(404, 'Fournisseur non trouvé');
+    }
+
+    const updated = await prisma.supplierProfile.update({
+      where: { id: supplierId },
+      data: {
+        kycStatus: 'REJECTED',
+        kycRejectionReason: reason,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    logger.info('Supplier KYC rejected by admin', {
+      supplierId,
+      reason,
+      adminId,
+    });
+
+    return updated;
+  }
+
+  /**
+   * Get suppliers pending KYC verification
+   */
+  async getSuppliersWithPendingKyc(options: {
+    page?: number;
+    limit?: number;
+  }) {
+    const { page = 1, limit = 20 } = options;
+    const skip = (page - 1) * limit;
+
+    const where = {
+      kycStatus: 'SUBMITTED',
+    };
+
+    const [suppliers, total] = await Promise.all([
+      prisma.supplierProfile.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phoneNumber: true,
+            },
+          },
+        },
+        skip,
+        take: limit,
+        orderBy: { kycSubmittedAt: 'asc' },
+      }),
+      prisma.supplierProfile.count({ where }),
+    ]);
+
+    return {
+      suppliers,
+      total,
+      pagination: {
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
 }
 
 export default new AdminService();

@@ -8,6 +8,7 @@ import {
 import config from '@/config';
 import escrowService from '@/core/services/escrow.service';
 import eventService, { AppEvent } from '@/core/services/event.service';
+import platformSettingsService from '@/core/services/platform-settings.service';
 import { prisma } from '@/infrastructure/database/prisma';
 import logger from '@/infrastructure/monitoring/logger';
 import { AppError } from '@/middleware/error-handler.middleware';
@@ -167,28 +168,35 @@ export class OrderService {
         (sum, item) => sum + item.totalPrice,
         0
       );
+
+      // Récupérer les paramètres depuis la base de données (ou fallback config)
+      const [businessSettings, waveSettings] = await Promise.all([
+        platformSettingsService.getBusinessSettings(),
+        platformSettingsService.getWaveSettings(),
+      ]);
+
       const deliveryFee =
         params.deliveryMethod === 'DELIVERY'
-          ? config.business.defaultDeliveryFee
+          ? businessSettings.defaultDeliveryFee
           : 0;
 
-      // Commission basée sur le tier du fournisseur
+      // Commission basée sur le tier du fournisseur (ou défaut de la plateforme)
       const commissionRate =
-        supplier.commissionRate || config.business.defaultCommissionRate / 100;
+        supplier.commissionRate || businessSettings.defaultCommissionRate;
       const commission = Math.round(subtotal * commissionRate);
 
       // Frais Wave (uniquement pour paiement Wave)
       const isWavePayment = params.paymentMethod === 'WAVE';
       const baseAmount = subtotal + deliveryFee;
 
-      // Frais de paiement Wave (1%) - payé par le client
+      // Frais de paiement Wave - payé par le client
       const wavePaymentFee = isWavePayment
-        ? Math.round(baseAmount * config.payment.wave.paymentFeeRate)
+        ? Math.round(baseAmount * waveSettings.wavePaymentFeeRate)
         : 0;
 
-      // Frais de transfert Wave (1%) - déduit du montant fournisseur
+      // Frais de transfert Wave - déduit du montant fournisseur
       const waveTransferFee = isWavePayment
-        ? Math.round((baseAmount - commission) * config.payment.wave.transferFeeRate)
+        ? Math.round((baseAmount - commission) * waveSettings.waveTransferFeeRate)
         : 0;
 
       // Total payé par le client (inclut les frais de paiement Wave)

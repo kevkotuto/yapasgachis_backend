@@ -8,6 +8,7 @@ import adminDealRoutes from '@/api/v1/routes/admin-deal.routes';
 import adminDonationRoutes from '@/api/v1/routes/admin-donation.routes';
 import adminSubscriptionRoutes from '@/api/v1/routes/admin-subscription.routes';
 import adminRoutes from '@/api/v1/routes/admin.routes';
+import adminSettingsRoutes from '@/api/v1/routes/admin-settings.routes';
 import advertisingRoutes from '@/api/v1/routes/advertising.routes';
 import associationDonationRoutes from '@/api/v1/routes/association-donation.routes';
 import associationRoutes from '@/api/v1/routes/association.routes';
@@ -154,6 +155,9 @@ app.use(`/api/${config.app.apiVersion}/notifications`, notificationRoutes);
 // Phase 7: Administration & Analytics
 app.use(`/api/${config.app.apiVersion}/admin`, adminRoutes);
 app.use(`/api/${config.app.apiVersion}/reviews`, reviewRoutes);
+
+// Phase 11: Platform Settings
+app.use(`/api/${config.app.apiVersion}/admin/settings`, adminSettingsRoutes);
 
 // Phase 8: Advertising
 app.use(`/api/${config.app.apiVersion}/advertising`, advertisingRoutes);
