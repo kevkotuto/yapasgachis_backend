@@ -5,6 +5,7 @@ import JWTService from './jwt.service';
 import OTPService, { OTPPurpose } from './otp.service';
 
 import UserRepository from '@/core/repositories/user.repository';
+import emailService from '@/infrastructure/messaging/email/email.service';
 import SMSService from '@/infrastructure/messaging/sms/sms.service';
 import logger from '@/infrastructure/monitoring/logger';
 import { AppError } from '@/middleware/error-handler.middleware';
@@ -13,7 +14,7 @@ import { hashPassword, comparePassword } from '@/utils/crypto.utils';
 import { formatPhoneNumber } from '@/utils/helpers';
 
 interface RegisterDTO {
-  phoneNumber: string;
+  phoneNumber?: string;
   email?: string;
   firstName: string;
   lastName?: string;
@@ -28,6 +29,17 @@ interface RegisterDTO {
 interface LoginDTO {
   phoneNumber: string;
   password: string;
+}
+
+interface LoginEmailDTO {
+  email: string;
+  password: string;
+}
+
+interface VerifyEmailOTPDTO {
+  email: string;
+  code: string;
+  purpose: OTPPurpose;
 }
 
 interface VerifyOTPDTO {
@@ -129,7 +141,7 @@ export class AuthService {
   }
 
   /**
-   * Login user
+   * Login user with phone number (NO OTP required - direct login)
    */
   async login(data: LoginDTO): Promise<{
     user: Partial<User>;
@@ -165,19 +177,72 @@ export class AuthService {
       );
     }
 
-    // Check if phone is verified
-    if (!user.phoneVerified) {
-      // Resend OTP
-      const otpCode = await OTPService.generateOTP(
-        phoneNumber,
-        OTPPurpose.PHONE_VERIFICATION
-      );
-      await SMSService.sendOTP(phoneNumber, otpCode);
-
+    // Check user status
+    if (user.status === 'SUSPENDED') {
       throw new AppError(
         APP_CONSTANTS.HTTP_STATUS.FORBIDDEN,
-        'Veuillez vérifier votre numéro de téléphone. Un nouveau code vous a été envoyé.',
-        'PHONE_NOT_VERIFIED'
+        'Votre compte a été suspendu. Veuillez contacter le support.',
+        'ACCOUNT_SUSPENDED'
+      );
+    }
+
+    if (user.status === 'DEACTIVATED') {
+      throw new AppError(
+        APP_CONSTANTS.HTTP_STATUS.FORBIDDEN,
+        'Votre compte a été désactivé.',
+        'ACCOUNT_DEACTIVATED'
+      );
+    }
+
+    // Auto-verify phone if not verified (since we're allowing direct login)
+    if (!user.phoneVerified) {
+      await this.userRepository.verifyPhoneNumber(user.id);
+    }
+
+    // Generate tokens
+    const tokens = await JWTService.generateTokenPair(user.id, user.role);
+
+    logger.info('User logged in via phone', { userId: user.id, phoneNumber });
+
+    // Return user without sensitive data
+    const { passwordHash: _, ...userWithoutPassword } = user;
+
+    return {
+      user: userWithoutPassword,
+      tokens,
+    };
+  }
+
+  /**
+   * Login user with email (OTP required)
+   * Step 1: Verify credentials and send OTP
+   */
+  async loginWithEmail(data: LoginEmailDTO): Promise<{
+    message: string;
+    requiresOTP: boolean;
+  }> {
+    const email = data.email.toLowerCase().trim();
+
+    // Find user
+    const user = await this.userRepository.findByEmail(email);
+    if (!user) {
+      throw new AppError(
+        APP_CONSTANTS.HTTP_STATUS.UNAUTHORIZED,
+        'Identifiants invalides',
+        APP_CONSTANTS.ERROR_CODES.INVALID_CREDENTIALS
+      );
+    }
+
+    // Check password
+    const isPasswordValid = await comparePassword(
+      data.password,
+      user.passwordHash
+    );
+    if (!isPasswordValid) {
+      throw new AppError(
+        APP_CONSTANTS.HTTP_STATUS.UNAUTHORIZED,
+        'Identifiants invalides',
+        APP_CONSTANTS.ERROR_CODES.INVALID_CREDENTIALS
       );
     }
 
@@ -198,10 +263,63 @@ export class AuthService {
       );
     }
 
+    // Generate and send OTP via email
+    const otpCode = await OTPService.generateEmailOTP(email, OTPPurpose.LOGIN);
+    await emailService.sendOTPEmail({
+      to: email,
+      firstName: user.firstName,
+      code: otpCode,
+      purpose: 'login',
+    });
+
+    logger.info('Login OTP sent via email', { userId: user.id, email });
+
+    return {
+      message: 'Un code de vérification a été envoyé à votre adresse email',
+      requiresOTP: true,
+    };
+  }
+
+  /**
+   * Verify email OTP and complete login
+   */
+  async verifyEmailOTP(data: VerifyEmailOTPDTO): Promise<{
+    user: Partial<User>;
+    tokens: {
+      accessToken: string;
+      refreshToken: string;
+      expiresIn: number;
+    };
+  }> {
+    const email = data.email.toLowerCase().trim();
+
+    // Verify OTP
+    await OTPService.verifyEmailOTP(email, data.code, data.purpose);
+
+    // Find user
+    const user = await this.userRepository.findByEmail(email);
+    if (!user) {
+      throw new AppError(
+        APP_CONSTANTS.HTTP_STATUS.NOT_FOUND,
+        'Utilisateur non trouvé',
+        APP_CONSTANTS.ERROR_CODES.NOT_FOUND
+      );
+    }
+
+    // Mark email as verified if not already
+    if (!user.emailVerified) {
+      await this.userRepository.update(user.id, { emailVerified: true });
+    }
+
+    // Ensure user is active
+    if (user.status === UserStatus.PENDING_VERIFICATION) {
+      await this.userRepository.update(user.id, { status: UserStatus.ACTIVE });
+    }
+
     // Generate tokens
     const tokens = await JWTService.generateTokenPair(user.id, user.role);
 
-    logger.info('User logged in', { userId: user.id, phoneNumber });
+    logger.info('User logged in via email OTP', { userId: user.id, email });
 
     // Return user without sensitive data
     const { passwordHash: _, ...userWithoutPassword } = user;
@@ -209,6 +327,41 @@ export class AuthService {
     return {
       user: userWithoutPassword,
       tokens,
+    };
+  }
+
+  /**
+   * Resend email OTP
+   */
+  async resendEmailOTP(
+    email: string,
+    purpose: OTPPurpose
+  ): Promise<{ message: string }> {
+    const formattedEmail = email.toLowerCase().trim();
+
+    // Check if user exists
+    const user = await this.userRepository.findByEmail(formattedEmail);
+    if (!user) {
+      throw new AppError(
+        APP_CONSTANTS.HTTP_STATUS.NOT_FOUND,
+        'Utilisateur non trouvé',
+        APP_CONSTANTS.ERROR_CODES.NOT_FOUND
+      );
+    }
+
+    // Generate and send new OTP
+    const otpCode = await OTPService.generateEmailOTP(formattedEmail, purpose);
+    await emailService.sendOTPEmail({
+      to: formattedEmail,
+      firstName: user.firstName,
+      code: otpCode,
+      purpose: purpose === OTPPurpose.LOGIN ? 'login' : 'verification',
+    });
+
+    logger.info('Email OTP resent', { email: formattedEmail, purpose });
+
+    return {
+      message: 'Un nouveau code OTP vous a été envoyé par email',
     };
   }
 

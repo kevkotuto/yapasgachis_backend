@@ -400,6 +400,82 @@ class EmailService {
   }
 
   /**
+   * Send OTP code via email (for login/registration)
+   */
+  async sendOTPEmail(params: {
+    to: string;
+    firstName: string;
+    code: string;
+    purpose: 'login' | 'registration' | 'verification';
+  }): Promise<boolean> {
+    const purposeTexts = {
+      login: {
+        title: 'Code de connexion',
+        message: 'Voici votre code de connexion:',
+      },
+      registration: {
+        title: "Code de vérification d'inscription",
+        message: 'Bienvenue! Voici votre code de vérification:',
+      },
+      verification: {
+        title: 'Code de vérification',
+        message: 'Voici votre code de vérification:',
+      },
+    };
+
+    const texts = purposeTexts[params.purpose];
+
+    const htmlBody = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>${texts.title}</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #4CAF50, #2E7D32); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0;">${texts.title}</h1>
+        </div>
+
+        <div style="background: white; padding: 30px; border: 1px solid #ddd; border-top: none;">
+          <h2 style="color: #333;">Bonjour ${params.firstName},</h2>
+
+          <p style="color: #555; line-height: 1.8;">
+            ${texts.message}
+          </p>
+
+          <div style="background: #f5f5f5; padding: 20px; border-radius: 10px; text-align: center; margin: 20px 0;">
+            <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #4CAF50;">
+              ${params.code}
+            </span>
+          </div>
+
+          <p style="color: #555; line-height: 1.8;">
+            Ce code expire dans 10 minutes.
+          </p>
+
+          <p style="color: #999; font-size: 14px;">
+            Si vous n'avez pas demande ce code, ignorez cet email.
+          </p>
+
+          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+
+          <p style="color: #999; font-size: 12px; text-align: center;">
+            YapaGachis - Ensemble contre le gaspillage alimentaire
+          </p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return this.send({
+      to: params.to,
+      subject: `${texts.title} - YapaGachis`,
+      body: htmlBody,
+    });
+  }
+
+  /**
    * Send password reset email
    */
   async sendPasswordResetEmail(params: {

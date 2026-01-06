@@ -4,8 +4,11 @@ import authController from '../controllers/auth.controller';
 import {
   registerSchema,
   loginSchema,
+  loginEmailSchema,
   verifyOTPSchema,
+  verifyEmailOTPSchema,
   resendOTPSchema,
+  resendEmailOTPSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
   changePasswordSchema,
@@ -63,7 +66,8 @@ router.post(
  * @swagger
  * /auth/login:
  *   post:
- *     summary: Connexion utilisateur
+ *     summary: Connexion par téléphone (sans OTP)
+ *     description: Connexion directe avec numéro de téléphone et mot de passe. Pas d'OTP requis.
  *     tags: [Auth]
  *     security: []
  *     requestBody:
@@ -82,15 +86,16 @@ router.post(
  *       401:
  *         description: Identifiants invalides
  *       403:
- *         description: Compte non vérifié ou suspendu
+ *         description: Compte suspendu ou désactivé
  */
 router.post('/login', authLimiter, validate(loginSchema), authController.login);
 
 /**
  * @swagger
- * /auth/verify-otp:
+ * /auth/login/email:
  *   post:
- *     summary: Vérifier le code OTP
+ *     summary: Connexion par email (OTP requis - Étape 1)
+ *     description: Vérifie les identifiants et envoie un OTP par email. Utilisez /verify-email-otp pour compléter la connexion.
  *     tags: [Auth]
  *     security: []
  *     requestBody:
@@ -99,10 +104,54 @@ router.post('/login', authLimiter, validate(loginSchema), authController.login);
  *         application/json:
  *           schema:
  *             type: object
- *             required: [phone, code]
+ *             required: [email, password]
  *             properties:
- *               phone: { type: string, example: '+221771234567' }
+ *               email: { type: string, format: email, example: 'user@example.com' }
+ *               password: { type: string, example: 'MonMotDePasse123!' }
+ *     responses:
+ *       200:
+ *         description: OTP envoyé par email
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 message: { type: string, example: 'Un code de vérification a été envoyé à votre adresse email' }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     requiresOTP: { type: boolean, example: true }
+ *       401:
+ *         description: Identifiants invalides
+ *       403:
+ *         description: Compte suspendu ou désactivé
+ */
+router.post(
+  '/login/email',
+  authLimiter,
+  validate(loginEmailSchema),
+  authController.loginEmail
+);
+
+/**
+ * @swagger
+ * /auth/verify-otp:
+ *   post:
+ *     summary: Vérifier le code OTP (téléphone)
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [phoneNumber, code, purpose]
+ *             properties:
+ *               phoneNumber: { type: string, example: '+221771234567' }
  *               code: { type: string, example: '123456' }
+ *               purpose: { type: string, enum: [registration, login, password_reset, phone_verification] }
  *     responses:
  *       200:
  *         description: OTP vérifié avec succès
@@ -122,9 +171,10 @@ router.post(
 
 /**
  * @swagger
- * /auth/resend-otp:
+ * /auth/verify-email-otp:
  *   post:
- *     summary: Renvoyer le code OTP
+ *     summary: Vérifier le code OTP email (Étape 2)
+ *     description: Complète la connexion par email après vérification de l'OTP
  *     tags: [Auth]
  *     security: []
  *     requestBody:
@@ -133,9 +183,45 @@ router.post(
  *         application/json:
  *           schema:
  *             type: object
- *             required: [phone]
+ *             required: [email, code, purpose]
  *             properties:
- *               phone: { type: string, example: '+221771234567' }
+ *               email: { type: string, format: email, example: 'user@example.com' }
+ *               code: { type: string, example: '123456' }
+ *               purpose: { type: string, enum: [login, registration, email_verification], example: 'login' }
+ *     responses:
+ *       200:
+ *         description: Connexion réussie
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/LoginResponse'
+ *       400:
+ *         description: Code OTP invalide ou expiré
+ */
+router.post(
+  '/verify-email-otp',
+  authLimiter,
+  validate(verifyEmailOTPSchema),
+  authController.verifyEmailOTP
+);
+
+/**
+ * @swagger
+ * /auth/resend-otp:
+ *   post:
+ *     summary: Renvoyer le code OTP (téléphone)
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [phoneNumber, purpose]
+ *             properties:
+ *               phoneNumber: { type: string, example: '+221771234567' }
+ *               purpose: { type: string, enum: [registration, login, password_reset, phone_verification] }
  *     responses:
  *       200:
  *         description: Nouveau code OTP envoyé
@@ -147,6 +233,36 @@ router.post(
   authLimiter,
   validate(resendOTPSchema),
   authController.resendOTP
+);
+
+/**
+ * @swagger
+ * /auth/resend-email-otp:
+ *   post:
+ *     summary: Renvoyer le code OTP par email
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, purpose]
+ *             properties:
+ *               email: { type: string, format: email, example: 'user@example.com' }
+ *               purpose: { type: string, enum: [login, registration, email_verification] }
+ *     responses:
+ *       200:
+ *         description: Nouveau code OTP envoyé par email
+ *       429:
+ *         description: Trop de tentatives
+ */
+router.post(
+  '/resend-email-otp',
+  authLimiter,
+  validate(resendEmailOTPSchema),
+  authController.resendEmailOTP
 );
 
 /**

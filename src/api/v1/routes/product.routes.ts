@@ -63,17 +63,21 @@ router.get(
   productController.getTrending
 );
 
+// ==================== PROTECTED ROUTES (SUPPLIER ONLY) ====================
+
 /**
- * Get product by ID (public)
- * GET /:id
+ * Get supplier's products
+ * GET /my-products
+ * Requires: Authentication + SUPPLIER role
+ * NOTE: Must be before /:id to avoid route conflict
  */
 router.get(
-  '/:id',
-  validate(getProductByIdSchema),
-  productController.getProduct
+  '/my-products',
+  authMiddleware,
+  supplierOnly,
+  validate(getSupplierProductsSchema),
+  productController.getMyProducts
 );
-
-// ==================== PROTECTED ROUTES (SUPPLIER ONLY) ====================
 
 /**
  * Create product
@@ -86,19 +90,6 @@ router.post(
   supplierOnly,
   validate(createProductSchema),
   productController.createProduct
-);
-
-/**
- * Get supplier's products
- * GET /my-products
- * Requires: Authentication + SUPPLIER role
- */
-router.get(
-  '/my-products',
-  authMiddleware,
-  supplierOnly,
-  validate(getSupplierProductsSchema),
-  productController.getMyProducts
 );
 
 /**
@@ -167,6 +158,19 @@ router.delete(
   supplierOnly,
   validate(deleteImageSchema),
   productController.deleteImage
+);
+
+// ==================== PARAMETERIZED ROUTES (MUST BE LAST) ====================
+
+/**
+ * Get product by ID (public)
+ * GET /:id
+ * NOTE: Must be last to avoid capturing static routes like /search, /trending
+ */
+router.get(
+  '/:id',
+  validate(getProductByIdSchema),
+  productController.getProduct
 );
 
 export default router;

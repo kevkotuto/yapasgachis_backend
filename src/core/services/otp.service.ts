@@ -9,11 +9,18 @@ export enum OTPPurpose {
   LOGIN = 'login',
   PASSWORD_RESET = 'password_reset',
   PHONE_VERIFICATION = 'phone_verification',
+  EMAIL_VERIFICATION = 'email_verification',
+}
+
+export enum OTPChannel {
+  SMS = 'sms',
+  EMAIL = 'email',
 }
 
 interface OTPData {
   code: string;
   purpose: OTPPurpose;
+  channel: OTPChannel;
   attempts: number;
   createdAt: string;
 }
@@ -23,14 +30,35 @@ export class OTPService {
   private static readonly RESEND_COOLDOWN = 60; // seconds
 
   /**
-   * Generate and store OTP
+   * Generate and store OTP for phone (SMS)
    */
   static async generateOTP(
     phoneNumber: string,
     purpose: OTPPurpose
   ): Promise<string> {
+    return this.generateOTPForIdentifier(phoneNumber, purpose, OTPChannel.SMS);
+  }
+
+  /**
+   * Generate and store OTP for email
+   */
+  static async generateEmailOTP(
+    email: string,
+    purpose: OTPPurpose
+  ): Promise<string> {
+    return this.generateOTPForIdentifier(email, purpose, OTPChannel.EMAIL);
+  }
+
+  /**
+   * Generic OTP generation for any identifier (phone or email)
+   */
+  private static async generateOTPForIdentifier(
+    identifier: string,
+    purpose: OTPPurpose,
+    channel: OTPChannel
+  ): Promise<string> {
     // Check resend cooldown
-    const cooldownKey = `${APP_CONSTANTS.CACHE_KEYS.OTP_PREFIX}cooldown:${phoneNumber}`;
+    const cooldownKey = `${APP_CONSTANTS.CACHE_KEYS.OTP_PREFIX}cooldown:${identifier}`;
     const cooldown = await redis.get(cooldownKey);
 
     if (cooldown) {
@@ -44,10 +72,11 @@ export class OTPService {
     const code = generateOTP(config.security.otpLength);
 
     // Store OTP in Redis
-    const otpKey = `${APP_CONSTANTS.CACHE_KEYS.OTP_PREFIX}${phoneNumber}:${purpose}`;
+    const otpKey = `${APP_CONSTANTS.CACHE_KEYS.OTP_PREFIX}${identifier}:${purpose}`;
     const otpData: OTPData = {
       code,
       purpose,
+      channel,
       attempts: 0,
       createdAt: new Date().toISOString(),
     };
@@ -60,7 +89,8 @@ export class OTPService {
     await redis.setex(cooldownKey, this.RESEND_COOLDOWN, '1');
 
     logger.info('OTP generated', {
-      phoneNumber,
+      identifier: channel === OTPChannel.EMAIL ? identifier : identifier.slice(-4),
+      channel,
       purpose,
       expiresIn: `${ttl}s`,
     });
@@ -69,18 +99,40 @@ export class OTPService {
   }
 
   /**
-   * Verify OTP
+   * Verify OTP (for phone - backwards compatible)
    */
   static async verifyOTP(
     phoneNumber: string,
     code: string,
     purpose: OTPPurpose
   ): Promise<boolean> {
-    const otpKey = `${APP_CONSTANTS.CACHE_KEYS.OTP_PREFIX}${phoneNumber}:${purpose}`;
+    return this.verifyOTPForIdentifier(phoneNumber, code, purpose);
+  }
+
+  /**
+   * Verify OTP for email
+   */
+  static async verifyEmailOTP(
+    email: string,
+    code: string,
+    purpose: OTPPurpose
+  ): Promise<boolean> {
+    return this.verifyOTPForIdentifier(email, code, purpose);
+  }
+
+  /**
+   * Generic OTP verification for any identifier
+   */
+  private static async verifyOTPForIdentifier(
+    identifier: string,
+    code: string,
+    purpose: OTPPurpose
+  ): Promise<boolean> {
+    const otpKey = `${APP_CONSTANTS.CACHE_KEYS.OTP_PREFIX}${identifier}:${purpose}`;
     const otpDataStr = await redis.get(otpKey);
 
     if (!otpDataStr) {
-      logger.warn('OTP not found or expired', { phoneNumber, purpose });
+      logger.warn('OTP not found or expired', { identifier, purpose });
       throw new Error('Code OTP invalide ou expiré');
     }
 
@@ -89,7 +141,7 @@ export class OTPService {
     // Check max attempts
     if (otpData.attempts >= this.MAX_ATTEMPTS) {
       await redis.del(otpKey);
-      logger.warn('OTP max attempts exceeded', { phoneNumber, purpose });
+      logger.warn('OTP max attempts exceeded', { identifier, purpose });
       throw new Error(
         'Nombre maximum de tentatives atteint. Demandez un nouveau code'
       );
@@ -103,7 +155,7 @@ export class OTPService {
       await redis.setex(otpKey, ttl, JSON.stringify(otpData));
 
       logger.warn('Invalid OTP attempt', {
-        phoneNumber,
+        identifier,
         purpose,
         attempts: otpData.attempts,
       });
@@ -116,19 +168,39 @@ export class OTPService {
     // OTP is valid, delete it
     await redis.del(otpKey);
 
-    logger.info('OTP verified successfully', { phoneNumber, purpose });
+    logger.info('OTP verified successfully', { identifier, purpose });
 
     return true;
   }
 
   /**
-   * Check if OTP exists
+   * Check if OTP exists (for phone - backwards compatible)
    */
   static async hasActiveOTP(
     phoneNumber: string,
     purpose: OTPPurpose
   ): Promise<boolean> {
-    const otpKey = `${APP_CONSTANTS.CACHE_KEYS.OTP_PREFIX}${phoneNumber}:${purpose}`;
+    return this.hasActiveOTPForIdentifier(phoneNumber, purpose);
+  }
+
+  /**
+   * Check if OTP exists for email
+   */
+  static async hasActiveEmailOTP(
+    email: string,
+    purpose: OTPPurpose
+  ): Promise<boolean> {
+    return this.hasActiveOTPForIdentifier(email, purpose);
+  }
+
+  /**
+   * Generic check for any identifier
+   */
+  private static async hasActiveOTPForIdentifier(
+    identifier: string,
+    purpose: OTPPurpose
+  ): Promise<boolean> {
+    const otpKey = `${APP_CONSTANTS.CACHE_KEYS.OTP_PREFIX}${identifier}:${purpose}`;
     const exists = await redis.exists(otpKey);
     return exists === 1;
   }
@@ -137,10 +209,10 @@ export class OTPService {
    * Get remaining time for OTP
    */
   static async getOTPRemainingTime(
-    phoneNumber: string,
+    identifier: string,
     purpose: OTPPurpose
   ): Promise<number> {
-    const otpKey = `${APP_CONSTANTS.CACHE_KEYS.OTP_PREFIX}${phoneNumber}:${purpose}`;
+    const otpKey = `${APP_CONSTANTS.CACHE_KEYS.OTP_PREFIX}${identifier}:${purpose}`;
     return redis.ttl(otpKey);
   }
 
@@ -148,20 +220,20 @@ export class OTPService {
    * Delete OTP (for cleanup or cancellation)
    */
   static async deleteOTP(
-    phoneNumber: string,
+    identifier: string,
     purpose: OTPPurpose
   ): Promise<void> {
-    const otpKey = `${APP_CONSTANTS.CACHE_KEYS.OTP_PREFIX}${phoneNumber}:${purpose}`;
+    const otpKey = `${APP_CONSTANTS.CACHE_KEYS.OTP_PREFIX}${identifier}:${purpose}`;
     await redis.del(otpKey);
 
-    logger.info('OTP deleted', { phoneNumber, purpose });
+    logger.info('OTP deleted', { identifier, purpose });
   }
 
   /**
    * Check resend cooldown
    */
-  static async canResendOTP(phoneNumber: string): Promise<boolean> {
-    const cooldownKey = `${APP_CONSTANTS.CACHE_KEYS.OTP_PREFIX}cooldown:${phoneNumber}`;
+  static async canResendOTP(identifier: string): Promise<boolean> {
+    const cooldownKey = `${APP_CONSTANTS.CACHE_KEYS.OTP_PREFIX}cooldown:${identifier}`;
     const cooldown = await redis.get(cooldownKey);
     return !cooldown;
   }
@@ -169,8 +241,8 @@ export class OTPService {
   /**
    * Get resend cooldown remaining time
    */
-  static async getResendCooldown(phoneNumber: string): Promise<number> {
-    const cooldownKey = `${APP_CONSTANTS.CACHE_KEYS.OTP_PREFIX}cooldown:${phoneNumber}`;
+  static async getResendCooldown(identifier: string): Promise<number> {
+    const cooldownKey = `${APP_CONSTANTS.CACHE_KEYS.OTP_PREFIX}cooldown:${identifier}`;
     const ttl = await redis.ttl(cooldownKey);
     return ttl > 0 ? ttl : 0;
   }

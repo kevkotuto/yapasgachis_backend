@@ -28,7 +28,7 @@ export const registerSchema = z.object({
 });
 
 /**
- * Login validation schema
+ * Login validation schema (phone + password - NO OTP)
  */
 export const loginSchema = z.object({
   body: z.object({
@@ -38,7 +38,17 @@ export const loginSchema = z.object({
 });
 
 /**
- * Verify OTP validation schema
+ * Login with email validation schema (email + password - OTP required)
+ */
+export const loginEmailSchema = z.object({
+  body: z.object({
+    email: emailSchema,
+    password: z.string().min(1, 'Le mot de passe est requis'),
+  }),
+});
+
+/**
+ * Verify OTP validation schema (for phone)
  */
 export const verifyOTPSchema = z.object({
   body: z.object({
@@ -54,7 +64,23 @@ export const verifyOTPSchema = z.object({
 });
 
 /**
- * Resend OTP validation schema
+ * Verify email OTP validation schema
+ */
+export const verifyEmailOTPSchema = z.object({
+  body: z.object({
+    email: emailSchema,
+    code: otpSchema,
+    purpose: z.enum([
+      'registration',
+      'login',
+      'password_reset',
+      'email_verification',
+    ]),
+  }),
+});
+
+/**
+ * Resend OTP validation schema (for phone)
  */
 export const resendOTPSchema = z.object({
   body: z.object({
@@ -64,6 +90,21 @@ export const resendOTPSchema = z.object({
       'login',
       'password_reset',
       'phone_verification',
+    ]),
+  }),
+});
+
+/**
+ * Resend email OTP validation schema
+ */
+export const resendEmailOTPSchema = z.object({
+  body: z.object({
+    email: emailSchema,
+    purpose: z.enum([
+      'registration',
+      'login',
+      'password_reset',
+      'email_verification',
     ]),
   }),
 });
@@ -145,8 +186,11 @@ export const linkGoogleSchema = z.object({
 
 export type RegisterInput = z.infer<typeof registerSchema>['body'];
 export type LoginInput = z.infer<typeof loginSchema>['body'];
+export type LoginEmailInput = z.infer<typeof loginEmailSchema>['body'];
 export type VerifyOTPInput = z.infer<typeof verifyOTPSchema>['body'];
+export type VerifyEmailOTPInput = z.infer<typeof verifyEmailOTPSchema>['body'];
 export type ResendOTPInput = z.infer<typeof resendOTPSchema>['body'];
+export type ResendEmailOTPInput = z.infer<typeof resendEmailOTPSchema>['body'];
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>['body'];
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>['body'];
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>['body'];

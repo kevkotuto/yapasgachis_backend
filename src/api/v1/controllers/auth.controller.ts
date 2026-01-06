@@ -30,7 +30,7 @@ export class AuthController {
   });
 
   /**
-   * Login user
+   * Login user with phone (NO OTP - direct login)
    * POST /api/v1/auth/login
    */
   login = asyncHandler(async (req: Request, res: Response) => {
@@ -47,7 +47,23 @@ export class AuthController {
   });
 
   /**
-   * Verify OTP
+   * Login user with email (OTP required - Step 1)
+   * POST /api/v1/auth/login/email
+   */
+  loginEmail = asyncHandler(async (req: Request, res: Response) => {
+    const result = await this.authService.loginWithEmail(req.body);
+
+    res.status(APP_CONSTANTS.HTTP_STATUS.OK).json({
+      success: true,
+      message: result.message,
+      data: {
+        requiresOTP: result.requiresOTP,
+      },
+    });
+  });
+
+  /**
+   * Verify OTP (for phone)
    * POST /api/v1/auth/verify-otp
    */
   verifyOTP = asyncHandler(async (req: Request, res: Response) => {
@@ -63,12 +79,45 @@ export class AuthController {
   });
 
   /**
-   * Resend OTP
+   * Verify email OTP and complete login (Step 2)
+   * POST /api/v1/auth/verify-email-otp
+   */
+  verifyEmailOTP = asyncHandler(async (req: Request, res: Response) => {
+    const result = await this.authService.verifyEmailOTP(req.body);
+
+    res.status(APP_CONSTANTS.HTTP_STATUS.OK).json({
+      success: true,
+      message: 'Connexion réussie',
+      data: {
+        user: result.user,
+        tokens: result.tokens,
+      },
+    });
+  });
+
+  /**
+   * Resend OTP (for phone)
    * POST /api/v1/auth/resend-otp
    */
   resendOTP = asyncHandler(async (req: Request, res: Response) => {
     const result = await this.authService.resendOTP(
       req.body.phoneNumber,
+      req.body.purpose
+    );
+
+    res.status(APP_CONSTANTS.HTTP_STATUS.OK).json({
+      success: true,
+      message: result.message,
+    });
+  });
+
+  /**
+   * Resend email OTP
+   * POST /api/v1/auth/resend-email-otp
+   */
+  resendEmailOTP = asyncHandler(async (req: Request, res: Response) => {
+    const result = await this.authService.resendEmailOTP(
+      req.body.email,
       req.body.purpose
     );
 

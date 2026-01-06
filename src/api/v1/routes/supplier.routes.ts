@@ -34,16 +34,6 @@ router.get(
 );
 
 /**
- * Get supplier by ID (public)
- * GET /:id
- */
-router.get(
-  '/:id',
-  validate(getSupplierByIdSchema),
-  supplierController.getProfileById
-);
-
-/**
  * Get nearby suppliers (public)
  * GET /nearby
  */
@@ -140,6 +130,18 @@ router.get(
   authMiddleware,
   supplierOnly,
   supplierController.canCreateProducts
+);
+
+// ==================== PARAMETERIZED ROUTES (MUST BE LAST) ====================
+
+/**
+ * Get supplier by ID (public)
+ * GET /:id
+ */
+router.get(
+  '/:id',
+  validate(getSupplierByIdSchema),
+  supplierController.getProfileById
 );
 
 export default router;
