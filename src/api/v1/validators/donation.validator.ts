@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import { DonationType, DonationStatus } from '@prisma/client';
+import { z } from 'zod';
 
 // ==================== DONATION VALIDATORS ====================
 
@@ -7,9 +7,7 @@ export const createFoodDonationSchema = z.object({
   body: z.object({
     associationId: z.string().uuid('ID association invalide'),
     productId: z.string().uuid('ID produit invalide'),
-    quantity: z
-      .number()
-      .positive('La quantité doit être positive'),
+    quantity: z.number().positive('La quantité doit être positive'),
     unit: z.enum(['kg', 'piece', 'portion', 'liter', 'box'], {
       errorMap: () => ({ message: 'Unité invalide' }),
     }),
@@ -60,7 +58,10 @@ export const cancelDonationSchema = z.object({
     donationId: z.string().uuid('ID donation invalide'),
   }),
   body: z.object({
-    reason: z.string().max(500, "La raison ne peut pas dépasser 500 caractères").optional(),
+    reason: z
+      .string()
+      .max(500, 'La raison ne peut pas dépasser 500 caractères')
+      .optional(),
   }),
 });
 
@@ -104,8 +105,12 @@ export const searchDonationsSchema = z.object({
 
 // Export types
 export type CreateFoodDonationInput = z.infer<typeof createFoodDonationSchema>;
-export type CreateFinancialDonationInput = z.infer<typeof createFinancialDonationSchema>;
-export type UpdateDonationStatusInput = z.infer<typeof updateDonationStatusSchema>;
+export type CreateFinancialDonationInput = z.infer<
+  typeof createFinancialDonationSchema
+>;
+export type UpdateDonationStatusInput = z.infer<
+  typeof updateDonationStatusSchema
+>;
 export type SchedulePickupInput = z.infer<typeof schedulePickupSchema>;
 export type CancelDonationInput = z.infer<typeof cancelDonationSchema>;
 export type GetDonationsQueryInput = z.infer<typeof getDonationsQuerySchema>;

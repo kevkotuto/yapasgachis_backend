@@ -1,14 +1,15 @@
 import axios from 'axios';
+
 import { prisma } from '@/infrastructure/database/prisma';
 import logger from '@/infrastructure/monitoring/logger';
 import { AppError } from '@/middleware/error-handler.middleware';
-import { DeviceType } from '@/utils/enums';
 import type {
   RegisterDeviceTokenParams,
   ExpoPushMessage,
   ExpoPushTicket,
   ExpoPushReceipt,
 } from '@/types/notification.types';
+import { DeviceType } from '@/utils/enums';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 const EXPO_RECEIPTS_URL = 'https://exp.host/--/api/v2/push/getReceipts';
@@ -44,7 +45,11 @@ class ExpoPushService {
     try {
       // Validate Expo token format
       if (!this.isValidExpoToken(params.token)) {
-        throw new AppError(400, 'Format de token Expo invalide', 'INVALID_TOKEN_FORMAT');
+        throw new AppError(
+          400,
+          'Format de token Expo invalide',
+          'INVALID_TOKEN_FORMAT'
+        );
       }
 
       // Upsert: update if exists, create if not
@@ -79,7 +84,11 @@ class ExpoPushService {
         userId: params.userId,
         error: (error as Error).message,
       });
-      throw new AppError(500, 'Échec de l\'enregistrement du token', 'TOKEN_REGISTRATION_FAILED');
+      throw new AppError(
+        500,
+        "Échec de l'enregistrement du token",
+        'TOKEN_REGISTRATION_FAILED'
+      );
     }
   }
 
@@ -185,7 +194,9 @@ class ExpoPushService {
 
         // Handle invalid tokens asynchronously
         this.handleInvalidTokens(chunk, response.data.data).catch((err) => {
-          logger.error('Failed to handle invalid tokens', { error: err.message });
+          logger.error('Failed to handle invalid tokens', {
+            error: err.message,
+          });
         });
       }
 
@@ -208,11 +219,15 @@ class ExpoPushService {
   /**
    * Get push notification receipts for delivery confirmation
    */
-  async getReceipts(ticketIds: string[]): Promise<Record<string, ExpoPushReceipt>> {
+  async getReceipts(
+    ticketIds: string[]
+  ): Promise<Record<string, ExpoPushReceipt>> {
     if (ticketIds.length === 0) return {};
 
     try {
-      const response = await axios.post<{ data: Record<string, ExpoPushReceipt> }>(
+      const response = await axios.post<{
+        data: Record<string, ExpoPushReceipt>;
+      }>(
         EXPO_RECEIPTS_URL,
         { ids: ticketIds },
         {
@@ -237,7 +252,8 @@ class ExpoPushService {
    */
   private isValidExpoToken(token: string): boolean {
     return (
-      /^ExponentPushToken\[.+\]$/.test(token) || /^ExpoPushToken\[.+\]$/.test(token)
+      /^ExponentPushToken\[.+\]$/.test(token) ||
+      /^ExpoPushToken\[.+\]$/.test(token)
     );
   }
 
@@ -250,7 +266,10 @@ class ExpoPushService {
   ): Promise<void> {
     for (let i = 0; i < tickets.length; i++) {
       const ticket = tickets[i];
-      if (ticket.status === 'error' && ticket.details?.error === 'DeviceNotRegistered') {
+      if (
+        ticket.status === 'error' &&
+        ticket.details?.error === 'DeviceNotRegistered'
+      ) {
         const toField = messages[i].to;
         const token = Array.isArray(toField) ? toField[0] : toField;
         await this.unregisterDeviceToken(token);

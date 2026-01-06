@@ -1,8 +1,8 @@
+import config from '@/config';
 import { redis } from '@/infrastructure/database/redis/client';
+import logger from '@/infrastructure/monitoring/logger';
 import { APP_CONSTANTS } from '@/utils/constants';
 import { generateOTP } from '@/utils/helpers';
-import config from '@/config';
-import logger from '@/infrastructure/monitoring/logger';
 
 export enum OTPPurpose {
   REGISTRATION = 'registration',
@@ -90,7 +90,9 @@ export class OTPService {
     if (otpData.attempts >= this.MAX_ATTEMPTS) {
       await redis.del(otpKey);
       logger.warn('OTP max attempts exceeded', { phoneNumber, purpose });
-      throw new Error('Nombre maximum de tentatives atteint. Demandez un nouveau code');
+      throw new Error(
+        'Nombre maximum de tentatives atteint. Demandez un nouveau code'
+      );
     }
 
     // Verify code

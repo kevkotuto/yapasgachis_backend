@@ -1,4 +1,5 @@
 import redis from './client';
+
 import config from '@/config';
 import logger from '@/infrastructure/monitoring/logger';
 

@@ -1,25 +1,28 @@
+import path from 'path';
+
 import winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
-import path from 'path';
 
 import config from '@/config';
 
 const { combine, timestamp, printf, colorize, errors, json } = winston.format;
 
 // Custom log format
-const logFormat = printf(({ level, message, timestamp, stack, ...metadata }) => {
-  let msg = `${timestamp} [${level}]: ${message}`;
+const logFormat = printf(
+  ({ level, message, timestamp, stack, ...metadata }) => {
+    let msg = `${timestamp} [${level}]: ${message}`;
 
-  if (Object.keys(metadata).length > 0) {
-    msg += ` ${JSON.stringify(metadata)}`;
+    if (Object.keys(metadata).length > 0) {
+      msg += ` ${JSON.stringify(metadata)}`;
+    }
+
+    if (stack) {
+      msg += `\n${stack}`;
+    }
+
+    return msg;
   }
-
-  if (stack) {
-    msg += `\n${stack}`;
-  }
-
-  return msg;
-});
+);
 
 // Create logs directory if it doesn't exist
 const logsDir = config.logging.filePath || './logs';
@@ -98,22 +101,34 @@ export const stream = {
 };
 
 // Helper methods for structured logging
-export const logError = (error: Error, context?: Record<string, unknown>): void => {
+export const logError = (
+  error: Error,
+  context?: Record<string, unknown>
+): void => {
   logger.error(error.message, {
     stack: error.stack,
     ...context,
   });
 };
 
-export const logInfo = (message: string, metadata?: Record<string, unknown>): void => {
+export const logInfo = (
+  message: string,
+  metadata?: Record<string, unknown>
+): void => {
   logger.info(message, metadata);
 };
 
-export const logWarning = (message: string, metadata?: Record<string, unknown>): void => {
+export const logWarning = (
+  message: string,
+  metadata?: Record<string, unknown>
+): void => {
   logger.warn(message, metadata);
 };
 
-export const logDebug = (message: string, metadata?: Record<string, unknown>): void => {
+export const logDebug = (
+  message: string,
+  metadata?: Record<string, unknown>
+): void => {
   logger.debug(message, metadata);
 };
 

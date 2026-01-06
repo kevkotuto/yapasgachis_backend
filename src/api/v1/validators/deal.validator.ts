@@ -1,49 +1,66 @@
+import {
+  DealCategory,
+  DealStatus,
+  BookingStatus,
+  PaymentMethod,
+} from '@prisma/client';
 import { z } from 'zod';
-import { DealCategory, DealStatus, BookingStatus, PaymentMethod } from '@prisma/client';
 
 // ==================== DEAL VALIDATORS ====================
 
 export const createDealSchema = z.object({
-  body: z.object({
-    storeId: z.string().uuid().optional(),
-    title: z.string().min(5, 'Le titre doit avoir au moins 5 caractères').max(100),
-    description: z.string().min(20, 'La description doit avoir au moins 20 caractères'),
-    category: z.nativeEnum(DealCategory),
-    images: z.array(z.string().url()).min(1, 'Au moins une image est requise'),
-    originalPrice: z.number().positive('Le prix original doit être positif'),
-    dealPrice: z.number().positive('Le prix du deal doit être positif'),
-    includes: z.array(z.string()).optional(),
-    excludes: z.array(z.string()).optional(),
-    terms: z.string().optional(),
-    availableFrom: z.string().datetime(),
-    availableUntil: z.string().datetime(),
-    availableSlots: z
-      .array(
-        z.object({
-          day: z.string(),
-          slots: z.array(z.string()),
+  body: z
+    .object({
+      storeId: z.string().uuid().optional(),
+      title: z
+        .string()
+        .min(5, 'Le titre doit avoir au moins 5 caractères')
+        .max(100),
+      description: z
+        .string()
+        .min(20, 'La description doit avoir au moins 20 caractères'),
+      category: z.nativeEnum(DealCategory),
+      images: z
+        .array(z.string().url())
+        .min(1, 'Au moins une image est requise'),
+      originalPrice: z.number().positive('Le prix original doit être positif'),
+      dealPrice: z.number().positive('Le prix du deal doit être positif'),
+      includes: z.array(z.string()).optional(),
+      excludes: z.array(z.string()).optional(),
+      terms: z.string().optional(),
+      availableFrom: z.string().datetime(),
+      availableUntil: z.string().datetime(),
+      availableSlots: z
+        .array(
+          z.object({
+            day: z.string(),
+            slots: z.array(z.string()),
+          })
+        )
+        .optional(),
+      totalQuantity: z
+        .number()
+        .int()
+        .positive('La quantité doit être positive'),
+      maxPerUser: z.number().int().positive().default(1),
+      isOffPeakOnly: z.boolean().default(false),
+      offPeakDays: z.array(z.string()).optional(),
+      offPeakHours: z
+        .object({
+          start: z.string(),
+          end: z.string(),
         })
-      )
-      .optional(),
-    totalQuantity: z.number().int().positive('La quantité doit être positive'),
-    maxPerUser: z.number().int().positive().default(1),
-    isOffPeakOnly: z.boolean().default(false),
-    offPeakDays: z.array(z.string()).optional(),
-    offPeakHours: z
-      .object({
-        start: z.string(),
-        end: z.string(),
-      })
-      .optional(),
-    requiresBooking: z.boolean().default(true),
-    bookingLeadTime: z.number().int().min(0).default(0),
-    cancellationHours: z.number().int().min(0).default(24),
-    contactPhone: z.string().optional(),
-    contactEmail: z.string().email().optional(),
-  }).refine(
-    (data) => data.dealPrice < data.originalPrice,
-    { message: 'Le prix du deal doit être inférieur au prix original', path: ['dealPrice'] }
-  ),
+        .optional(),
+      requiresBooking: z.boolean().default(true),
+      bookingLeadTime: z.number().int().min(0).default(0),
+      cancellationHours: z.number().int().min(0).default(24),
+      contactPhone: z.string().optional(),
+      contactEmail: z.string().email().optional(),
+    })
+    .refine((data) => data.dealPrice < data.originalPrice, {
+      message: 'Le prix du deal doit être inférieur au prix original',
+      path: ['dealPrice'],
+    }),
 });
 
 export const updateDealSchema = z.object({
@@ -103,10 +120,25 @@ export const searchDealsSchema = z.object({
     longitude: z.string().transform(Number).pipe(z.number()).optional(),
     radius: z.string().transform(Number).pipe(z.number().positive()).optional(),
     minPrice: z.string().transform(Number).pipe(z.number().min(0)).optional(),
-    maxPrice: z.string().transform(Number).pipe(z.number().positive()).optional(),
-    isOffPeakOnly: z.string().transform((val) => val === 'true').optional(),
-    page: z.string().transform(Number).pipe(z.number().int().positive()).optional(),
-    limit: z.string().transform(Number).pipe(z.number().int().positive().max(100)).optional(),
+    maxPrice: z
+      .string()
+      .transform(Number)
+      .pipe(z.number().positive())
+      .optional(),
+    isOffPeakOnly: z
+      .string()
+      .transform((val) => val === 'true')
+      .optional(),
+    page: z
+      .string()
+      .transform(Number)
+      .pipe(z.number().int().positive())
+      .optional(),
+    limit: z
+      .string()
+      .transform(Number)
+      .pipe(z.number().int().positive().max(100))
+      .optional(),
   }),
 });
 
@@ -156,8 +188,16 @@ export const validateBookingSchema = z.object({
 export const userBookingsQuerySchema = z.object({
   query: z.object({
     status: z.nativeEnum(BookingStatus).optional(),
-    page: z.string().transform(Number).pipe(z.number().int().positive()).optional(),
-    limit: z.string().transform(Number).pipe(z.number().int().positive().max(100)).optional(),
+    page: z
+      .string()
+      .transform(Number)
+      .pipe(z.number().int().positive())
+      .optional(),
+    limit: z
+      .string()
+      .transform(Number)
+      .pipe(z.number().int().positive().max(100))
+      .optional(),
   }),
 });
 
@@ -167,8 +207,16 @@ export const supplierBookingsQuerySchema = z.object({
     storeId: z.string().uuid().optional(),
     startDate: z.string().datetime().optional(),
     endDate: z.string().datetime().optional(),
-    page: z.string().transform(Number).pipe(z.number().int().positive()).optional(),
-    limit: z.string().transform(Number).pipe(z.number().int().positive().max(100)).optional(),
+    page: z
+      .string()
+      .transform(Number)
+      .pipe(z.number().int().positive())
+      .optional(),
+    limit: z
+      .string()
+      .transform(Number)
+      .pipe(z.number().int().positive().max(100))
+      .optional(),
   }),
 });
 
@@ -197,4 +245,6 @@ export type BookDealInput = z.infer<typeof bookDealSchema>;
 export type CancelBookingInput = z.infer<typeof cancelBookingSchema>;
 export type ValidateBookingInput = z.infer<typeof validateBookingSchema>;
 export type UserBookingsQueryInput = z.infer<typeof userBookingsQuerySchema>;
-export type SupplierBookingsQueryInput = z.infer<typeof supplierBookingsQuerySchema>;
+export type SupplierBookingsQueryInput = z.infer<
+  typeof supplierBookingsQuerySchema
+>;

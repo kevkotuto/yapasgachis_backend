@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+
 import { logHttpRequest } from '@/infrastructure/monitoring/logger';
 
 export const loggingMiddleware = (
@@ -22,7 +23,9 @@ export const loggingMiddleware = (
 
     // Log slow requests (> 1 second)
     if (duration > 1000) {
-      console.warn(`Slow request detected: ${req.method} ${req.url} took ${duration}ms`);
+      console.warn(
+        `Slow request detected: ${req.method} ${req.url} took ${duration}ms`
+      );
     }
   });
 

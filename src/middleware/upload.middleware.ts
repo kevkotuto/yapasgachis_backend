@@ -1,6 +1,8 @@
-import multer from 'multer';
 import { Request, RequestHandler } from 'express';
+import multer from 'multer';
+
 import { AppError } from './error-handler.middleware';
+
 import logger from '@/infrastructure/monitoring/logger';
 
 /**
@@ -26,9 +28,7 @@ const ALLOWED_DOCUMENT_TYPES = [
 /**
  * File filter function
  */
-const fileFilter = (
-  allowedTypes: string[]
-): multer.Options['fileFilter'] => {
+const fileFilter = (allowedTypes: string[]): multer.Options['fileFilter'] => {
   return (
     _req: Request,
     file: Express.Multer.File,
@@ -195,7 +195,7 @@ export const handleUploadError = (
 export const requireFiles = (_fieldName: string = 'images') => {
   return (req: Request, res: any, next: any) => {
     const files = req.files as Express.Multer.File[] | undefined;
-    const file = req.file as Express.Multer.File | undefined;
+    const file = req.file;
 
     if (!files && !file) {
       return res.status(400).json({

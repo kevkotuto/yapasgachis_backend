@@ -10,7 +10,10 @@ export const corsMiddleware = cors({
     }
 
     // Check if origin is in allowed list
-    if (config.cors.origin.includes(origin) || config.app.env === 'development') {
+    if (
+      config.cors.origin.includes(origin) ||
+      config.app.env === 'development'
+    ) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));

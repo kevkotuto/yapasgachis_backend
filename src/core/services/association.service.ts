@@ -1,12 +1,13 @@
 import { AssociationProfile, UserRole } from '@prisma/client';
+
 import associationRepository, {
   AssociationRepository,
 } from '@/core/repositories/association.repository';
 import UserRepository from '@/core/repositories/user.repository';
-import geocodingService from '@/infrastructure/geolocation/geocoding.service';
-import { AppError } from '@/middleware/error-handler.middleware';
-import logger from '@/infrastructure/monitoring/logger';
 import { prisma } from '@/infrastructure/database/prisma';
+import geocodingService from '@/infrastructure/geolocation/geocoding.service';
+import logger from '@/infrastructure/monitoring/logger';
+import { AppError } from '@/middleware/error-handler.middleware';
 
 /**
  * Association Service
@@ -116,7 +117,10 @@ export class AssociationService {
         userId,
         error: (error as Error).message,
       });
-      throw new AppError(500, "Erreur lors de la création du profil association");
+      throw new AppError(
+        500,
+        'Erreur lors de la création du profil association'
+      );
     }
   }
 
@@ -229,7 +233,11 @@ export class AssociationService {
     radius?: number;
     page?: number;
     limit?: number;
-  }): Promise<{ associations: AssociationProfile[]; total: number; pages: number }> {
+  }): Promise<{
+    associations: AssociationProfile[];
+    total: number;
+    pages: number;
+  }> {
     const { associations, total } = await this.associationRepo.search(params);
     const limit = params.limit || 20;
     const pages = Math.ceil(total / limit);
@@ -358,7 +366,10 @@ export class AssociationService {
   /**
    * Verify an association (admin)
    */
-  async verify(adminId: string, associationId: string): Promise<AssociationProfile> {
+  async verify(
+    adminId: string,
+    associationId: string
+  ): Promise<AssociationProfile> {
     try {
       const association = await this.associationRepo.findById(associationId);
 
@@ -400,7 +411,10 @@ export class AssociationService {
         associationId,
         error: (error as Error).message,
       });
-      throw new AppError(500, "Erreur lors de la vérification de l'association");
+      throw new AppError(
+        500,
+        "Erreur lors de la vérification de l'association"
+      );
     }
   }
 
@@ -454,7 +468,11 @@ export class AssociationService {
     verified?: boolean;
     page?: number;
     limit?: number;
-  }): Promise<{ associations: AssociationProfile[]; total: number; pages: number }> {
+  }): Promise<{
+    associations: AssociationProfile[];
+    total: number;
+    pages: number;
+  }> {
     const { associations, total } = await this.associationRepo.search(params);
     const limit = params.limit || 20;
     const pages = Math.ceil(total / limit);
@@ -496,9 +514,15 @@ export class AssociationService {
       logger.error('Error getting global association stats', {
         error: (error as Error).message,
       });
-      throw new AppError(500, 'Erreur lors de la récupération des statistiques');
+      throw new AppError(
+        500,
+        'Erreur lors de la récupération des statistiques'
+      );
     }
   }
 }
 
-export default new AssociationService(associationRepository, new UserRepository());
+export default new AssociationService(
+  associationRepository,
+  new UserRepository()
+);

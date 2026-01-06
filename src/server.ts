@@ -1,10 +1,11 @@
 import http from 'http';
 
 import app from './app';
+
 import config from '@/config';
-import logger from '@/infrastructure/monitoring/logger';
 import { PrismaService } from '@/infrastructure/database/prisma';
 import { RedisService } from '@/infrastructure/database/redis/client';
+import logger from '@/infrastructure/monitoring/logger';
 import socketService from '@/infrastructure/websocket/socket.service';
 
 // Create HTTP server

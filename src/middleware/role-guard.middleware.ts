@@ -1,10 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
 
 import { AppError } from './error-handler.middleware';
+
 import { APP_CONSTANTS } from '@/utils/constants';
 
 // Define UserRole type from Prisma schema
-type UserRole = 'CLIENT' | 'SUPPLIER_FOOD' | 'SUPPLIER_DEALS' | 'ASSOCIATION' | 'ADVERTISER' | 'ADMIN' | 'SUPER_ADMIN';
+type UserRole =
+  | 'CLIENT'
+  | 'SUPPLIER_FOOD'
+  | 'SUPPLIER_DEALS'
+  | 'ASSOCIATION'
+  | 'ADVERTISER'
+  | 'ADMIN'
+  | 'SUPER_ADMIN';
 
 // Export UserRole values for use in middleware
 const UserRole = {
@@ -39,7 +47,7 @@ export const roleGuard = (allowedRoles: UserRole | UserRole[]) => {
     if (!roles.includes(req.user.role)) {
       throw new AppError(
         APP_CONSTANTS.HTTP_STATUS.FORBIDDEN,
-        'Vous n\'avez pas les permissions nécessaires pour accéder à cette ressource',
+        "Vous n'avez pas les permissions nécessaires pour accéder à cette ressource",
         APP_CONSTANTS.ERROR_CODES.FORBIDDEN
       );
     }
@@ -109,7 +117,7 @@ export const ownerOrAdmin = (getOwnerId: (req: Request) => string) => {
     if (!isOwner && !isAdmin) {
       throw new AppError(
         APP_CONSTANTS.HTTP_STATUS.FORBIDDEN,
-        'Vous ne pouvez accéder qu\'à vos propres ressources',
+        "Vous ne pouvez accéder qu'à vos propres ressources",
         APP_CONSTANTS.ERROR_CODES.FORBIDDEN
       );
     }

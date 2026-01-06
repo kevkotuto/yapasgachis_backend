@@ -1,8 +1,9 @@
+import { OrderStatus, ProductStatus } from '@prisma/client';
+
 import analyticsRepository from '@/core/repositories/analytics.repository';
 import { prisma } from '@/infrastructure/database/prisma';
 import CacheService from '@/infrastructure/database/redis/cache.service';
 import logger from '@/infrastructure/monitoring/logger';
-import { OrderStatus, ProductStatus } from '@prisma/client';
 
 /**
  * Analytics Service
@@ -137,7 +138,11 @@ export class AnalyticsService {
       prisma.order.count({
         where: {
           status: {
-            in: [OrderStatus.PENDING_PAYMENT, OrderStatus.PAID, OrderStatus.PREPARING],
+            in: [
+              OrderStatus.PENDING_PAYMENT,
+              OrderStatus.PAID,
+              OrderStatus.PREPARING,
+            ],
           },
         },
       }),

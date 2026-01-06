@@ -1,9 +1,10 @@
+import { AdFormat, CampaignStatus, UserRole } from '@prisma/client';
+
 import advertiserRepository from '@/core/repositories/advertiser.repository';
 import analyticsService from '@/core/services/analytics.service';
 import { prisma } from '@/infrastructure/database/prisma';
 import logger from '@/infrastructure/monitoring/logger';
 import { AppError } from '@/utils/helpers';
-import { AdFormat, CampaignStatus, UserRole } from '@prisma/client';
 
 /**
  * Advertising Service
@@ -153,7 +154,10 @@ export class AdvertisingService {
     }
 
     if (new Date(data.endDate) <= new Date(data.startDate)) {
-      throw new AppError(400, 'La date de fin doit être après la date de début');
+      throw new AppError(
+        400,
+        'La date de fin doit être après la date de début'
+      );
     }
 
     // Validate budget
@@ -163,7 +167,7 @@ export class AdvertisingService {
 
     // Validate bid amount
     if (data.bidAmount < 100) {
-      throw new AppError(400, 'L\'enchère minimum est de 100 XOF');
+      throw new AppError(400, "L'enchère minimum est de 100 XOF");
     }
 
     const campaign = await advertiserRepository.createCampaign(profile.id, {
@@ -195,7 +199,10 @@ export class AdvertisingService {
     if (userId) {
       const profile = await advertiserRepository.findProfileByUserId(userId);
       if (profile && campaign.advertiserId !== profile.id) {
-        throw new AppError(403, "Vous n'êtes pas autorisé à voir cette campagne");
+        throw new AppError(
+          403,
+          "Vous n'êtes pas autorisé à voir cette campagne"
+        );
       }
     }
 
@@ -263,12 +270,18 @@ export class AdvertisingService {
     }
 
     if (!profile || campaign.advertiserId !== profile.id) {
-      throw new AppError(403, "Vous n'êtes pas autorisé à modifier cette campagne");
+      throw new AppError(
+        403,
+        "Vous n'êtes pas autorisé à modifier cette campagne"
+      );
     }
 
     // Can only update DRAFT or PAUSED campaigns
     if (!['DRAFT', 'PAUSED'].includes(campaign.status)) {
-      throw new AppError(400, 'Seules les campagnes en brouillon ou en pause peuvent être modifiées');
+      throw new AppError(
+        400,
+        'Seules les campagnes en brouillon ou en pause peuvent être modifiées'
+      );
     }
 
     const updatedCampaign = await advertiserRepository.updateCampaign(
@@ -296,11 +309,17 @@ export class AdvertisingService {
     }
 
     if (!profile || campaign.advertiserId !== profile.id) {
-      throw new AppError(403, "Vous n'êtes pas autorisé à soumettre cette campagne");
+      throw new AppError(
+        403,
+        "Vous n'êtes pas autorisé à soumettre cette campagne"
+      );
     }
 
     if (campaign.status !== 'DRAFT') {
-      throw new AppError(400, 'Seules les campagnes en brouillon peuvent être soumises');
+      throw new AppError(
+        400,
+        'Seules les campagnes en brouillon peuvent être soumises'
+      );
     }
 
     const updatedCampaign = await advertiserRepository.updateCampaignStatus(
@@ -328,11 +347,17 @@ export class AdvertisingService {
     }
 
     if (!profile || campaign.advertiserId !== profile.id) {
-      throw new AppError(403, "Vous n'êtes pas autorisé à mettre cette campagne en pause");
+      throw new AppError(
+        403,
+        "Vous n'êtes pas autorisé à mettre cette campagne en pause"
+      );
     }
 
     if (campaign.status !== 'ACTIVE') {
-      throw new AppError(400, 'Seules les campagnes actives peuvent être mises en pause');
+      throw new AppError(
+        400,
+        'Seules les campagnes actives peuvent être mises en pause'
+      );
     }
 
     const updatedCampaign = await advertiserRepository.updateCampaignStatus(
@@ -360,17 +385,26 @@ export class AdvertisingService {
     }
 
     if (!profile || campaign.advertiserId !== profile.id) {
-      throw new AppError(403, "Vous n'êtes pas autorisé à reprendre cette campagne");
+      throw new AppError(
+        403,
+        "Vous n'êtes pas autorisé à reprendre cette campagne"
+      );
     }
 
     if (campaign.status !== 'PAUSED') {
-      throw new AppError(400, 'Seules les campagnes en pause peuvent être reprises');
+      throw new AppError(
+        400,
+        'Seules les campagnes en pause peuvent être reprises'
+      );
     }
 
     // Check if campaign is still within date range
     const now = new Date();
     if (now >= campaign.endDate) {
-      throw new AppError(400, 'Cette campagne a expiré et ne peut pas être reprise');
+      throw new AppError(
+        400,
+        'Cette campagne a expiré et ne peut pas être reprise'
+      );
     }
 
     // Check if budget is exhausted
@@ -403,12 +437,18 @@ export class AdvertisingService {
     }
 
     if (!profile || campaign.advertiserId !== profile.id) {
-      throw new AppError(403, "Vous n'êtes pas autorisé à supprimer cette campagne");
+      throw new AppError(
+        403,
+        "Vous n'êtes pas autorisé à supprimer cette campagne"
+      );
     }
 
     // Can only delete DRAFT or REJECTED campaigns
     if (!['DRAFT', 'REJECTED'].includes(campaign.status)) {
-      throw new AppError(400, 'Seules les campagnes en brouillon ou rejetées peuvent être supprimées');
+      throw new AppError(
+        400,
+        'Seules les campagnes en brouillon ou rejetées peuvent être supprimées'
+      );
     }
 
     await advertiserRepository.deleteCampaign(campaignId);
@@ -433,7 +473,10 @@ export class AdvertisingService {
     }
 
     if (!profile || campaign.advertiserId !== profile.id) {
-      throw new AppError(403, "Vous n'êtes pas autorisé à voir les statistiques de cette campagne");
+      throw new AppError(
+        403,
+        "Vous n'êtes pas autorisé à voir les statistiques de cette campagne"
+      );
     }
 
     return await advertiserRepository.getCampaignStats(campaignId);
@@ -468,7 +511,10 @@ export class AdvertisingService {
     }
 
     if (campaign.status !== 'PENDING_APPROVAL') {
-      throw new AppError(400, 'Seules les campagnes en attente peuvent être approuvées');
+      throw new AppError(
+        400,
+        'Seules les campagnes en attente peuvent être approuvées'
+      );
     }
 
     // Check if start date is in the future
@@ -494,11 +540,7 @@ export class AdvertisingService {
   /**
    * Reject campaign (admin)
    */
-  async rejectCampaign(
-    campaignId: string,
-    adminId: string,
-    reason: string
-  ) {
+  async rejectCampaign(campaignId: string, adminId: string, reason: string) {
     const campaign = await advertiserRepository.findCampaignById(campaignId);
 
     if (!campaign) {
@@ -506,7 +548,10 @@ export class AdvertisingService {
     }
 
     if (campaign.status !== 'PENDING_APPROVAL') {
-      throw new AppError(400, 'Seules les campagnes en attente peuvent être rejetées');
+      throw new AppError(
+        400,
+        'Seules les campagnes en attente peuvent être rejetées'
+      );
     }
 
     const updatedCampaign = await advertiserRepository.updateCampaign(
@@ -602,7 +647,10 @@ export class AdvertisingService {
 
     // Update spent based on CPC
     if (campaign.costModel === 'CPC') {
-      await advertiserRepository.updateSpentAmount(campaignId, campaign.bidAmount);
+      await advertiserRepository.updateSpentAmount(
+        campaignId,
+        campaign.bidAmount
+      );
     }
 
     // Track analytics event

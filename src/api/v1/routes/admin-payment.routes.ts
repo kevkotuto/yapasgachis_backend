@@ -1,4 +1,5 @@
 import { Router } from 'express';
+
 import adminPaymentController from '@/api/v1/controllers/admin-payment.controller';
 import { authenticate } from '@/middleware/auth.middleware';
 import { requireRoles } from '@/middleware/role-guard.middleware';
@@ -53,7 +54,10 @@ router.post('/escrow/:orderId/refund', adminPaymentController.refundEscrow);
  * @desc Ouvrir un litige
  * @body reason - Raison du litige
  */
-router.post('/escrow/:orderId/dispute/open', adminPaymentController.openDispute);
+router.post(
+  '/escrow/:orderId/dispute/open',
+  adminPaymentController.openDispute
+);
 
 /**
  * @route POST /api/v1/admin/payments/escrow/:orderId/dispute/resolve-supplier

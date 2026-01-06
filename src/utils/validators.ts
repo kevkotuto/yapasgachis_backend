@@ -5,29 +5,17 @@ import { APP_CONSTANTS } from './constants';
 // Phone number validator
 export const phoneSchema = z
   .string()
-  .regex(
-    APP_CONSTANTS.REGEX.PHONE,
-    'Numéro de téléphone invalide'
-  );
+  .regex(APP_CONSTANTS.REGEX.PHONE, 'Numéro de téléphone invalide');
 
 // Email validator
-export const emailSchema = z
-  .string()
-  .email('Email invalide')
-  .toLowerCase();
+export const emailSchema = z.string().email('Email invalide').toLowerCase();
 
 // Password validator
 export const passwordSchema = z
   .string()
   .min(8, 'Le mot de passe doit contenir au moins 8 caractères')
-  .regex(
-    /[a-z]/,
-    'Le mot de passe doit contenir au moins une lettre minuscule'
-  )
-  .regex(
-    /[A-Z]/,
-    'Le mot de passe doit contenir au moins une lettre majuscule'
-  )
+  .regex(/[a-z]/, 'Le mot de passe doit contenir au moins une lettre minuscule')
+  .regex(/[A-Z]/, 'Le mot de passe doit contenir au moins une lettre majuscule')
   .regex(/[0-9]/, 'Le mot de passe doit contenir au moins un chiffre')
   .regex(
     /[@$!%*?&]/,
@@ -52,10 +40,9 @@ export const coordinatesSchema = z.object({
 // Date validators
 export const dateSchema = z.coerce.date();
 
-export const futureDateSchema = z.coerce.date().refine(
-  (date) => date > new Date(),
-  'La date doit être dans le futur'
-);
+export const futureDateSchema = z.coerce
+  .date()
+  .refine((date) => date > new Date(), 'La date doit être dans le futur');
 
 // File upload validators
 export const imageFileSchema = z.object({
@@ -63,7 +50,7 @@ export const imageFileSchema = z.object({
     .string()
     .refine(
       (type) => ['image/jpeg', 'image/png', 'image/webp'].includes(type),
-      'Format d\'image invalide. Formats acceptés: JPEG, PNG, WEBP'
+      "Format d'image invalide. Formats acceptés: JPEG, PNG, WEBP"
     ),
   size: z
     .number()
@@ -107,8 +94,8 @@ export const descriptionSchema = z
 
 export const addressSchema = z
   .string()
-  .min(5, 'L\'adresse doit contenir au moins 5 caractères')
-  .max(500, 'L\'adresse ne doit pas dépasser 500 caractères')
+  .min(5, "L'adresse doit contenir au moins 5 caractères")
+  .max(500, "L'adresse ne doit pas dépasser 500 caractères")
   .trim();
 
 // URL validator

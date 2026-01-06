@@ -1,8 +1,9 @@
 import axios from 'axios';
+
 import config from '@/config';
+import CacheService from '@/infrastructure/database/redis/cache.service';
 import logger from '@/infrastructure/monitoring/logger';
 import { AppError } from '@/middleware/error-handler.middleware';
-import CacheService from '@/infrastructure/database/redis/cache.service';
 
 /**
  * Mobile Money Payment Service
@@ -64,9 +65,7 @@ export class MobileMoneyService {
   /**
    * Initiate payment
    */
-  async initiatePayment(
-    request: PaymentRequest
-  ): Promise<PaymentResponse> {
+  async initiatePayment(request: PaymentRequest): Promise<PaymentResponse> {
     try {
       // Validate phone number format for provider
       this.validatePhoneNumber(request.phoneNumber, request.provider);
@@ -120,7 +119,7 @@ export class MobileMoneyService {
 
       throw new AppError(
         500,
-        'Erreur lors de l\'initiation du paiement',
+        "Erreur lors de l'initiation du paiement",
         'PAYMENT_INITIATION_FAILED'
       );
     }
@@ -318,7 +317,11 @@ export class MobileMoneyService {
       const number = cleaned.substring(3);
 
       // Orange: 07, 08, 09
-      if (number.startsWith('07') || number.startsWith('08') || number.startsWith('09')) {
+      if (
+        number.startsWith('07') ||
+        number.startsWith('08') ||
+        number.startsWith('09')
+      ) {
         return MobileMoneyProvider.ORANGE;
       }
 

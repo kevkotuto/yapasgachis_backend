@@ -1,10 +1,11 @@
-import { prisma } from '@/infrastructure/database/prisma';
 import {
   SupplierProfile,
   SubscriptionTier,
   SupplierType,
   Prisma,
 } from '@prisma/client';
+
+import { prisma } from '@/infrastructure/database/prisma';
 import logger from '@/infrastructure/monitoring/logger';
 
 /**
@@ -245,8 +246,8 @@ export class SupplierRepository {
             const distance = this.calculateDistance(
               latitude,
               longitude,
-              supplier.latitude!,
-              supplier.longitude!
+              supplier.latitude,
+              supplier.longitude
             );
             return { ...supplier, distance };
           })

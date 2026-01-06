@@ -1,4 +1,5 @@
 import rateLimit from 'express-rate-limit';
+
 import config from '@/config';
 
 // General API rate limiter
@@ -22,7 +23,8 @@ export const authLimiter = rateLimit({
   max: config.rateLimit.authMaxRequests,
   message: {
     success: false,
-    message: 'Trop de tentatives de connexion, veuillez réessayer dans 15 minutes',
+    message:
+      'Trop de tentatives de connexion, veuillez réessayer dans 15 minutes',
     code: 'TOO_MANY_AUTH_ATTEMPTS',
   },
   standardHeaders: true,
@@ -37,7 +39,7 @@ export const uploadLimiter = rateLimit({
   max: 10, // 10 uploads per 15 minutes
   message: {
     success: false,
-    message: 'Limite d\'upload atteinte, veuillez réessayer plus tard',
+    message: "Limite d'upload atteinte, veuillez réessayer plus tard",
     code: 'TOO_MANY_UPLOADS',
   },
   standardHeaders: true,

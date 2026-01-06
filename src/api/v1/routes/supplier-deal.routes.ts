@@ -1,8 +1,6 @@
 import { Router } from 'express';
+
 import dealController from '@/api/v1/controllers/deal.controller';
-import { authenticate } from '@/middleware/auth.middleware';
-import { requireRole } from '@/middleware/role-guard.middleware';
-import { validate } from '@/middleware/validation.middleware';
 import {
   createDealSchema,
   updateDealSchema,
@@ -11,6 +9,9 @@ import {
   supplierBookingsQuerySchema,
   supplierDealsQuerySchema,
 } from '@/api/v1/validators/deal.validator';
+import { authenticate } from '@/middleware/auth.middleware';
+import { requireRole } from '@/middleware/role-guard.middleware';
+import { validate } from '@/middleware/validation.middleware';
 
 const router: Router = Router();
 
@@ -28,18 +29,10 @@ router.get(
 );
 
 // Create a deal
-router.post(
-  '/',
-  validate(createDealSchema),
-  dealController.createDeal
-);
+router.post('/', validate(createDealSchema), dealController.createDeal);
 
 // Update a deal
-router.put(
-  '/:dealId',
-  validate(updateDealSchema),
-  dealController.updateDeal
-);
+router.put('/:dealId', validate(updateDealSchema), dealController.updateDeal);
 
 // Toggle deal pause
 router.post(

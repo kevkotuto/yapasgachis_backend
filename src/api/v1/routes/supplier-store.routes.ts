@@ -1,14 +1,15 @@
 import { Router } from 'express';
+
 import supplierStoreController from '@/api/v1/controllers/supplier-store.controller';
-import { authenticate } from '@/middleware/auth.middleware';
-import { requireRole } from '@/middleware/role-guard.middleware';
-import { validate } from '@/middleware/validation.middleware';
 import {
   createStoreSchema,
   updateStoreSchema,
   storeIdParamSchema,
   setTemporaryClosureSchema,
 } from '@/api/v1/validators/supplier-store.validator';
+import { authenticate } from '@/middleware/auth.middleware';
+import { requireRole } from '@/middleware/role-guard.middleware';
+import { validate } from '@/middleware/validation.middleware';
 
 const router: Router = Router();
 

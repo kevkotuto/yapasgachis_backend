@@ -1,7 +1,8 @@
 import axios from 'axios';
+
+import CacheService from '@/infrastructure/database/redis/cache.service';
 import logger from '@/infrastructure/monitoring/logger';
 import { AppError } from '@/middleware/error-handler.middleware';
-import CacheService from '@/infrastructure/database/redis/cache.service';
 
 /**
  * Geocoding Service
@@ -218,8 +219,7 @@ export class GeocodingService {
     maxLon: number;
   } {
     const latChange = radiusKm / 111.32; // 1 degree latitude ≈ 111.32 km
-    const lonChange =
-      radiusKm / (111.32 * Math.cos(this.toRadians(latitude)));
+    const lonChange = radiusKm / (111.32 * Math.cos(this.toRadians(latitude)));
 
     return {
       minLat: latitude - latChange,
@@ -260,9 +260,7 @@ export class GeocodingService {
    * Batch geocode multiple addresses
    * Note: Be mindful of rate limits (max 1 request/second for Nominatim)
    */
-  async batchGeocode(
-    addresses: string[]
-  ): Promise<
+  async batchGeocode(addresses: string[]): Promise<
     Array<{
       address: string;
       latitude?: number;

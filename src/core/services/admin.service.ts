@@ -1,12 +1,8 @@
+import { UserRole, UserStatus, ProductStatus, Prisma } from '@prisma/client';
+
 import { prisma } from '@/infrastructure/database/prisma';
 import logger from '@/infrastructure/monitoring/logger';
 import { AppError } from '@/utils/helpers';
-import {
-  UserRole,
-  UserStatus,
-  ProductStatus,
-  Prisma,
-} from '@prisma/client';
 
 /**
  * Admin Service
@@ -161,7 +157,10 @@ export class AdminService {
 
     // Prevent changing status of SUPER_ADMIN
     if (user.role === UserRole.SUPER_ADMIN) {
-      throw new AppError(403, 'Impossible de modifier le statut d\'un super administrateur');
+      throw new AppError(
+        403,
+        "Impossible de modifier le statut d'un super administrateur"
+      );
     }
 
     const updatedUser = await prisma.user.update({
@@ -183,11 +182,7 @@ export class AdminService {
   /**
    * Update user role
    */
-  async updateUserRole(
-    userId: string,
-    role: UserRole,
-    adminId?: string
-  ) {
+  async updateUserRole(userId: string, role: UserRole, adminId?: string) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
     });
@@ -198,7 +193,10 @@ export class AdminService {
 
     // Prevent changing SUPER_ADMIN role
     if (user.role === UserRole.SUPER_ADMIN || role === UserRole.SUPER_ADMIN) {
-      throw new AppError(403, 'Impossible d\'attribuer ou retirer le rôle de super administrateur');
+      throw new AppError(
+        403,
+        "Impossible d'attribuer ou retirer le rôle de super administrateur"
+      );
     }
 
     const updatedUser = await prisma.user.update({
@@ -229,7 +227,10 @@ export class AdminService {
     }
 
     if (user.role === UserRole.SUPER_ADMIN) {
-      throw new AppError(403, 'Impossible de supprimer un super administrateur');
+      throw new AppError(
+        403,
+        'Impossible de supprimer un super administrateur'
+      );
     }
 
     await prisma.user.update({
@@ -411,11 +412,7 @@ export class AdminService {
   /**
    * Reject supplier verification
    */
-  async rejectSupplier(
-    supplierId: string,
-    reason: string,
-    adminId: string
-  ) {
+  async rejectSupplier(supplierId: string, reason: string, adminId: string) {
     const supplier = await prisma.supplierProfile.findUnique({
       where: { id: supplierId },
       include: { user: true },
@@ -454,7 +451,10 @@ export class AdminService {
     adminId: string
   ) {
     if (commissionRate < 0 || commissionRate > 1) {
-      throw new AppError(400, 'Le taux de commission doit être entre 0 et 1 (0% - 100%)');
+      throw new AppError(
+        400,
+        'Le taux de commission doit être entre 0 et 1 (0% - 100%)'
+      );
     }
 
     const supplier = await prisma.supplierProfile.findUnique({
@@ -624,7 +624,10 @@ export class AdminService {
     }
 
     if (product.status !== ProductStatus.DRAFT) {
-      throw new AppError(400, 'Seuls les produits en brouillon peuvent être approuvés');
+      throw new AppError(
+        400,
+        'Seuls les produits en brouillon peuvent être approuvés'
+      );
     }
 
     const updatedProduct = await prisma.product.update({
@@ -646,11 +649,7 @@ export class AdminService {
   /**
    * Reject product (archive it)
    */
-  async rejectProduct(
-    productId: string,
-    reason: string,
-    adminId: string
-  ) {
+  async rejectProduct(productId: string, reason: string, adminId: string) {
     const product = await prisma.product.findUnique({
       where: { id: productId },
       include: { supplier: true },

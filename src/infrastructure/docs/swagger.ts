@@ -1,6 +1,7 @@
+import { Express } from 'express';
 import swaggerJsdoc, { Options } from 'swagger-jsdoc';
 import * as swaggerUi from 'swagger-ui-express';
-import { Express } from 'express';
+
 import config from '@/config';
 
 const swaggerDefinition = {
@@ -51,7 +52,10 @@ Authorization: Bearer <token>
     },
   ],
   tags: [
-    { name: 'Auth', description: 'Authentification et gestion des utilisateurs' },
+    {
+      name: 'Auth',
+      description: 'Authentification et gestion des utilisateurs',
+    },
     { name: 'Suppliers', description: 'Gestion des fournisseurs' },
     { name: 'Products', description: 'Gestion des produits' },
     { name: 'Orders', description: 'Gestion des commandes' },
@@ -60,7 +64,10 @@ Authorization: Bearer <token>
     { name: 'Subscriptions', description: 'Abonnements et codes promo' },
     { name: 'Associations', description: 'Gestion des associations' },
     { name: 'Donations', description: 'Dons alimentaires et financiers' },
-    { name: 'Notifications', description: 'Notifications push, email, temps réel' },
+    {
+      name: 'Notifications',
+      description: 'Notifications push, email, temps réel',
+    },
     { name: 'Reviews', description: 'Avis et évaluations' },
     { name: 'Advertising', description: 'Campagnes publicitaires' },
     { name: 'Admin', description: 'Administration et analytics' },
@@ -111,8 +118,14 @@ Authorization: Bearer <token>
           phone: { type: 'string', example: '+221771234567' },
           firstName: { type: 'string', example: 'Mamadou' },
           lastName: { type: 'string', example: 'Diallo' },
-          role: { type: 'string', enum: ['USER', 'SUPPLIER', 'ASSOCIATION', 'ADVERTISER', 'ADMIN'] },
-          status: { type: 'string', enum: ['PENDING', 'ACTIVE', 'SUSPENDED', 'DEACTIVATED'] },
+          role: {
+            type: 'string',
+            enum: ['USER', 'SUPPLIER', 'ASSOCIATION', 'ADVERTISER', 'ADMIN'],
+          },
+          status: {
+            type: 'string',
+            enum: ['PENDING', 'ACTIVE', 'SUSPENDED', 'DEACTIVATED'],
+          },
           createdAt: { type: 'string', format: 'date-time' },
         },
       },
@@ -161,8 +174,30 @@ Authorization: Bearer <token>
           discountedPrice: { type: 'number', example: 2500 },
           discountPercentage: { type: 'number', example: 50 },
           quantity: { type: 'integer', example: 10 },
-          category: { type: 'string', enum: ['BAKERY', 'RESTAURANT', 'SUPERMARKET', 'GROCERY', 'FRUITS_VEGETABLES', 'DAIRY', 'MEAT_FISH', 'OTHER'] },
-          status: { type: 'string', enum: ['DRAFT', 'PENDING', 'ACTIVE', 'SOLD_OUT', 'EXPIRED', 'REJECTED'] },
+          category: {
+            type: 'string',
+            enum: [
+              'BAKERY',
+              'RESTAURANT',
+              'SUPERMARKET',
+              'GROCERY',
+              'FRUITS_VEGETABLES',
+              'DAIRY',
+              'MEAT_FISH',
+              'OTHER',
+            ],
+          },
+          status: {
+            type: 'string',
+            enum: [
+              'DRAFT',
+              'PENDING',
+              'ACTIVE',
+              'SOLD_OUT',
+              'EXPIRED',
+              'REJECTED',
+            ],
+          },
           images: { type: 'array', items: { type: 'string', format: 'uri' } },
           pickupStart: { type: 'string', format: 'date-time' },
           pickupEnd: { type: 'string', format: 'date-time' },
@@ -176,7 +211,10 @@ Authorization: Bearer <token>
         properties: {
           id: { type: 'string', format: 'uuid' },
           businessName: { type: 'string', example: 'Pâtisserie Kayzer' },
-          type: { type: 'string', enum: ['BAKERY', 'RESTAURANT', 'SUPERMARKET', 'GROCERY', 'OTHER'] },
+          type: {
+            type: 'string',
+            enum: ['BAKERY', 'RESTAURANT', 'SUPERMARKET', 'GROCERY', 'OTHER'],
+          },
           isVerified: { type: 'boolean' },
           rating: { type: 'number', example: 4.5 },
           logo: { type: 'string', format: 'uri' },
@@ -188,11 +226,27 @@ Authorization: Bearer <token>
         properties: {
           id: { type: 'string', format: 'uuid' },
           orderNumber: { type: 'string', example: 'ORD-2024-001234' },
-          status: { type: 'string', enum: ['PENDING', 'PAID', 'PREPARING', 'READY', 'DELIVERING', 'DELIVERED', 'COMPLETED', 'CANCELLED', 'REFUNDED'] },
+          status: {
+            type: 'string',
+            enum: [
+              'PENDING',
+              'PAID',
+              'PREPARING',
+              'READY',
+              'DELIVERING',
+              'DELIVERED',
+              'COMPLETED',
+              'CANCELLED',
+              'REFUNDED',
+            ],
+          },
           totalAmount: { type: 'number', example: 5000 },
           deliveryMethod: { type: 'string', enum: ['PICKUP', 'DELIVERY'] },
           paymentMethod: { type: 'string', enum: ['WAVE', 'CASH_ON_DELIVERY'] },
-          items: { type: 'array', items: { $ref: '#/components/schemas/OrderItem' } },
+          items: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/OrderItem' },
+          },
           createdAt: { type: 'string', format: 'date-time' },
         },
       },
@@ -214,7 +268,18 @@ Authorization: Bearer <token>
           id: { type: 'string', format: 'uuid' },
           title: { type: 'string', example: 'Petit-déjeuner Gourmand' },
           description: { type: 'string' },
-          category: { type: 'string', enum: ['FOOD', 'WELLNESS', 'ENTERTAINMENT', 'TRAVEL', 'SHOPPING', 'SERVICES', 'OTHER'] },
+          category: {
+            type: 'string',
+            enum: [
+              'FOOD',
+              'WELLNESS',
+              'ENTERTAINMENT',
+              'TRAVEL',
+              'SHOPPING',
+              'SERVICES',
+              'OTHER',
+            ],
+          },
           originalPrice: { type: 'number', example: 10000 },
           discountedPrice: { type: 'number', example: 5000 },
           discountPercentage: { type: 'number', example: 50 },
@@ -222,7 +287,10 @@ Authorization: Bearer <token>
           quantityRemaining: { type: 'integer' },
           startsAt: { type: 'string', format: 'date-time' },
           endsAt: { type: 'string', format: 'date-time' },
-          status: { type: 'string', enum: ['PENDING', 'APPROVED', 'REJECTED', 'EXPIRED', 'PAUSED'] },
+          status: {
+            type: 'string',
+            enum: ['PENDING', 'APPROVED', 'REJECTED', 'EXPIRED', 'PAUSED'],
+          },
         },
       },
       // Donation schemas
@@ -231,9 +299,25 @@ Authorization: Bearer <token>
         properties: {
           id: { type: 'string', format: 'uuid' },
           type: { type: 'string', enum: ['FOOD', 'FINANCIAL'] },
-          status: { type: 'string', enum: ['PENDING', 'SCHEDULED', 'COLLECTED', 'DISTRIBUTED', 'COMPLETED', 'CANCELLED'] },
-          amount: { type: 'number', description: 'Montant pour dons financiers' },
-          quantity: { type: 'number', description: 'Quantité en kg pour dons alimentaires' },
+          status: {
+            type: 'string',
+            enum: [
+              'PENDING',
+              'SCHEDULED',
+              'COLLECTED',
+              'DISTRIBUTED',
+              'COMPLETED',
+              'CANCELLED',
+            ],
+          },
+          amount: {
+            type: 'number',
+            description: 'Montant pour dons financiers',
+          },
+          quantity: {
+            type: 'number',
+            description: 'Quantité en kg pour dons alimentaires',
+          },
           association: { $ref: '#/components/schemas/AssociationSummary' },
           createdAt: { type: 'string', format: 'date-time' },
         },
@@ -305,9 +389,7 @@ Authorization: Bearer <token>
             example: {
               success: false,
               message: 'Erreur de validation',
-              errors: [
-                { field: 'email', message: 'Email invalide' },
-              ],
+              errors: [{ field: 'email', message: 'Email invalide' }],
             },
           },
         },
@@ -319,10 +401,7 @@ Authorization: Bearer <token>
 
 const options: Options = {
   swaggerDefinition,
-  apis: [
-    './src/api/v1/routes/*.ts',
-    './src/api/v1/controllers/*.ts',
-  ],
+  apis: ['./src/api/v1/routes/*.ts', './src/api/v1/controllers/*.ts'],
 };
 
 const swaggerSpec = swaggerJsdoc(options);

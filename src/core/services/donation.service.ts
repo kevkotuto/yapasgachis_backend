@@ -5,17 +5,18 @@ import {
   UserRole,
   ProductStatus,
 } from '@prisma/client';
-import donationRepository, {
-  DonationRepository,
-} from '@/core/repositories/donation.repository';
+
 import associationRepository, {
   AssociationRepository,
 } from '@/core/repositories/association.repository';
+import donationRepository, {
+  DonationRepository,
+} from '@/core/repositories/donation.repository';
 import UserRepository from '@/core/repositories/user.repository';
-import { AppError } from '@/middleware/error-handler.middleware';
-import logger from '@/infrastructure/monitoring/logger';
-import { prisma } from '@/infrastructure/database/prisma';
 import eventService, { AppEvent } from '@/core/services/event.service';
+import { prisma } from '@/infrastructure/database/prisma';
+import logger from '@/infrastructure/monitoring/logger';
+import { AppError } from '@/middleware/error-handler.middleware';
 
 /**
  * Donation Service
@@ -49,9 +50,15 @@ export class DonationService {
       }
 
       // Verify association exists and is verified
-      const association = await this.associationRepo.findById(data.associationId);
+      const association = await this.associationRepo.findById(
+        data.associationId
+      );
       if (!association) {
-        throw new AppError(404, 'Association non trouvée', 'ASSOCIATION_NOT_FOUND');
+        throw new AppError(
+          404,
+          'Association non trouvée',
+          'ASSOCIATION_NOT_FOUND'
+        );
       }
       if (!association.verified) {
         throw new AppError(
@@ -174,9 +181,15 @@ export class DonationService {
       }
 
       // Verify association exists and is verified
-      const association = await this.associationRepo.findById(data.associationId);
+      const association = await this.associationRepo.findById(
+        data.associationId
+      );
       if (!association) {
-        throw new AppError(404, 'Association non trouvée', 'ASSOCIATION_NOT_FOUND');
+        throw new AppError(
+          404,
+          'Association non trouvée',
+          'ASSOCIATION_NOT_FOUND'
+        );
       }
       if (!association.verified) {
         throw new AppError(
@@ -188,7 +201,11 @@ export class DonationService {
 
       // Validate amount
       if (data.amount <= 0) {
-        throw new AppError(400, 'Le montant doit être positif', 'INVALID_AMOUNT');
+        throw new AppError(
+          400,
+          'Le montant doit être positif',
+          'INVALID_AMOUNT'
+        );
       }
 
       // Create donation
@@ -267,7 +284,8 @@ export class DonationService {
       }
 
       // Verify user is authorized (donor or association)
-      const associationProfile = await this.associationRepo.findByUserId(userId);
+      const associationProfile =
+        await this.associationRepo.findByUserId(userId);
       const isAssociation = associationProfile?.id === donation.associationId;
       const isDonor = donation.donorId === userId;
 
@@ -312,7 +330,11 @@ export class DonationService {
             ? donation.amount || 0
             : (donation.quantity || 0) * 100; // Estimate value for food
 
-        await this.associationRepo.updateStats(donation.associationId, 1, value);
+        await this.associationRepo.updateStats(
+          donation.associationId,
+          1,
+          value
+        );
       }
 
       // Emit event
@@ -367,8 +389,12 @@ export class DonationService {
       }
 
       // Verify user is the association
-      const associationProfile = await this.associationRepo.findByUserId(userId);
-      if (!associationProfile || associationProfile.id !== donation.associationId) {
+      const associationProfile =
+        await this.associationRepo.findByUserId(userId);
+      if (
+        !associationProfile ||
+        associationProfile.id !== donation.associationId
+      ) {
         throw new AppError(
           403,
           "Seule l'association destinataire peut programmer la collecte",
@@ -428,8 +454,12 @@ export class DonationService {
       }
 
       // Verify user is the association
-      const associationProfile = await this.associationRepo.findByUserId(userId);
-      if (!associationProfile || associationProfile.id !== donation.associationId) {
+      const associationProfile =
+        await this.associationRepo.findByUserId(userId);
+      if (
+        !associationProfile ||
+        associationProfile.id !== donation.associationId
+      ) {
         throw new AppError(
           403,
           "Seule l'association destinataire peut confirmer la collecte",
@@ -583,7 +613,10 @@ export class DonationService {
       );
     }
 
-    const result = await this.donationRepo.findByAssociation(profile.id, params);
+    const result = await this.donationRepo.findByAssociation(
+      profile.id,
+      params
+    );
     const limit = params.limit || 20;
 
     return {
@@ -656,7 +689,7 @@ export class DonationService {
       if (donation.donorId !== userId) {
         throw new AppError(
           403,
-          "Seul le donateur peut demander un reçu",
+          'Seul le donateur peut demander un reçu',
           'FORBIDDEN'
         );
       }
@@ -788,10 +821,14 @@ export class DonationService {
           prisma.donation.count(),
           prisma.donation.count({ where: { type: DonationType.FOOD } }),
           prisma.donation.count({ where: { type: DonationType.FINANCIAL } }),
-          prisma.donation.count({ where: { status: DonationStatus.COMPLETED } }),
+          prisma.donation.count({
+            where: { status: DonationStatus.COMPLETED },
+          }),
           prisma.donation.count({
             where: {
-              status: { in: [DonationStatus.PENDING, DonationStatus.SCHEDULED] },
+              status: {
+                in: [DonationStatus.PENDING, DonationStatus.SCHEDULED],
+              },
             },
           }),
           prisma.donation.aggregate({
@@ -800,7 +837,9 @@ export class DonationService {
               quantity: true,
             },
             where: {
-              status: { in: [DonationStatus.COMPLETED, DonationStatus.DISTRIBUTED] },
+              status: {
+                in: [DonationStatus.COMPLETED, DonationStatus.DISTRIBUTED],
+              },
             },
           }),
         ]);
@@ -818,7 +857,10 @@ export class DonationService {
       logger.error('Error getting global donation stats', {
         error: (error as Error).message,
       });
-      throw new AppError(500, 'Erreur lors de la récupération des statistiques');
+      throw new AppError(
+        500,
+        'Erreur lors de la récupération des statistiques'
+      );
     }
   }
 }

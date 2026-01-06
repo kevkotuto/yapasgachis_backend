@@ -1,8 +1,6 @@
 import { Router } from 'express';
+
 import donationController from '@/api/v1/controllers/donation.controller';
-import { authenticate } from '@/middleware/auth.middleware';
-import { requireRole } from '@/middleware/role-guard.middleware';
-import { validate } from '@/middleware/validation.middleware';
 import {
   createFoodDonationSchema,
   createFinancialDonationSchema,
@@ -12,6 +10,9 @@ import {
   cancelDonationSchema,
   getDonationsQuerySchema,
 } from '@/api/v1/validators/donation.validator';
+import { authenticate } from '@/middleware/auth.middleware';
+import { requireRole } from '@/middleware/role-guard.middleware';
+import { validate } from '@/middleware/validation.middleware';
 
 const router: Router = Router();
 

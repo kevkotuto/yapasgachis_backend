@@ -1,7 +1,7 @@
-import cron from 'node-cron';
-import { PrismaClient, ProductStatus, DonationStatus } from '@prisma/client';
-import logger from '@infrastructure/monitoring/logger';
 import config from '@config/index';
+import logger from '@infrastructure/monitoring/logger';
+import { PrismaClient, ProductStatus, DonationStatus } from '@prisma/client';
+import cron from 'node-cron';
 
 const prisma = new PrismaClient();
 
@@ -35,7 +35,9 @@ const expireProductsJob = () => {
         },
       });
 
-      logger.info(`[CRON] ${jobName} completed: ${result.count} products expired`);
+      logger.info(
+        `[CRON] ${jobName} completed: ${result.count} products expired`
+      );
 
       // Also mark products with availableUntil passed
       const result2 = await prisma.product.updateMany({
@@ -51,7 +53,9 @@ const expireProductsJob = () => {
       });
 
       if (result2.count > 0) {
-        logger.info(`[CRON] ${jobName}: ${result2.count} products archived (availability ended)`);
+        logger.info(
+          `[CRON] ${jobName}: ${result2.count} products archived (availability ended)`
+        );
       }
 
       // Notify suppliers about expiring products (within next 24 hours)
@@ -228,7 +232,9 @@ const subscriptionRenewalJob = () => {
       });
 
       if (expiredDeals.count > 0) {
-        logger.info(`  - Deals expired (inactive subscription): ${expiredDeals.count}`);
+        logger.info(
+          `  - Deals expired (inactive subscription): ${expiredDeals.count}`
+        );
       }
     } catch (error) {
       logger.error(`[CRON] ${jobName} failed:`, error);
@@ -432,14 +438,18 @@ const analyticsAggregationJob = () => {
 
       logger.info(`[CRON] ${jobName} completed:`);
       logger.info(`  - Date: ${yesterday.toISOString().split('T')[0]}`);
-      logger.info(`  - Orders: ${ordersStats._count} (${ordersStats._sum.total || 0} XOF)`);
+      logger.info(
+        `  - Orders: ${ordersStats._count} (${ordersStats._sum.total || 0} XOF)`
+      );
       logger.info(`  - New users: ${newUsers}`);
       logger.info(`  - New suppliers: ${newSuppliers}`);
       logger.info(`  - Donations: ${donationsStats._count}`);
       logger.info(`  - Deal bookings: ${dealBookingsStats._count}`);
       logger.info(`  - Supplier stats updated: ${suppliers.length}`);
       logger.info(`  - Old events cleaned: ${deletedEvents.count}`);
-      logger.info(`  - Old notifications cleaned: ${deletedNotifications.count}`);
+      logger.info(
+        `  - Old notifications cleaned: ${deletedNotifications.count}`
+      );
     } catch (error) {
       logger.error(`[CRON] ${jobName} failed:`, error);
     }
@@ -492,7 +502,9 @@ const expireDealsJob = () => {
       });
 
       if (expiredBookings.count > 0) {
-        logger.info(`[CRON] ${jobName}: ${expiredBookings.count} bookings expired`);
+        logger.info(
+          `[CRON] ${jobName}: ${expiredBookings.count} bookings expired`
+        );
       }
     } catch (error) {
       logger.error(`[CRON] ${jobName} failed:`, error);
@@ -550,7 +562,8 @@ const cleanExpiredTokensJob = () => {
  * Initialize all cron jobs
  */
 export const initCronJobs = () => {
-  const enabled = config.cron?.enabled ?? process.env.ENABLE_CRON_JOBS === 'true';
+  const enabled =
+    config.cron?.enabled ?? process.env.ENABLE_CRON_JOBS === 'true';
 
   if (!enabled) {
     logger.warn('[CRON] Cron jobs are disabled');

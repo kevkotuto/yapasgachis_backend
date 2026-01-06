@@ -1,9 +1,7 @@
 import { Router } from 'express';
+
 import adminController from '@/api/v1/controllers/admin.controller';
 import reviewController from '@/api/v1/controllers/review.controller';
-import { authenticate } from '@/middleware/auth.middleware';
-import { requireRole } from '@/middleware/role-guard.middleware';
-import { validate } from '@/middleware/validation.middleware';
 import {
   getUsersSchema,
   userIdSchema,
@@ -21,7 +19,14 @@ import {
   bulkVerifySuppliersSchema,
   paginationSchema,
 } from '@/api/v1/validators/admin.validator';
-import { dateRangeSchema, dateRangeWithLimitSchema, supplierIdSchema as analyticsSupplierIdSchema } from '@/api/v1/validators/analytics.validator';
+import {
+  dateRangeSchema,
+  dateRangeWithLimitSchema,
+  supplierIdSchema as analyticsSupplierIdSchema,
+} from '@/api/v1/validators/analytics.validator';
+import { authenticate } from '@/middleware/auth.middleware';
+import { requireRole } from '@/middleware/role-guard.middleware';
+import { validate } from '@/middleware/validation.middleware';
 
 const router: Router = Router();
 
@@ -127,10 +132,7 @@ router.get(
   validate(paginationSchema),
   reviewController.getReportedReviews
 );
-router.patch(
-  '/reviews/:id/clear-report',
-  reviewController.clearReport
-);
+router.patch('/reviews/:id/clear-report', reviewController.clearReport);
 router.delete('/reviews/:id', reviewController.adminDeleteReview);
 
 // ==================== ANALYTICS ====================

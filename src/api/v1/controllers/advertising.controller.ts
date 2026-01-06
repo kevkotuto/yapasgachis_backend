@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
-import { asyncHandler } from '@/utils/helpers';
-import advertisingService from '@/core/services/advertising.service';
+
 import {
   CreateAdvertiserProfileInput,
   UpdateAdvertiserProfileInput,
@@ -11,7 +10,10 @@ import {
   RejectCampaignInput,
   GetAdsQuery,
 } from '../validators/advertising.validator';
+
+import advertisingService from '@/core/services/advertising.service';
 import logger from '@/infrastructure/monitoring/logger';
+import { asyncHandler } from '@/utils/helpers';
 
 /**
  * Advertising Controller
@@ -24,32 +26,33 @@ export class AdvertisingController {
    * Create advertiser profile
    * POST /api/v1/advertising/profile
    */
-  createProfile = asyncHandler(
-    async (req: Request, res: Response) => {
-      const userId = req.user!.id;
-      const body = req.body as CreateAdvertiserProfileInput;
+  createProfile = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user.id;
+    const body = req.body as CreateAdvertiserProfileInput;
 
-      const profile = await advertisingService.createProfile(userId, body as Required<CreateAdvertiserProfileInput>);
+    const profile = await advertisingService.createProfile(
+      userId,
+      body as Required<CreateAdvertiserProfileInput>
+    );
 
-      logger.info('Advertiser profile created via API', {
-        userId,
-        profileId: profile.id,
-      });
+    logger.info('Advertiser profile created via API', {
+      userId,
+      profileId: profile.id,
+    });
 
-      res.status(201).json({
-        success: true,
-        message: 'Profil annonceur créé avec succès',
-        data: { profile },
-      });
-    }
-  );
+    res.status(201).json({
+      success: true,
+      message: 'Profil annonceur créé avec succès',
+      data: { profile },
+    });
+  });
 
   /**
    * Get my advertiser profile
    * GET /api/v1/advertising/profile
    */
   getMyProfile = asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.id;
+    const userId = req.user.id;
 
     const profile = await advertisingService.getProfile(userId);
 
@@ -68,7 +71,7 @@ export class AdvertisingController {
       req: Request<{}, {}, UpdateAdvertiserProfileInput>,
       res: Response
     ) => {
-      const userId = req.user!.id;
+      const userId = req.user.id;
 
       const profile = await advertisingService.updateProfile(userId, req.body);
 
@@ -91,26 +94,27 @@ export class AdvertisingController {
    * Create campaign
    * POST /api/v1/advertising/campaigns
    */
-  createCampaign = asyncHandler(
-    async (req: Request, res: Response) => {
-      const userId = req.user!.id;
-      const body = req.body as CreateCampaignInput;
+  createCampaign = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user.id;
+    const body = req.body as CreateCampaignInput;
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const campaign = await advertisingService.createCampaign(userId, body as any);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const campaign = await advertisingService.createCampaign(
+      userId,
+      body as any
+    );
 
-      logger.info('Campaign created via API', {
-        userId,
-        campaignId: campaign.id,
-      });
+    logger.info('Campaign created via API', {
+      userId,
+      campaignId: campaign.id,
+    });
 
-      res.status(201).json({
-        success: true,
-        message: 'Campagne créée avec succès',
-        data: { campaign },
-      });
-    }
-  );
+    res.status(201).json({
+      success: true,
+      message: 'Campagne créée avec succès',
+      data: { campaign },
+    });
+  });
 
   /**
    * Get my campaigns
@@ -118,7 +122,7 @@ export class AdvertisingController {
    */
   getMyCampaigns = asyncHandler(
     async (req: Request<{}, {}, {}, GetCampaignsQuery>, res: Response) => {
-      const userId = req.user!.id;
+      const userId = req.user.id;
 
       const result = await advertisingService.getMyCampaigns(userId, req.query);
 
@@ -135,7 +139,7 @@ export class AdvertisingController {
    */
   getCampaign = asyncHandler(
     async (req: Request<{ id: string }>, res: Response) => {
-      const userId = req.user!.id;
+      const userId = req.user.id;
       const { id } = req.params;
 
       const campaign = await advertisingService.getCampaign(id, userId);
@@ -156,7 +160,7 @@ export class AdvertisingController {
       req: Request<{ id: string }, {}, UpdateCampaignInput>,
       res: Response
     ) => {
-      const userId = req.user!.id;
+      const userId = req.user.id;
       const { id } = req.params;
 
       const campaign = await advertisingService.updateCampaign(
@@ -184,7 +188,7 @@ export class AdvertisingController {
    */
   submitCampaign = asyncHandler(
     async (req: Request<{ id: string }>, res: Response) => {
-      const userId = req.user!.id;
+      const userId = req.user.id;
       const { id } = req.params;
 
       const campaign = await advertisingService.submitCampaignForApproval(
@@ -211,7 +215,7 @@ export class AdvertisingController {
    */
   pauseCampaign = asyncHandler(
     async (req: Request<{ id: string }>, res: Response) => {
-      const userId = req.user!.id;
+      const userId = req.user.id;
       const { id } = req.params;
 
       const campaign = await advertisingService.pauseCampaign(userId, id);
@@ -235,7 +239,7 @@ export class AdvertisingController {
    */
   resumeCampaign = asyncHandler(
     async (req: Request<{ id: string }>, res: Response) => {
-      const userId = req.user!.id;
+      const userId = req.user.id;
       const { id } = req.params;
 
       const campaign = await advertisingService.resumeCampaign(userId, id);
@@ -259,7 +263,7 @@ export class AdvertisingController {
    */
   deleteCampaign = asyncHandler(
     async (req: Request<{ id: string }>, res: Response) => {
-      const userId = req.user!.id;
+      const userId = req.user.id;
       const { id } = req.params;
 
       await advertisingService.deleteCampaign(userId, id);
@@ -282,7 +286,7 @@ export class AdvertisingController {
    */
   getCampaignStats = asyncHandler(
     async (req: Request<{ id: string }>, res: Response) => {
-      const userId = req.user!.id;
+      const userId = req.user.id;
       const { id } = req.params;
 
       const stats = await advertisingService.getCampaignStats(userId, id);
@@ -387,7 +391,7 @@ export class AdvertisingController {
    */
   approveCampaign = asyncHandler(
     async (req: Request<{ id: string }>, res: Response) => {
-      const adminId = req.user!.id;
+      const adminId = req.user.id;
       const { id } = req.params;
 
       const campaign = await advertisingService.approveCampaign(id, adminId);
@@ -414,7 +418,7 @@ export class AdvertisingController {
       req: Request<{ id: string }, {}, RejectCampaignInput>,
       res: Response
     ) => {
-      const adminId = req.user!.id;
+      const adminId = req.user.id;
       const { id } = req.params;
       const { reason } = req.body;
 

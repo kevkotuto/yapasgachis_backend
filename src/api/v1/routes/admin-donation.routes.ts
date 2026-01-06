@@ -1,9 +1,10 @@
 import { Router } from 'express';
+
 import donationController from '@/api/v1/controllers/donation.controller';
+import { searchDonationsSchema } from '@/api/v1/validators/donation.validator';
 import { authenticate } from '@/middleware/auth.middleware';
 import { requireRole } from '@/middleware/role-guard.middleware';
 import { validate } from '@/middleware/validation.middleware';
-import { searchDonationsSchema } from '@/api/v1/validators/donation.validator';
 
 const router: Router = Router();
 

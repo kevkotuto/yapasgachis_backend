@@ -15,7 +15,7 @@ export const createStoreSchema = z.object({
     name: z.string().min(2, 'Le nom doit avoir au moins 2 caractères').max(100),
     description: z.string().max(500).optional(),
     images: z.array(z.string().url()).optional(),
-    address: z.string().min(5, 'L\'adresse doit avoir au moins 5 caractères'),
+    address: z.string().min(5, "L'adresse doit avoir au moins 5 caractères"),
     city: z.string().min(2),
     commune: z.string().optional(),
     neighborhood: z.string().optional(),
@@ -68,11 +68,27 @@ export const searchStoresSchema = z.object({
     search: z.string().optional(),
     city: z.string().optional(),
     commune: z.string().optional(),
-    latitude: z.string().transform(Number).pipe(z.number().min(-90).max(90)).optional(),
-    longitude: z.string().transform(Number).pipe(z.number().min(-180).max(180)).optional(),
+    latitude: z
+      .string()
+      .transform(Number)
+      .pipe(z.number().min(-90).max(90))
+      .optional(),
+    longitude: z
+      .string()
+      .transform(Number)
+      .pipe(z.number().min(-180).max(180))
+      .optional(),
     radius: z.string().transform(Number).pipe(z.number().positive()).optional(),
-    page: z.string().transform(Number).pipe(z.number().int().positive()).optional(),
-    limit: z.string().transform(Number).pipe(z.number().int().positive().max(100)).optional(),
+    page: z
+      .string()
+      .transform(Number)
+      .pipe(z.number().int().positive())
+      .optional(),
+    limit: z
+      .string()
+      .transform(Number)
+      .pipe(z.number().int().positive().max(100))
+      .optional(),
   }),
 });
 
@@ -90,4 +106,6 @@ export const setTemporaryClosureSchema = z.object({
 export type CreateStoreInput = z.infer<typeof createStoreSchema>;
 export type UpdateStoreInput = z.infer<typeof updateStoreSchema>;
 export type SearchStoresInput = z.infer<typeof searchStoresSchema>;
-export type SetTemporaryClosureInput = z.infer<typeof setTemporaryClosureSchema>;
+export type SetTemporaryClosureInput = z.infer<
+  typeof setTemporaryClosureSchema
+>;

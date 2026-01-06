@@ -1,9 +1,6 @@
+import { DealBooking, BookingStatus, Prisma } from '@prisma/client';
+
 import { prisma } from '@/infrastructure/database/prisma';
-import {
-  DealBooking,
-  BookingStatus,
-  Prisma,
-} from '@prisma/client';
 import logger from '@/infrastructure/monitoring/logger';
 
 // Type for booking with deal relation included
@@ -119,7 +116,9 @@ export class DealBookingRepository {
   /**
    * Find booking by booking number
    */
-  async findByBookingNumber(bookingNumber: string): Promise<DealBooking | null> {
+  async findByBookingNumber(
+    bookingNumber: string
+  ): Promise<DealBooking | null> {
     try {
       return await prisma.dealBooking.findUnique({
         where: { bookingNumber },
@@ -157,7 +156,9 @@ export class DealBookingRepository {
   /**
    * Find booking by validation code
    */
-  async findByValidationCode(validationCode: string): Promise<DealBookingWithDeal | null> {
+  async findByValidationCode(
+    validationCode: string
+  ): Promise<DealBookingWithDeal | null> {
     try {
       return await prisma.dealBooking.findUnique({
         where: { validationCode },
@@ -319,7 +320,14 @@ export class DealBookingRepository {
       limit?: number;
     }
   ): Promise<{ bookings: DealBooking[]; total: number }> {
-    const { status, storeId, startDate, endDate, page = 1, limit = 20 } = params || {};
+    const {
+      status,
+      storeId,
+      startDate,
+      endDate,
+      page = 1,
+      limit = 20,
+    } = params || {};
     const skip = (page - 1) * limit;
 
     try {
@@ -439,7 +447,10 @@ export class DealBookingRepository {
   /**
    * Count user bookings for a deal
    */
-  async countUserBookingsForDeal(userId: string, dealId: string): Promise<number> {
+  async countUserBookingsForDeal(
+    userId: string,
+    dealId: string
+  ): Promise<number> {
     try {
       return await prisma.dealBooking.count({
         where: {

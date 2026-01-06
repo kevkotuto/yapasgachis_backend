@@ -1,10 +1,11 @@
-import { prisma } from '@/infrastructure/database/prisma';
 import {
   Product,
   ProductStatus,
   ProductCategory,
   Prisma,
 } from '@prisma/client';
+
+import { prisma } from '@/infrastructure/database/prisma';
 import logger from '@/infrastructure/monitoring/logger';
 
 /**
@@ -298,18 +299,25 @@ export class ProductRepository {
             const distance = this.calculateDistance(
               latitude,
               longitude,
-              product.supplier.latitude!,
-              product.supplier.longitude!
+              product.supplier.latitude,
+              product.supplier.longitude
             );
             return { ...product, distance };
           })
           .filter((product) => product.distance <= radius)
           .sort((a, b) => {
-            if (sortBy === 'price') return sortOrder === 'asc' ? a.discountedPrice - b.discountedPrice : b.discountedPrice - a.discountedPrice;
+            if (sortBy === 'price')
+              return sortOrder === 'asc'
+                ? a.discountedPrice - b.discountedPrice
+                : b.discountedPrice - a.discountedPrice;
             if (sortBy === 'discount') {
-              const aDiscount = ((a.originalPrice - a.discountedPrice) / a.originalPrice) * 100;
-              const bDiscount = ((b.originalPrice - b.discountedPrice) / b.originalPrice) * 100;
-              return sortOrder === 'asc' ? aDiscount - bDiscount : bDiscount - aDiscount;
+              const aDiscount =
+                ((a.originalPrice - a.discountedPrice) / a.originalPrice) * 100;
+              const bDiscount =
+                ((b.originalPrice - b.discountedPrice) / b.originalPrice) * 100;
+              return sortOrder === 'asc'
+                ? aDiscount - bDiscount
+                : bDiscount - aDiscount;
             }
             return a.distance - b.distance;
           });
@@ -414,7 +422,16 @@ export class ProductRepository {
             some: {
               order: {
                 createdAt: { gte: sevenDaysAgo },
-                status: { in: ['PAID', 'PREPARING', 'READY_FOR_PICKUP', 'IN_DELIVERY', 'DELIVERED', 'COMPLETED'] },
+                status: {
+                  in: [
+                    'PAID',
+                    'PREPARING',
+                    'READY_FOR_PICKUP',
+                    'IN_DELIVERY',
+                    'DELIVERED',
+                    'COMPLETED',
+                  ],
+                },
               },
             },
           },

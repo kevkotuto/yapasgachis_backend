@@ -90,7 +90,7 @@ export class GoogleAuthService {
         );
       }
 
-      const userInfo = await response.json() as {
+      const userInfo = (await response.json()) as {
         sub: string;
         email: string;
         given_name?: string;
@@ -104,7 +104,8 @@ export class GoogleAuthService {
         googleId: userInfo.sub,
         email: userInfo.email,
         firstName: userInfo.given_name || userInfo.name?.split(' ')[0] || '',
-        lastName: userInfo.family_name || userInfo.name?.split(' ').slice(1).join(' '),
+        lastName:
+          userInfo.family_name || userInfo.name?.split(' ').slice(1).join(' '),
         avatar: userInfo.picture,
         emailVerified: userInfo.email_verified || false,
       };
@@ -139,7 +140,8 @@ export class GoogleAuthService {
       googleId: payload.sub,
       email: payload.email,
       firstName: payload.given_name || payload.name?.split(' ')[0] || '',
-      lastName: payload.family_name || payload.name?.split(' ').slice(1).join(' '),
+      lastName:
+        payload.family_name || payload.name?.split(' ').slice(1).join(' '),
       avatar: payload.picture,
       emailVerified: payload.email_verified || false,
     };

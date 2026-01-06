@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 
-import { APP_CONSTANTS } from '@/utils/constants';
 import { logError } from '@/infrastructure/monitoring/logger';
 import { captureException } from '@/infrastructure/monitoring/sentry';
+import { APP_CONSTANTS } from '@/utils/constants';
 import { formatValidationErrors } from '@/utils/validators';
 
 export class AppError extends Error {

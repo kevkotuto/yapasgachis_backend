@@ -1,9 +1,6 @@
+import { SubscriptionPlan, SubscriptionTier, Prisma } from '@prisma/client';
+
 import { prisma } from '@/infrastructure/database/prisma';
-import {
-  SubscriptionPlan,
-  SubscriptionTier,
-  Prisma,
-} from '@prisma/client';
 import logger from '@/infrastructure/monitoring/logger';
 
 /**
@@ -14,7 +11,9 @@ export class SubscriptionPlanRepository {
   /**
    * Create a new subscription plan
    */
-  async create(data: Prisma.SubscriptionPlanCreateInput): Promise<SubscriptionPlan> {
+  async create(
+    data: Prisma.SubscriptionPlanCreateInput
+  ): Promise<SubscriptionPlan> {
     try {
       return await prisma.subscriptionPlan.create({
         data,

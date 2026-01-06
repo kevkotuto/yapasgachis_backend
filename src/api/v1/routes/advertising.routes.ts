@@ -1,8 +1,6 @@
 import { Router } from 'express';
+
 import advertisingController from '@/api/v1/controllers/advertising.controller';
-import { authenticate, optionalAuth } from '@/middleware/auth.middleware';
-import { requireRole } from '@/middleware/role-guard.middleware';
-import { validate } from '@/middleware/validation.middleware';
 import {
   createAdvertiserProfileSchema,
   updateAdvertiserProfileSchema,
@@ -13,6 +11,9 @@ import {
   getAdsSchema,
   trackAdClickSchema,
 } from '@/api/v1/validators/advertising.validator';
+import { authenticate, optionalAuth } from '@/middleware/auth.middleware';
+import { requireRole } from '@/middleware/role-guard.middleware';
+import { validate } from '@/middleware/validation.middleware';
 
 const router: Router = Router();
 

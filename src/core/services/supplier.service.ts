@@ -1,11 +1,17 @@
-import { SupplierProfile, SubscriptionTier, SupplierType, UserRole } from '@prisma/client';
+import {
+  SupplierProfile,
+  SubscriptionTier,
+  SupplierType,
+  UserRole,
+} from '@prisma/client';
+
 import supplierRepository, {
   SupplierRepository,
 } from '@/core/repositories/supplier.repository';
 import UserRepository from '@/core/repositories/user.repository';
 import geocodingService from '@/infrastructure/geolocation/geocoding.service';
-import { AppError } from '@/middleware/error-handler.middleware';
 import logger from '@/infrastructure/monitoring/logger';
+import { AppError } from '@/middleware/error-handler.middleware';
 
 /**
  * Supplier Service
@@ -43,7 +49,10 @@ export class SupplierService {
         throw new AppError(404, 'Utilisateur non trouvé', 'USER_NOT_FOUND');
       }
 
-      if (user.role !== UserRole.SUPPLIER_FOOD && user.role !== UserRole.SUPPLIER_DEALS) {
+      if (
+        user.role !== UserRole.SUPPLIER_FOOD &&
+        user.role !== UserRole.SUPPLIER_DEALS
+      ) {
         throw new AppError(
           403,
           'Seuls les fournisseurs peuvent créer un profil fournisseur',
@@ -108,7 +117,10 @@ export class SupplierService {
         userId,
         error: (error as Error).message,
       });
-      throw new AppError(500, 'Erreur lors de la création du profil fournisseur');
+      throw new AppError(
+        500,
+        'Erreur lors de la création du profil fournisseur'
+      );
     }
   }
 

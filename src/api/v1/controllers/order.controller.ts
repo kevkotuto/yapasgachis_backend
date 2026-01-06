@@ -1,9 +1,5 @@
 import { Request, Response } from 'express';
-import { asyncHandler } from '@/utils/helpers';
-import orderService from '@/core/services/order.service';
-import orderRepository from '@/core/repositories/order.repository';
-import mobileMoneyService from '@/infrastructure/payment/mobile-money.service';
-import supplierRepository from '@/core/repositories/supplier.repository';
+
 import {
   CreateOrderInput,
   GetOrderByIdInput,
@@ -13,7 +9,13 @@ import {
   CheckPaymentStatusInput,
   SearchOrdersInput,
 } from '../validators/order.validator';
+
+import orderRepository from '@/core/repositories/order.repository';
+import supplierRepository from '@/core/repositories/supplier.repository';
+import orderService from '@/core/services/order.service';
 import logger from '@/infrastructure/monitoring/logger';
+import mobileMoneyService from '@/infrastructure/payment/mobile-money.service';
+import { asyncHandler } from '@/utils/helpers';
 
 /**
  * Order Controller
@@ -24,35 +26,33 @@ export class OrderController {
    * Create order with payment
    * POST /api/v1/orders
    */
-  createOrder = asyncHandler(
-    async (req: Request, res: Response) => {
-      const userId = req.user!.id;
-      const body = req.body as CreateOrderInput;
+  createOrder = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user.id;
+    const body = req.body as CreateOrderInput;
 
-      const { order, paymentUrl } = await orderService.createOrder({
-        userId,
-        ...body,
-      } as import('@/core/services/order.service').CreateOrderParams);
+    const { order, paymentUrl } = await orderService.createOrder({
+      userId,
+      ...body,
+    } as import('@/core/services/order.service').CreateOrderParams);
 
-      logger.info('Order created via API', {
-        userId,
-        orderId: order.id,
-        total: order.total,
-      });
+    logger.info('Order created via API', {
+      userId,
+      orderId: order.id,
+      total: order.total,
+    });
 
-      res.status(201).json({
-        success: true,
-        message: 'Commande créée avec succès',
-        data: {
-          order,
-          payment: {
-            paymentUrl,
-            status: order.status,
-          },
+    res.status(201).json({
+      success: true,
+      message: 'Commande créée avec succès',
+      data: {
+        order,
+        payment: {
+          paymentUrl,
+          status: order.status,
         },
-      });
-    }
-  );
+      },
+    });
+  });
 
   /**
    * Get order by ID
@@ -60,7 +60,7 @@ export class OrderController {
    */
   getOrder = asyncHandler(
     async (req: Request<GetOrderByIdInput>, res: Response) => {
-      const userId = req.user!.id;
+      const userId = req.user.id;
       const { id } = req.params;
 
       const order = await orderService.getOrderById(id, userId);
@@ -78,7 +78,7 @@ export class OrderController {
    */
   getMyOrders = asyncHandler(
     async (req: Request<{}, {}, {}, GetUserOrdersInput>, res: Response) => {
-      const userId = req.user!.id;
+      const userId = req.user.id;
 
       const result = await orderService.getUserOrders(userId, req.query);
 
@@ -95,7 +95,7 @@ export class OrderController {
    */
   getSupplierOrders = asyncHandler(
     async (req: Request<{}, {}, {}, GetUserOrdersInput>, res: Response) => {
-      const userId = req.user!.id;
+      const userId = req.user.id;
 
       // Get supplier profile
       const supplier = await supplierRepository.findByUserId(userId);
@@ -132,7 +132,7 @@ export class OrderController {
       >,
       res: Response
     ) => {
-      const userId = req.user!.id;
+      const userId = req.user.id;
       const { id } = req.params;
       const { status } = req.body;
 
@@ -175,7 +175,7 @@ export class OrderController {
       req: Request<CancelOrderInput['params'], {}, CancelOrderInput['body']>,
       res: Response
     ) => {
-      const userId = req.user!.id;
+      const userId = req.user.id;
       const { id } = req.params;
       const { reason } = req.body;
 
@@ -199,7 +199,7 @@ export class OrderController {
    * GET /api/v1/orders/statistics
    */
   getStatistics = asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.id;
+    const userId = req.user.id;
 
     const statistics = await orderRepository.getUserStatistics(userId);
 
@@ -214,7 +214,7 @@ export class OrderController {
    * GET /api/v1/orders/supplier-statistics
    */
   getSupplierStatistics = asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.id;
+    const userId = req.user.id;
 
     // Get supplier profile
     const supplier = await supplierRepository.findByUserId(userId);
@@ -242,9 +242,8 @@ export class OrderController {
     async (req: Request<CheckPaymentStatusInput>, res: Response) => {
       const { transactionId } = req.params;
 
-      const payment = await mobileMoneyService.checkPaymentStatus(
-        transactionId
-      );
+      const payment =
+        await mobileMoneyService.checkPaymentStatus(transactionId);
 
       res.json({
         success: true,

@@ -1,11 +1,12 @@
 import { Prisma } from '@prisma/client';
 import { Worker, Job } from 'bullmq';
+
 import config from '@/config';
-import expoPushService from '@/infrastructure/messaging/push/expo-push.service';
-import socketService from '@/infrastructure/websocket/socket.service';
-import emailService from '@/infrastructure/messaging/email/email.service';
 import { prisma } from '@/infrastructure/database/prisma';
+import emailService from '@/infrastructure/messaging/email/email.service';
+import expoPushService from '@/infrastructure/messaging/push/expo-push.service';
 import logger from '@/infrastructure/monitoring/logger';
+import socketService from '@/infrastructure/websocket/socket.service';
 import type {
   SendPushJobData,
   SendEmailJobData,
@@ -36,7 +37,8 @@ async function handleSendPush(data: SendPushJobData): Promise<void> {
       await prisma.notification.update({
         where: { id: data.notificationId },
         data: {
-          pushSent: tickets.length > 0 && tickets.some((t) => t.status === 'ok'),
+          pushSent:
+            tickets.length > 0 && tickets.some((t) => t.status === 'ok'),
           pushSentAt: new Date(),
           pushReceipts: tickets as unknown as Prisma.InputJsonValue,
         },
@@ -98,7 +100,9 @@ async function handleSendEmail(data: SendEmailJobData): Promise<void> {
 /**
  * Process bulk-notification job: Send notifications to multiple users
  */
-async function handleBulkNotification(data: BulkNotificationJobData): Promise<void> {
+async function handleBulkNotification(
+  data: BulkNotificationJobData
+): Promise<void> {
   const {
     userIds,
     sendPush = true,
@@ -174,7 +178,8 @@ async function handleScheduledNotification(
   const { scheduledFor, ...params } = data;
 
   // Import dynamically to avoid circular dependency
-  const { notificationService } = await import('@/core/services/notification.service');
+  const { notificationService } =
+    await import('@/core/services/notification.service');
 
   await notificationService.create({
     ...params,
@@ -185,7 +190,9 @@ async function handleScheduledNotification(
 /**
  * Process check-receipts job: Verify Expo push delivery
  */
-async function handleCheckReceipts(data: { ticketIds: string[] }): Promise<void> {
+async function handleCheckReceipts(data: {
+  ticketIds: string[];
+}): Promise<void> {
   const receipts = await expoPushService.getReceipts(data.ticketIds);
 
   let successCount = 0;
@@ -229,7 +236,9 @@ export function createNotificationWorker(): Worker {
           await handleBulkNotification(job.data as BulkNotificationJobData);
           break;
         case 'scheduled-notification':
-          await handleScheduledNotification(job.data as ScheduledNotificationJobData);
+          await handleScheduledNotification(
+            job.data as ScheduledNotificationJobData
+          );
           break;
         case 'check-receipts':
           await handleCheckReceipts(job.data as { ticketIds: string[] });

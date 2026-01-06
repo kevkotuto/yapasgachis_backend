@@ -1,8 +1,6 @@
 import { Router } from 'express';
+
 import orderController from '../controllers/order.controller';
-import { authMiddleware } from '@/middleware/auth.middleware';
-import { supplierOnly, clientOnly } from '@/middleware/role-guard.middleware';
-import { validate } from '@/middleware/validation.middleware';
 import {
   createOrderSchema,
   getOrderByIdSchema,
@@ -11,6 +9,10 @@ import {
   cancelOrderSchema,
   checkPaymentStatusSchema,
 } from '../validators/order.validator';
+
+import { authMiddleware } from '@/middleware/auth.middleware';
+import { supplierOnly, clientOnly } from '@/middleware/role-guard.middleware';
+import { validate } from '@/middleware/validation.middleware';
 
 const router: Router = Router();
 

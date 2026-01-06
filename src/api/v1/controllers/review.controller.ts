@@ -1,13 +1,15 @@
 import { Request, Response } from 'express';
-import { asyncHandler } from '@/utils/helpers';
-import reviewService from '@/core/services/review.service';
+
 import {
   CreateReviewInput,
   UpdateReviewInput,
   GetProductReviewsQuery,
   GetSupplierReviewsQuery,
 } from '../validators/review.validator';
+
+import reviewService from '@/core/services/review.service';
 import logger from '@/infrastructure/monitoring/logger';
+import { asyncHandler } from '@/utils/helpers';
 
 /**
  * Review Controller
@@ -18,67 +20,68 @@ export class ReviewController {
    * Create a review
    * POST /api/v1/reviews
    */
-  createReview = asyncHandler(
-    async (req: Request, res: Response) => {
-      const userId = req.user!.id;
-      const body = req.body as CreateReviewInput;
+  createReview = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user.id;
+    const body = req.body as CreateReviewInput;
 
-      const review = await reviewService.createReview(userId, body as Required<CreateReviewInput>);
+    const review = await reviewService.createReview(
+      userId,
+      body as Required<CreateReviewInput>
+    );
 
-      logger.info('Review created via API', {
-        userId,
-        reviewId: review.id,
-      });
+    logger.info('Review created via API', {
+      userId,
+      reviewId: review.id,
+    });
 
-      res.status(201).json({
-        success: true,
-        message: 'Avis créé avec succès',
-        data: { review },
-      });
-    }
-  );
+    res.status(201).json({
+      success: true,
+      message: 'Avis créé avec succès',
+      data: { review },
+    });
+  });
 
   /**
    * Get reviews for a product
    * GET /api/v1/reviews/product/:productId
    */
-  getProductReviews = asyncHandler(
-    async (req: Request, res: Response) => {
-      const { productId } = req.params;
-      const query = req.query as unknown as GetProductReviewsQuery;
-      const result = await reviewService.getProductReviews(productId, query);
+  getProductReviews = asyncHandler(async (req: Request, res: Response) => {
+    const { productId } = req.params;
+    const query = req.query as unknown as GetProductReviewsQuery;
+    const result = await reviewService.getProductReviews(productId, query);
 
-      res.json({
-        success: true,
-        data: result,
-      });
-    }
-  );
+    res.json({
+      success: true,
+      data: result,
+    });
+  });
 
   /**
    * Get reviews for a supplier
    * GET /api/v1/reviews/supplier/:supplierId
    */
-  getSupplierReviews = asyncHandler(
-    async (req: Request, res: Response) => {
-      const { supplierId } = req.params;
-      const query = req.query as unknown as GetSupplierReviewsQuery;
-      const { page, limit } = query;
-      const result = await reviewService.getSupplierReviews(supplierId, page, limit);
+  getSupplierReviews = asyncHandler(async (req: Request, res: Response) => {
+    const { supplierId } = req.params;
+    const query = req.query as unknown as GetSupplierReviewsQuery;
+    const { page, limit } = query;
+    const result = await reviewService.getSupplierReviews(
+      supplierId,
+      page,
+      limit
+    );
 
-      res.json({
-        success: true,
-        data: result,
-      });
-    }
-  );
+    res.json({
+      success: true,
+      data: result,
+    });
+  });
 
   /**
    * Get my reviews
    * GET /api/v1/reviews/my
    */
   getMyReviews = asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.id;
+    const userId = req.user.id;
     const { page, limit } = req.query as { page?: number; limit?: number };
 
     const result = await reviewService.getUserReviews(
@@ -102,7 +105,7 @@ export class ReviewController {
       req: Request<{ id: string }, {}, UpdateReviewInput>,
       res: Response
     ) => {
-      const userId = req.user!.id;
+      const userId = req.user.id;
       const { id } = req.params;
 
       const review = await reviewService.updateReview(userId, id, req.body);
@@ -126,7 +129,7 @@ export class ReviewController {
    */
   deleteReview = asyncHandler(
     async (req: Request<{ id: string }>, res: Response) => {
-      const userId = req.user!.id;
+      const userId = req.user.id;
       const { id } = req.params;
 
       await reviewService.deleteReview(userId, id);
@@ -170,7 +173,7 @@ export class ReviewController {
       req: Request<{ id: string }, {}, { reason?: string }>,
       res: Response
     ) => {
-      const userId = req.user!.id;
+      const userId = req.user.id;
       const { id } = req.params;
       const { reason } = req.body;
 
@@ -221,7 +224,7 @@ export class ReviewController {
 
       logger.info('Review report cleared by admin', {
         reviewId: id,
-        adminId: req.user!.id,
+        adminId: req.user.id,
       });
 
       res.json({
@@ -238,7 +241,7 @@ export class ReviewController {
    */
   adminDeleteReview = asyncHandler(
     async (req: Request<{ id: string }>, res: Response) => {
-      const adminId = req.user!.id;
+      const adminId = req.user.id;
       const { id } = req.params;
 
       await reviewService.deleteReview(adminId, id, true);

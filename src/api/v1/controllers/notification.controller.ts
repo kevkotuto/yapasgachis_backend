@@ -1,10 +1,11 @@
 import { Request, Response } from 'express';
-import { asyncHandler } from '@/utils/helpers';
-import notificationService from '@/core/services/notification.service';
+
 import notificationPreferencesService from '@/core/services/notification-preferences.service';
+import notificationService from '@/core/services/notification.service';
 import expoPushService from '@/infrastructure/messaging/push/expo-push.service';
 import logger from '@/infrastructure/monitoring/logger';
 import type { DeviceType, NotificationType } from '@/utils/enums';
+import { asyncHandler } from '@/utils/helpers';
 
 interface RegisterDeviceTokenBody {
   token: string;
@@ -35,9 +36,13 @@ export class NotificationController {
    * POST /api/v1/notifications/device-token
    */
   registerDeviceToken = asyncHandler(
-    async (req: Request<object, object, RegisterDeviceTokenBody>, res: Response) => {
-      const userId = req.user!.id;
-      const { token, deviceType, deviceName, deviceId, appVersion, osVersion } = req.body;
+    async (
+      req: Request<object, object, RegisterDeviceTokenBody>,
+      res: Response
+    ) => {
+      const userId = req.user.id;
+      const { token, deviceType, deviceName, deviceId, appVersion, osVersion } =
+        req.body;
 
       await expoPushService.registerDeviceToken({
         userId,
@@ -63,7 +68,10 @@ export class NotificationController {
    * DELETE /api/v1/notifications/device-token
    */
   unregisterDeviceToken = asyncHandler(
-    async (req: Request<object, object, UnregisterDeviceTokenBody>, res: Response) => {
+    async (
+      req: Request<object, object, UnregisterDeviceTokenBody>,
+      res: Response
+    ) => {
       const { token } = req.body;
 
       await expoPushService.unregisterDeviceToken(token);
@@ -79,16 +87,18 @@ export class NotificationController {
    * Unregister all device tokens for current user (logout)
    * DELETE /api/v1/notifications/device-tokens
    */
-  unregisterAllDeviceTokens = asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.id;
+  unregisterAllDeviceTokens = asyncHandler(
+    async (req: Request, res: Response) => {
+      const userId = req.user.id;
 
-    await expoPushService.unregisterAllUserTokens(userId);
+      await expoPushService.unregisterAllUserTokens(userId);
 
-    res.json({
-      success: true,
-      message: 'Tous les tokens supprimés avec succès',
-    });
-  });
+      res.json({
+        success: true,
+        message: 'Tous les tokens supprimés avec succès',
+      });
+    }
+  );
 
   /**
    * Get user notifications with pagination
@@ -99,7 +109,7 @@ export class NotificationController {
       req: Request<object, object, object, GetNotificationsQuery>,
       res: Response
     ) => {
-      const userId = req.user!.id;
+      const userId = req.user.id;
       const { read, type, page, limit } = req.query;
 
       const result = await notificationService.getUserNotifications(userId, {
@@ -121,7 +131,7 @@ export class NotificationController {
    * GET /api/v1/notifications/unread-count
    */
   getUnreadCount = asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.id;
+    const userId = req.user.id;
 
     const count = await notificationService.getUnreadCount(userId);
 
@@ -137,7 +147,7 @@ export class NotificationController {
    */
   markAsRead = asyncHandler(
     async (req: Request<{ id: string }>, res: Response) => {
-      const userId = req.user!.id;
+      const userId = req.user.id;
       const { id } = req.params;
 
       const notification = await notificationService.markAsRead(id, userId);
@@ -155,7 +165,7 @@ export class NotificationController {
    * PATCH /api/v1/notifications/read-all
    */
   markAllAsRead = asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.id;
+    const userId = req.user.id;
 
     await notificationService.markAllAsRead(userId);
 
@@ -171,7 +181,7 @@ export class NotificationController {
    */
   deleteNotification = asyncHandler(
     async (req: Request<{ id: string }>, res: Response) => {
-      const userId = req.user!.id;
+      const userId = req.user.id;
       const { id } = req.params;
 
       await notificationService.delete(id, userId);
@@ -188,7 +198,7 @@ export class NotificationController {
    * DELETE /api/v1/notifications
    */
   deleteAllNotifications = asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.id;
+    const userId = req.user.id;
 
     await notificationService.deleteAll(userId);
 
@@ -203,9 +213,10 @@ export class NotificationController {
    * GET /api/v1/notifications/preferences
    */
   getPreferences = asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.id;
+    const userId = req.user.id;
 
-    const preferences = await notificationPreferencesService.getPreferences(userId);
+    const preferences =
+      await notificationPreferencesService.getPreferences(userId);
 
     res.json({
       success: true,
@@ -218,7 +229,7 @@ export class NotificationController {
    * PATCH /api/v1/notifications/preferences
    */
   updatePreferences = asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.id;
+    const userId = req.user.id;
 
     const preferences = await notificationPreferencesService.updatePreferences(
       userId,

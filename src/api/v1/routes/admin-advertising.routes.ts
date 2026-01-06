@@ -1,14 +1,15 @@
 import { Router } from 'express';
+
 import advertisingController from '@/api/v1/controllers/advertising.controller';
-import { authenticate } from '@/middleware/auth.middleware';
-import { requireRole } from '@/middleware/role-guard.middleware';
-import { validate } from '@/middleware/validation.middleware';
 import {
   getAllCampaignsSchema,
   campaignIdSchema,
   rejectCampaignSchema,
   paginationSchema,
 } from '@/api/v1/validators/advertising.validator';
+import { authenticate } from '@/middleware/auth.middleware';
+import { requireRole } from '@/middleware/role-guard.middleware';
+import { validate } from '@/middleware/validation.middleware';
 
 const router: Router = Router();
 

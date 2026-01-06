@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 
-import logger from '@/infrastructure/monitoring/logger';
 import config from '@/config';
+import logger from '@/infrastructure/monitoring/logger';
 
 // Singleton pattern for Prisma Client
 class PrismaService {

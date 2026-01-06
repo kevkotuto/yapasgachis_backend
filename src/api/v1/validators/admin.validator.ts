@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import { UserRole, UserStatus, ProductStatus } from '@prisma/client';
+import { z } from 'zod';
 
 // ==================== USER MANAGEMENT VALIDATORS ====================
 
@@ -10,7 +10,10 @@ export const getUsersSchema = z.object({
     status: z.nativeEnum(UserStatus).optional(),
     page: z.coerce.number().min(1).optional().default(1),
     limit: z.coerce.number().min(1).max(100).optional().default(20),
-    sortBy: z.enum(['createdAt', 'firstName', 'lastName']).optional().default('createdAt'),
+    sortBy: z
+      .enum(['createdAt', 'firstName', 'lastName'])
+      .optional()
+      .default('createdAt'),
     sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
   }),
 });
@@ -45,7 +48,10 @@ export const updateUserRoleSchema = z.object({
 export const getSuppliersSchema = z.object({
   query: z.object({
     search: z.string().optional(),
-    isVerified: z.string().transform((val) => val === 'true').optional(),
+    isVerified: z
+      .string()
+      .transform((val) => val === 'true')
+      .optional(),
     supplierType: z.string().optional(),
     subscriptionTier: z.string().optional(),
     page: z.coerce.number().min(1).optional().default(1),
@@ -137,11 +143,17 @@ export const paginationSchema = z.object({
 
 // Types
 export type GetUsersQuery = z.infer<typeof getUsersSchema>['query'];
-export type UpdateUserStatusInput = z.infer<typeof updateUserStatusSchema>['body'];
+export type UpdateUserStatusInput = z.infer<
+  typeof updateUserStatusSchema
+>['body'];
 export type UpdateUserRoleInput = z.infer<typeof updateUserRoleSchema>['body'];
 export type GetSuppliersQuery = z.infer<typeof getSuppliersSchema>['query'];
 export type RejectSupplierInput = z.infer<typeof rejectSupplierSchema>['body'];
-export type UpdateSupplierCommissionInput = z.infer<typeof updateSupplierCommissionSchema>['body'];
+export type UpdateSupplierCommissionInput = z.infer<
+  typeof updateSupplierCommissionSchema
+>['body'];
 export type GetProductsQuery = z.infer<typeof getProductsSchema>['query'];
 export type RejectProductInput = z.infer<typeof rejectProductSchema>['body'];
-export type UpdateProductStatusInput = z.infer<typeof updateProductStatusSchema>['body'];
+export type UpdateProductStatusInput = z.infer<
+  typeof updateProductStatusSchema
+>['body'];

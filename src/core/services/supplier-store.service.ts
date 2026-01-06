@@ -1,12 +1,13 @@
 import { SupplierStore } from '@prisma/client';
+
 import supplierStoreRepository, {
   SupplierStoreRepository,
 } from '@/core/repositories/supplier-store.repository';
 import supplierRepository from '@/core/repositories/supplier.repository';
 import subscriptionService from '@/core/services/subscription.service';
 import geocodingService from '@/infrastructure/geolocation/geocoding.service';
-import { AppError } from '@/middleware/error-handler.middleware';
 import logger from '@/infrastructure/monitoring/logger';
+import { AppError } from '@/middleware/error-handler.middleware';
 
 /**
  * Supplier Store Service
@@ -158,7 +159,7 @@ export class SupplierStoreService {
       }
 
       // Re-geocode if address changed
-      let updateData: any = { ...data };
+      const updateData: any = { ...data };
       if (data.address && data.address !== store.address) {
         const fullAddress = `${data.address}, ${data.commune || store.commune || ''} ${data.city || store.city}`;
         const geocoded = await geocodingService.geocodeAddress(fullAddress);
@@ -208,7 +209,7 @@ export class SupplierStoreService {
       if (stats.activeProducts > 0 || stats.activeDeals > 0) {
         throw new AppError(
           400,
-          'Ce magasin a des produits ou deals actifs. Désactivez-les d\'abord.',
+          "Ce magasin a des produits ou deals actifs. Désactivez-les d'abord.",
           'STORE_HAS_ACTIVE_ITEMS'
         );
       }
@@ -391,14 +392,23 @@ export class SupplierStoreService {
   /**
    * Check if store is currently open based on operating hours
    */
-  isStoreOpen(store: SupplierStore): { isOpen: boolean; opensAt?: string; closesAt?: string } {
+  isStoreOpen(store: SupplierStore): {
+    isOpen: boolean;
+    opensAt?: string;
+    closesAt?: string;
+  } {
     if (store.isTemporarilyClosed) {
       return { isOpen: false };
     }
 
     const now = new Date();
-    const dayName = now.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-    const operatingHours = store.operatingHours as Record<string, { open: string; close: string }>;
+    const dayName = now
+      .toLocaleDateString('en-US', { weekday: 'long' })
+      .toLowerCase();
+    const operatingHours = store.operatingHours as Record<
+      string,
+      { open: string; close: string }
+    >;
 
     const todayHours = operatingHours[dayName];
     if (!todayHours) {
@@ -406,7 +416,8 @@ export class SupplierStoreService {
     }
 
     const currentTime = now.toTimeString().slice(0, 5); // "HH:MM"
-    const isOpen = currentTime >= todayHours.open && currentTime < todayHours.close;
+    const isOpen =
+      currentTime >= todayHours.open && currentTime < todayHours.close;
 
     return {
       isOpen,

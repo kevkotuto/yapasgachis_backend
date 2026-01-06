@@ -1,17 +1,18 @@
 import { Prisma } from '@prisma/client';
+
+import notificationPreferencesService from '@/core/services/notification-preferences.service';
 import { prisma } from '@/infrastructure/database/prisma';
+import logger from '@/infrastructure/monitoring/logger';
 import { notificationQueue } from '@/infrastructure/queue/queues/notification.queue';
 import socketService from '@/infrastructure/websocket/socket.service';
-import notificationPreferencesService from '@/core/services/notification-preferences.service';
-import logger from '@/infrastructure/monitoring/logger';
 import { AppError } from '@/middleware/error-handler.middleware';
-import { NotificationType, NotificationPriority } from '@/utils/enums';
 import type {
   CreateNotificationParams,
   NotificationWithMeta,
   NotificationListResult,
   NotificationFilters,
 } from '@/types/notification.types';
+import { NotificationType, NotificationPriority } from '@/utils/enums';
 
 /**
  * NotificationService - Central orchestrator for all notifications
@@ -41,7 +42,9 @@ class NotificationService {
   /**
    * Create and send a notification
    */
-  async create(params: CreateNotificationParams): Promise<NotificationWithMeta> {
+  async create(
+    params: CreateNotificationParams
+  ): Promise<NotificationWithMeta> {
     const {
       sendPush = true,
       sendEmail = false,
@@ -74,7 +77,11 @@ class NotificationService {
     }
 
     // Create notification in database
-    const { userId: userIdForNotif, data: notifDataForCreate, ...restNotifData } = notificationData;
+    const {
+      userId: userIdForNotif,
+      data: notifDataForCreate,
+      ...restNotifData
+    } = notificationData;
     const notification = await prisma.notification.create({
       data: {
         ...restNotifData,
@@ -229,13 +236,20 @@ class NotificationService {
   /**
    * Mark a notification as read
    */
-  async markAsRead(notificationId: string, userId: string): Promise<NotificationWithMeta> {
+  async markAsRead(
+    notificationId: string,
+    userId: string
+  ): Promise<NotificationWithMeta> {
     const notification = await prisma.notification.findFirst({
       where: { id: notificationId, userId },
     });
 
     if (!notification) {
-      throw new AppError(404, 'Notification non trouvée', 'NOTIFICATION_NOT_FOUND');
+      throw new AppError(
+        404,
+        'Notification non trouvée',
+        'NOTIFICATION_NOT_FOUND'
+      );
     }
 
     const updated = await prisma.notification.update({
@@ -285,7 +299,11 @@ class NotificationService {
     });
 
     if (!notification) {
-      throw new AppError(404, 'Notification non trouvée', 'NOTIFICATION_NOT_FOUND');
+      throw new AppError(
+        404,
+        'Notification non trouvée',
+        'NOTIFICATION_NOT_FOUND'
+      );
     }
 
     await prisma.notification.delete({

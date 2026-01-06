@@ -1,4 +1,5 @@
 import { Router } from 'express';
+
 import paymentController from '@/api/v1/controllers/payment.controller';
 import { authenticate } from '@/middleware/auth.middleware';
 
@@ -38,7 +39,11 @@ router.get('/wave/error', paymentController.handleWaveError);
  * @desc Vérifier le statut de paiement d'une commande
  * @access Private
  */
-router.get('/status/:orderId', authenticate, paymentController.checkPaymentStatus);
+router.get(
+  '/status/:orderId',
+  authenticate,
+  paymentController.checkPaymentStatus
+);
 
 /**
  * @route POST /api/v1/payments/retry/:orderId

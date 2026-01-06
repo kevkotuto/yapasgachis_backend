@@ -1,4 +1,5 @@
 import { CacheService } from './cache.service';
+
 import config from '@/config';
 import logger from '@/infrastructure/monitoring/logger';
 
@@ -51,11 +52,11 @@ const CACHE_KEYS = {
 
 // TTL configurations (in seconds)
 const TTL = {
-  SHORT: 60,           // 1 minute - for frequently changing data
-  MEDIUM: 300,         // 5 minutes - for semi-dynamic data
-  LONG: 900,           // 15 minutes - for less frequently changing data
-  VERY_LONG: 3600,     // 1 hour - for stable data
-  DAY: 86400,          // 24 hours - for very stable data
+  SHORT: 60, // 1 minute - for frequently changing data
+  MEDIUM: 300, // 5 minutes - for semi-dynamic data
+  LONG: 900, // 15 minutes - for less frequently changing data
+  VERY_LONG: 3600, // 1 hour - for stable data
+  DAY: 86400, // 24 hours - for very stable data
 };
 
 export class StrategicCacheService {
@@ -64,7 +65,10 @@ export class StrategicCacheService {
   /**
    * Cache single product
    */
-  static async cacheProduct(productId: string, product: unknown): Promise<void> {
+  static async cacheProduct(
+    productId: string,
+    product: unknown
+  ): Promise<void> {
     await CacheService.set(
       `${CACHE_KEYS.PRODUCT}${productId}`,
       product,
@@ -97,7 +101,9 @@ export class StrategicCacheService {
   /**
    * Get cached product list
    */
-  static async getProductList<T>(filters: Record<string, unknown>): Promise<T | null> {
+  static async getProductList<T>(
+    filters: Record<string, unknown>
+  ): Promise<T | null> {
     const filterKey = this.hashFilters(filters);
     return CacheService.get<T>(`${CACHE_KEYS.PRODUCT_LIST}${filterKey}`);
   }
@@ -120,7 +126,9 @@ export class StrategicCacheService {
    */
   static async invalidateSupplierProducts(supplierId: string): Promise<void> {
     await Promise.all([
-      CacheService.deletePattern(`${CACHE_KEYS.PRODUCT_SUPPLIER}${supplierId}*`),
+      CacheService.deletePattern(
+        `${CACHE_KEYS.PRODUCT_SUPPLIER}${supplierId}*`
+      ),
       CacheService.deletePattern(`${CACHE_KEYS.PRODUCT_LIST}*`),
     ]);
     logger.debug('Supplier products cache invalidated', { supplierId });
@@ -150,13 +158,19 @@ export class StrategicCacheService {
     deals: unknown
   ): Promise<void> {
     const filterKey = this.hashFilters(filters);
-    await CacheService.set(`${CACHE_KEYS.DEAL_LIST}${filterKey}`, deals, TTL.SHORT);
+    await CacheService.set(
+      `${CACHE_KEYS.DEAL_LIST}${filterKey}`,
+      deals,
+      TTL.SHORT
+    );
   }
 
   /**
    * Get cached deal list
    */
-  static async getDealList<T>(filters: Record<string, unknown>): Promise<T | null> {
+  static async getDealList<T>(
+    filters: Record<string, unknown>
+  ): Promise<T | null> {
     const filterKey = this.hashFilters(filters);
     return CacheService.get<T>(`${CACHE_KEYS.DEAL_LIST}${filterKey}`);
   }
@@ -246,8 +260,15 @@ export class StrategicCacheService {
   /**
    * Cache user profile
    */
-  static async cacheUserProfile(userId: string, profile: unknown): Promise<void> {
-    await CacheService.set(`${CACHE_KEYS.USER_PROFILE}${userId}`, profile, TTL.MEDIUM);
+  static async cacheUserProfile(
+    userId: string,
+    profile: unknown
+  ): Promise<void> {
+    await CacheService.set(
+      `${CACHE_KEYS.USER_PROFILE}${userId}`,
+      profile,
+      TTL.MEDIUM
+    );
   }
 
   /**
@@ -299,7 +320,11 @@ export class StrategicCacheService {
    * Reset unread count
    */
   static async resetUnreadCount(userId: string): Promise<void> {
-    await CacheService.set(`${CACHE_KEYS.USER_UNREAD_COUNT}${userId}`, 0, TTL.SHORT);
+    await CacheService.set(
+      `${CACHE_KEYS.USER_UNREAD_COUNT}${userId}`,
+      0,
+      TTL.SHORT
+    );
   }
 
   // ==================== SEARCH ====================
@@ -332,7 +357,9 @@ export class StrategicCacheService {
    */
   static async recordSearch(query: string): Promise<void> {
     const normalizedQuery = query.toLowerCase().trim();
-    await CacheService.increment(`${CACHE_KEYS.POPULAR_SEARCHES}:${normalizedQuery}`);
+    await CacheService.increment(
+      `${CACHE_KEYS.POPULAR_SEARCHES}:${normalizedQuery}`
+    );
   }
 
   // ==================== HELPERS ====================
@@ -343,10 +370,13 @@ export class StrategicCacheService {
   private static hashFilters(filters: Record<string, unknown>): string {
     const sorted = Object.keys(filters)
       .sort()
-      .reduce((acc, key) => {
-        acc[key] = filters[key];
-        return acc;
-      }, {} as Record<string, unknown>);
+      .reduce(
+        (acc, key) => {
+          acc[key] = filters[key];
+          return acc;
+        },
+        {} as Record<string, unknown>
+      );
 
     return Buffer.from(JSON.stringify(sorted)).toString('base64').slice(0, 32);
   }
@@ -354,7 +384,10 @@ export class StrategicCacheService {
   /**
    * Hash search query and filters
    */
-  private static hashQuery(query: string, filters: Record<string, unknown>): string {
+  private static hashQuery(
+    query: string,
+    filters: Record<string, unknown>
+  ): string {
     const data = { query: query.toLowerCase().trim(), ...filters };
     return this.hashFilters(data);
   }
@@ -379,9 +412,11 @@ export class StrategicCacheService {
    * Clear all application caches (admin operation)
    */
   static async clearAllCaches(): Promise<void> {
-    const patterns = Object.values(CACHE_KEYS).map(prefix => `${prefix}*`);
+    const patterns = Object.values(CACHE_KEYS).map((prefix) => `${prefix}*`);
 
-    await Promise.all(patterns.map(pattern => CacheService.deletePattern(pattern)));
+    await Promise.all(
+      patterns.map((pattern) => CacheService.deletePattern(pattern))
+    );
 
     logger.info('All application caches cleared');
   }

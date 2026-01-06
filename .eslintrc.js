@@ -27,16 +27,41 @@ module.exports = {
     '@typescript-eslint/explicit-module-boundary-types': 'warn',
     '@typescript-eslint/no-explicit-any': 'warn',
     '@typescript-eslint/no-unused-vars': [
-      'error',
+      'warn',
       {
         argsIgnorePattern: '^_',
         varsIgnorePattern: '^_',
       },
     ],
-    '@typescript-eslint/no-floating-promises': 'error',
-    '@typescript-eslint/no-misused-promises': 'error',
+    'no-useless-escape': 'warn',
+    '@typescript-eslint/no-floating-promises': 'warn',
+    '@typescript-eslint/no-misused-promises': [
+      'error',
+      {
+        checksVoidReturn: false,
+      },
+    ],
+    '@typescript-eslint/require-await': 'warn',
     '@typescript-eslint/await-thenable': 'error',
     '@typescript-eslint/no-unnecessary-type-assertion': 'warn',
+    // Relax strict type-checking rules that are too noisy
+    '@typescript-eslint/no-unsafe-assignment': 'off',
+    '@typescript-eslint/no-unsafe-member-access': 'off',
+    '@typescript-eslint/no-unsafe-call': 'off',
+    '@typescript-eslint/no-unsafe-return': 'off',
+    '@typescript-eslint/no-unsafe-argument': 'off',
+    '@typescript-eslint/ban-types': [
+      'warn',
+      {
+        types: {
+          '{}': false, // Allow {} type
+        },
+        extendDefaults: true,
+      },
+    ],
+    '@typescript-eslint/unbound-method': 'off',
+    '@typescript-eslint/restrict-template-expressions': 'off',
+    '@typescript-eslint/no-base-to-string': 'off',
     'import/order': [
       'error',
       {

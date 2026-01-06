@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import { ProductCategory, ProductStatus } from '@prisma/client';
+import { z } from 'zod';
 
 /**
  * Product Validators
@@ -38,10 +38,10 @@ export const createProductSchema = z.object({
       unit: z.string().max(20).optional(),
       expiresAt: z
         .string()
-        .datetime('Date d\'expiration invalide')
+        .datetime("Date d'expiration invalide")
         .transform((val) => new Date(val))
         .refine((date) => date > new Date(), {
-          message: 'La date d\'expiration doit être dans le futur',
+          message: "La date d'expiration doit être dans le futur",
         }),
       images: z.array(z.string().url()).optional(),
       tags: z.array(z.string().max(50)).max(10).optional(),
@@ -105,7 +105,9 @@ export const getProductByIdSchema = z.object({
   }),
 });
 
-export type GetProductByIdInput = z.infer<typeof getProductByIdSchema>['params'];
+export type GetProductByIdInput = z.infer<
+  typeof getProductByIdSchema
+>['params'];
 
 // Delete product
 export const deleteProductSchema = z.object({
@@ -188,7 +190,9 @@ export const getExpiringSoonSchema = z.object({
   }),
 });
 
-export type GetExpiringSoonInput = z.infer<typeof getExpiringSoonSchema>['query'];
+export type GetExpiringSoonInput = z.infer<
+  typeof getExpiringSoonSchema
+>['query'];
 
 // Get trending
 export const getTrendingSchema = z.object({
@@ -236,7 +240,7 @@ export const deleteImageSchema = z.object({
     id: z.string().uuid('ID de produit invalide'),
   }),
   body: z.object({
-    imageUrl: z.string().url('URL d\'image invalide'),
+    imageUrl: z.string().url("URL d'image invalide"),
   }),
 });
 

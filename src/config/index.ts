@@ -1,5 +1,6 @@
-import dotenv from 'dotenv';
 import path from 'path';
+
+import dotenv from 'dotenv';
 
 // Load environment variables
 dotenv.config();
@@ -221,12 +222,11 @@ const config: Config = {
   },
   upload: {
     maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '10485760', 10),
-    allowedFileTypes:
-      process.env.ALLOWED_FILE_TYPES?.split(',') || [
-        'image/jpeg',
-        'image/png',
-        'image/webp',
-      ],
+    allowedFileTypes: process.env.ALLOWED_FILE_TYPES?.split(',') || [
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+    ],
     uploadDest: process.env.UPLOAD_DEST || './uploads',
   },
   cloudinary: {
@@ -288,9 +288,7 @@ const config: Config = {
     mtnMoney: {
       apiKey: process.env.MTN_MONEY_API_KEY || '',
       userId: process.env.MTN_MONEY_USER_ID || '',
-      apiUrl:
-        process.env.MTN_MONEY_API_URL ||
-        'https://proxy.momoapi.mtn.com',
+      apiUrl: process.env.MTN_MONEY_API_URL || 'https://proxy.momoapi.mtn.com',
     },
     moovMoney: {
       apiKey: process.env.MOOV_MONEY_API_KEY || '',
@@ -344,8 +342,7 @@ const config: Config = {
     enabled: process.env.ENABLE_CRON_JOBS === 'true',
     schedules: {
       expireProducts: process.env.CRON_EXPIRE_PRODUCTS || '0 */6 * * *',
-      subscriptionRenewal:
-        process.env.CRON_SUBSCRIPTION_RENEWAL || '0 0 * * *',
+      subscriptionRenewal: process.env.CRON_SUBSCRIPTION_RENEWAL || '0 0 * * *',
       analyticsAggregation:
         process.env.CRON_ANALYTICS_AGGREGATION || '0 1 * * *',
     },
@@ -378,10 +375,7 @@ const config: Config = {
       process.env.DEFAULT_DELIVERY_FEE || '1000',
       10
     ),
-    deliveryFeePerKm: parseInt(
-      process.env.DELIVERY_FEE_PER_KM || '200',
-      10
-    ),
+    deliveryFeePerKm: parseInt(process.env.DELIVERY_FEE_PER_KM || '200', 10),
     maxDeliveryDistance: parseInt(
       process.env.MAX_DELIVERY_DISTANCE || '20',
       10

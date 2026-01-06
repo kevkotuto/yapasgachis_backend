@@ -1,10 +1,16 @@
-import { Order, OrderStatus, PaymentMethod, DeliveryMethod } from '@prisma/client';
-import { prisma } from '@/infrastructure/database/prisma';
+import {
+  Order,
+  OrderStatus,
+  PaymentMethod,
+  DeliveryMethod,
+} from '@prisma/client';
+
+import config from '@/config';
 import escrowService from '@/core/services/escrow.service';
 import eventService, { AppEvent } from '@/core/services/event.service';
+import { prisma } from '@/infrastructure/database/prisma';
 import logger from '@/infrastructure/monitoring/logger';
 import { AppError } from '@/middleware/error-handler.middleware';
-import config from '@/config';
 import { generateQRCode } from '@/utils/qr-code.utils';
 
 /**
@@ -124,7 +130,7 @@ export class OrderService {
       ) {
         throw new AppError(
           400,
-          'Ce fournisseur n\'accepte pas le paiement en espèces',
+          "Ce fournisseur n'accepte pas le paiement en espèces",
           'CASH_NOT_ACCEPTED'
         );
       }
@@ -148,7 +154,7 @@ export class OrderService {
 
       // 6. Calculer les montants
       const orderItems = params.items.map((item) => {
-        const product = products.find((p) => p.id === item.productId)!;
+        const product = products.find((p) => p.id === item.productId);
         return {
           productId: item.productId,
           quantity: item.quantity,
@@ -157,7 +163,10 @@ export class OrderService {
         };
       });
 
-      const subtotal = orderItems.reduce((sum, item) => sum + item.totalPrice, 0);
+      const subtotal = orderItems.reduce(
+        (sum, item) => sum + item.totalPrice,
+        0
+      );
       const deliveryFee =
         params.deliveryMethod === 'DELIVERY'
           ? config.business.defaultDeliveryFee
@@ -165,7 +174,8 @@ export class OrderService {
       const total = subtotal + deliveryFee;
 
       // Commission basée sur le tier du fournisseur
-      const commissionRate = supplier.commissionRate || config.business.defaultCommissionRate / 100;
+      const commissionRate =
+        supplier.commissionRate || config.business.defaultCommissionRate / 100;
       const commission = Math.round(subtotal * commissionRate);
       const supplierAmount = total - commission;
 
@@ -451,7 +461,11 @@ export class OrderService {
     }
 
     // Valider la transition de statut
-    this.validateStatusTransition(order.status, newStatus, order.deliveryMethod);
+    this.validateStatusTransition(
+      order.status,
+      newStatus,
+      order.deliveryMethod
+    );
 
     const updated = await prisma.order.update({
       where: { id: orderId },
@@ -920,7 +934,10 @@ export class OrderService {
         deliveryMethod === DeliveryMethod.PICKUP
           ? [OrderStatus.READY_FOR_PICKUP, OrderStatus.CANCELLED]
           : [OrderStatus.IN_DELIVERY, OrderStatus.CANCELLED],
-      [OrderStatus.READY_FOR_PICKUP]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
+      [OrderStatus.READY_FOR_PICKUP]: [
+        OrderStatus.COMPLETED,
+        OrderStatus.CANCELLED,
+      ],
       [OrderStatus.IN_DELIVERY]: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
       [OrderStatus.DELIVERED]: [OrderStatus.COMPLETED],
       [OrderStatus.COMPLETED]: [],

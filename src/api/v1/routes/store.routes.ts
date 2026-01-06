@@ -1,11 +1,12 @@
 import { Router } from 'express';
+
 import supplierStoreController from '@/api/v1/controllers/supplier-store.controller';
-import { optionalAuthenticate } from '@/middleware/auth.middleware';
-import { validate } from '@/middleware/validation.middleware';
 import {
   storeIdParamSchema,
   searchStoresSchema,
 } from '@/api/v1/validators/supplier-store.validator';
+import { optionalAuthenticate } from '@/middleware/auth.middleware';
+import { validate } from '@/middleware/validation.middleware';
 
 const router: Router = Router();
 

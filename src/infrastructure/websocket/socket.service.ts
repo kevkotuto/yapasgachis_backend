@@ -1,9 +1,11 @@
 import { Server as HttpServer } from 'http';
-import { Server, Socket } from 'socket.io';
+
 import jwt from 'jsonwebtoken';
+import { Server, Socket } from 'socket.io';
+
 import config from '@/config';
-import { CacheService } from '@/infrastructure/database/redis/cache.service';
 import { prisma } from '@/infrastructure/database/prisma';
+import { CacheService } from '@/infrastructure/database/redis/cache.service';
 import logger from '@/infrastructure/monitoring/logger';
 
 interface AuthenticatedSocket extends Socket {
@@ -92,7 +94,7 @@ class SocketService {
    * Handle new socket connection
    */
   private async handleConnection(socket: AuthenticatedSocket): Promise<void> {
-    const userId = socket.userId!;
+    const userId = socket.userId;
 
     logger.info('WebSocket client connected', {
       userId,
@@ -105,7 +107,11 @@ class SocketService {
 
     // Track online status in Redis
     await CacheService.addToSet('online_users', userId);
-    await CacheService.set(`socket:${userId}`, socket.id, config.cache.ttl.long);
+    await CacheService.set(
+      `socket:${userId}`,
+      socket.id,
+      config.cache.ttl.long
+    );
 
     // Send current unread count on connection
     this.sendInitialData(socket, userId);
@@ -142,7 +148,10 @@ class SocketService {
   /**
    * Register socket event handlers
    */
-  private registerEventHandlers(socket: AuthenticatedSocket, userId: string): void {
+  private registerEventHandlers(
+    socket: AuthenticatedSocket,
+    userId: string
+  ): void {
     // Join order room for real-time updates
     socket.on('order:join', (orderId: string) => {
       socket.join(`order:${orderId}`);
@@ -178,7 +187,10 @@ class SocketService {
   /**
    * Handle socket disconnection
    */
-  private async handleDisconnect(userId: string, socketId: string): Promise<void> {
+  private async handleDisconnect(
+    userId: string,
+    socketId: string
+  ): Promise<void> {
     await CacheService.removeFromSet('online_users', userId);
     await CacheService.delete(`socket:${userId}`);
 
@@ -202,7 +214,7 @@ class SocketService {
   sendToUsers(userIds: string[], event: string, data: unknown): void {
     if (!this.io) return;
     userIds.forEach((userId) => {
-      this.io!.to(`user:${userId}`).emit(event, data);
+      this.io.to(`user:${userId}`).emit(event, data);
     });
   }
 
@@ -272,7 +284,7 @@ class SocketService {
   async close(): Promise<void> {
     if (this.io) {
       await new Promise<void>((resolve) => {
-        this.io!.close(() => {
+        this.io.close(() => {
           logger.info('WebSocket server closed');
           resolve();
         });

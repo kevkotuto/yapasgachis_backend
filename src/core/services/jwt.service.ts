@@ -1,11 +1,11 @@
+import { UserRole } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 
 import config from '@/config';
 import { redis } from '@/infrastructure/database/redis/client';
-import { APP_CONSTANTS } from '@/utils/constants';
 import logger from '@/infrastructure/monitoring/logger';
-import { UserRole } from '@prisma/client';
+import { APP_CONSTANTS } from '@/utils/constants';
 
 interface TokenPayload {
   userId: string;
@@ -176,7 +176,10 @@ export class JWTService {
    */
   static async revokeRefreshToken(token: string): Promise<void> {
     try {
-      const payload = jwt.verify(token, config.jwt.refreshSecret) as TokenPayload;
+      const payload = jwt.verify(
+        token,
+        config.jwt.refreshSecret
+      ) as TokenPayload;
       const sessionKey = `${APP_CONSTANTS.CACHE_KEYS.SESSION_PREFIX}${payload.sessionId}`;
 
       await redis.del(sessionKey);

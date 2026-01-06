@@ -1,13 +1,6 @@
 import { Router } from 'express';
+
 import productController from '../controllers/product.controller';
-import { authMiddleware } from '@/middleware/auth.middleware';
-import { supplierOnly } from '@/middleware/role-guard.middleware';
-import { validate } from '@/middleware/validation.middleware';
-import {
-  uploadImages,
-  requireFiles,
-  handleUploadError,
-} from '@/middleware/upload.middleware';
 import {
   createProductSchema,
   updateProductSchema,
@@ -21,6 +14,15 @@ import {
   deleteImageSchema,
   getSupplierProductsSchema,
 } from '../validators/product.validator';
+
+import { authMiddleware } from '@/middleware/auth.middleware';
+import { supplierOnly } from '@/middleware/role-guard.middleware';
+import {
+  uploadImages,
+  requireFiles,
+  handleUploadError,
+} from '@/middleware/upload.middleware';
+import { validate } from '@/middleware/validation.middleware';
 
 const router: Router = Router();
 

@@ -147,7 +147,10 @@ export const formatTime = (date: Date, locale: string = 'fr-FR'): string => {
 /**
  * Format date and time for display
  */
-export const formatDateTime = (date: Date, locale: string = 'fr-FR'): string => {
+export const formatDateTime = (
+  date: Date,
+  locale: string = 'fr-FR'
+): string => {
   return new Intl.DateTimeFormat(locale, {
     year: 'numeric',
     month: 'long',
@@ -160,7 +163,10 @@ export const formatDateTime = (date: Date, locale: string = 'fr-FR'): string => 
 /**
  * Get relative time (e.g., "2 hours ago")
  */
-export const getRelativeTime = (date: Date, locale: string = 'fr-FR'): string => {
+export const getRelativeTime = (
+  date: Date,
+  locale: string = 'fr-FR'
+): string => {
   const now = new Date();
   const diff = now.getTime() - date.getTime();
   const seconds = Math.floor(diff / 1000);
@@ -184,7 +190,7 @@ export const getRelativeTime = (date: Date, locale: string = 'fr-FR'): string =>
     return `il y a ${minutes} minute${minutes > 1 ? 's' : ''}`;
   }
 
-  return 'à l\'instant';
+  return "à l'instant";
 };
 
 /**

@@ -1,5 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
 import * as crypto from 'crypto';
+
+import { Request, Response, NextFunction } from 'express';
+
 import logger from '@/infrastructure/monitoring/logger';
 
 /**
@@ -9,7 +11,8 @@ import logger from '@/infrastructure/monitoring/logger';
 
 const CSRF_HEADER = 'x-csrf-token';
 const CSRF_COOKIE = 'csrf_token';
-const CSRF_SECRET = process.env.CSRF_SECRET || crypto.randomBytes(32).toString('hex');
+const CSRF_SECRET =
+  process.env.CSRF_SECRET || crypto.randomBytes(32).toString('hex');
 
 // Methods that require CSRF protection
 const PROTECTED_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
@@ -40,7 +43,10 @@ export const generateCsrfToken = (sessionId: string): string => {
 /**
  * Validate a CSRF token
  */
-export const validateCsrfToken = (token: string, sessionId: string): boolean => {
+export const validateCsrfToken = (
+  token: string,
+  sessionId: string
+): boolean => {
   try {
     const decoded = Buffer.from(token, 'base64').toString('utf-8');
     const [storedSessionId, timestamp, signature] = decoded.split(':');
@@ -74,9 +80,13 @@ export const validateCsrfToken = (token: string, sessionId: string): boolean => 
 /**
  * CSRF Protection Middleware
  */
-export const csrfProtection = (req: Request, res: Response, next: NextFunction): void => {
+export const csrfProtection = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
   // Skip for excluded paths
-  if (EXCLUDED_PATHS.some(path => req.path.startsWith(path))) {
+  if (EXCLUDED_PATHS.some((path) => req.path.startsWith(path))) {
     return next();
   }
 
@@ -124,7 +134,11 @@ export const csrfTokenGenerator = (req: Request, res: Response): void => {
 /**
  * Security headers middleware (extends Helmet)
  */
-export const securityHeaders = (req: Request, res: Response, next: NextFunction): void => {
+export const securityHeaders = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
   // Prevent clickjacking
   res.setHeader('X-Frame-Options', 'DENY');
 
@@ -153,7 +167,11 @@ export const securityHeaders = (req: Request, res: Response, next: NextFunction)
  * Request sanitization middleware
  * Sanitizes request body, query, and params to prevent injection attacks
  */
-export const sanitizeRequest = (req: Request, res: Response, next: NextFunction): void => {
+export const sanitizeRequest = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
   const sanitize = (obj: Record<string, unknown>): Record<string, unknown> => {
     const sanitized: Record<string, unknown> = {};
 
@@ -166,9 +184,14 @@ export const sanitizeRequest = (req: Request, res: Response, next: NextFunction)
           .replace(/on\w+=/gi, '')
           .trim();
       } else if (Array.isArray(value)) {
-        sanitized[key] = value.map(item =>
+        sanitized[key] = value.map((item) =>
           typeof item === 'string'
-            ? item.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '').trim()
+            ? item
+                .replace(
+                  /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+                  ''
+                )
+                .trim()
             : item
         );
       } else if (value && typeof value === 'object') {
@@ -186,7 +209,9 @@ export const sanitizeRequest = (req: Request, res: Response, next: NextFunction)
   }
 
   if (req.query && typeof req.query === 'object') {
-    req.query = sanitize(req.query as Record<string, unknown>) as typeof req.query;
+    req.query = sanitize(
+      req.query as Record<string, unknown>
+    ) as typeof req.query;
   }
 
   next();
@@ -215,7 +240,11 @@ export const requestSizeLimiter = (maxSizeKB: number) => {
 /**
  * SQL Injection pattern detector (for logging/monitoring)
  */
-export const sqlInjectionDetector = (req: Request, res: Response, next: NextFunction): void => {
+export const sqlInjectionDetector = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
   const sqlPatterns = [
     /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|TRUNCATE)\b.*\b(FROM|INTO|TABLE|DATABASE)\b)/i,
     /(;\s*--)/,
@@ -226,7 +255,7 @@ export const sqlInjectionDetector = (req: Request, res: Response, next: NextFunc
 
   const checkValue = (value: unknown): boolean => {
     if (typeof value === 'string') {
-      return sqlPatterns.some(pattern => pattern.test(value));
+      return sqlPatterns.some((pattern) => pattern.test(value));
     }
     if (Array.isArray(value)) {
       return value.some(checkValue);
@@ -238,9 +267,7 @@ export const sqlInjectionDetector = (req: Request, res: Response, next: NextFunc
   };
 
   const suspicious =
-    checkValue(req.body) ||
-    checkValue(req.query) ||
-    checkValue(req.params);
+    checkValue(req.body) || checkValue(req.query) || checkValue(req.params);
 
   if (suspicious) {
     logger.warn('Potential SQL injection attempt detected', {

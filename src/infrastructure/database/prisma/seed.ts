@@ -1,4 +1,14 @@
-import { PrismaClient, UserRole, UserStatus, SubscriptionTier, SupplierType, ProductCategory, ProductStatus, DealCategory, DealStatus } from '@prisma/client';
+import {
+  PrismaClient,
+  UserRole,
+  UserStatus,
+  SubscriptionTier,
+  SupplierType,
+  ProductCategory,
+  ProductStatus,
+  DealCategory,
+  DealStatus,
+} from '@prisma/client';
 import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -15,7 +25,8 @@ async function main() {
     create: {
       name: 'Basic',
       tier: SubscriptionTier.BASIC,
-      description: 'Plan gratuit pour demarrer. Ideal pour les petits commercants.',
+      description:
+        'Plan gratuit pour demarrer. Ideal pour les petits commercants.',
       monthlyPrice: 0,
       yearlyPrice: 0,
       maxStores: 1,
@@ -37,7 +48,8 @@ async function main() {
     create: {
       name: 'Pro',
       tier: SubscriptionTier.PRO,
-      description: 'Pour les commercants en croissance. Plus de visibilite et fonctionnalites.',
+      description:
+        'Pour les commercants en croissance. Plus de visibilite et fonctionnalites.',
       monthlyPrice: 15000, // 15,000 XOF/month
       yearlyPrice: 150000, // 150,000 XOF/year (2 months free)
       maxStores: 3,
@@ -46,7 +58,7 @@ async function main() {
       canCreateDeals: true,
       priorityListing: true,
       analyticsAccess: true,
-      commissionRate: 0.10, // 10% commission
+      commissionRate: 0.1, // 10% commission
       trialDays: 14,
       isActive: true,
       isPublic: true,
@@ -59,7 +71,8 @@ async function main() {
     create: {
       name: 'Premium',
       tier: SubscriptionTier.PREMIUM,
-      description: 'Pour les grandes enseignes. Fonctionnalites illimitees et support prioritaire.',
+      description:
+        'Pour les grandes enseignes. Fonctionnalites illimitees et support prioritaire.',
       monthlyPrice: 35000, // 35,000 XOF/month
       yearlyPrice: 350000, // 350,000 XOF/year (2 months free)
       maxStores: 999, // Unlimited
@@ -197,10 +210,11 @@ async function main() {
       userId: restaurantUser.id,
       businessName: 'Chez Tantine Marie',
       supplierType: SupplierType.RESTAURANT,
-      description: 'Restaurant ivoirien traditionnel. Specialites: Attieke, Garba, Kedjenou.',
+      description:
+        'Restaurant ivoirien traditionnel. Specialites: Attieke, Garba, Kedjenou.',
       address: '123 Rue des Jardins, Cocody Angre',
-      latitude: 5.3700,
-      longitude: -3.9800,
+      latitude: 5.37,
+      longitude: -3.98,
       operatingHours: {
         monday: { open: '08:00', close: '22:00' },
         tuesday: { open: '08:00', close: '22:00' },
@@ -219,7 +233,7 @@ async function main() {
       subscriptionEndDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
       subscriptionActive: true,
       acceptCashPayment: true,
-      commissionRate: 0.10,
+      commissionRate: 0.1,
       isVerified: true,
       verifiedAt: new Date(),
     },
@@ -235,8 +249,8 @@ async function main() {
       city: 'Abidjan',
       commune: 'Cocody',
       neighborhood: 'Angre',
-      latitude: 5.3700,
-      longitude: -3.9800,
+      latitude: 5.37,
+      longitude: -3.98,
       phoneNumber: '+2250702000001',
       operatingHours: {
         monday: { open: '08:00', close: '22:00' },
@@ -265,7 +279,8 @@ async function main() {
       supplierId: restaurantSupplier.id,
       storeId: restaurantStore.id,
       title: 'Panier Surprise Dejeuner',
-      description: 'Un panier surprise avec les restes du dejeuner. Peut contenir: riz, attieke, poulet, poisson, legumes sautees.',
+      description:
+        'Un panier surprise avec les restes du dejeuner. Peut contenir: riz, attieke, poulet, poisson, legumes sautees.',
       category: ProductCategory.FOOD_PREPARED,
       images: ['https://example.com/panier-dejeuner.jpg'],
       originalPrice: 3500,
@@ -285,7 +300,8 @@ async function main() {
       supplierId: restaurantSupplier.id,
       storeId: restaurantStore.id,
       title: 'Attieke Poisson Braise',
-      description: 'Attieke frais avec poisson braise, tomates, oignons et piment. Portion genereuse!',
+      description:
+        'Attieke frais avec poisson braise, tomates, oignons et piment. Portion genereuse!',
       category: ProductCategory.FOOD_PREPARED,
       images: ['https://example.com/attieke-poisson.jpg'],
       originalPrice: 2500,
@@ -305,7 +321,8 @@ async function main() {
       supplierId: restaurantSupplier.id,
       storeId: restaurantStore.id,
       title: 'Garba Special',
-      description: 'Garba avec thon frais, attiéké, oignons, tomates, piment et huile.',
+      description:
+        'Garba avec thon frais, attiéké, oignons, tomates, piment et huile.',
       category: ProductCategory.FOOD_PREPARED,
       images: ['https://example.com/garba.jpg'],
       originalPrice: 1500,
@@ -360,10 +377,11 @@ async function main() {
       userId: hotelUser.id,
       businessName: 'Hotel Palm Beach',
       supplierType: SupplierType.HOTEL,
-      description: 'Hotel 4 etoiles avec piscine, spa et restaurant. Vue sur la lagune.',
+      description:
+        'Hotel 4 etoiles avec piscine, spa et restaurant. Vue sur la lagune.',
       address: '45 Boulevard de la Republique, Plateau',
-      latitude: 5.3200,
-      longitude: -4.0200,
+      latitude: 5.32,
+      longitude: -4.02,
       operatingHours: {
         monday: { open: '00:00', close: '23:59' },
         tuesday: { open: '00:00', close: '23:59' },
@@ -396,7 +414,8 @@ async function main() {
     {
       supplierId: hotelSupplier.id,
       title: 'Acces Piscine - Journee Complete',
-      description: 'Profitez de notre magnifique piscine avec vue sur la lagune. Inclut: serviette, casier, acces vestiaires.',
+      description:
+        'Profitez de notre magnifique piscine avec vue sur la lagune. Inclut: serviette, casier, acces vestiaires.',
       category: DealCategory.POOL_ACCESS,
       images: ['https://example.com/piscine.jpg'],
       originalPrice: 15000,
@@ -430,7 +449,8 @@ async function main() {
     {
       supplierId: hotelSupplier.id,
       title: 'Spa Detente - Massage 1h',
-      description: 'Massage relaxant d\'une heure dans notre spa de luxe. Choix entre massage suedois, thai ou aux pierres chaudes.',
+      description:
+        "Massage relaxant d'une heure dans notre spa de luxe. Choix entre massage suedois, thai ou aux pierres chaudes.",
       category: DealCategory.SPA_WELLNESS,
       images: ['https://example.com/spa.jpg'],
       originalPrice: 35000,
@@ -444,9 +464,18 @@ async function main() {
       availableUntil: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days
       availableSlots: [
         { day: 'monday', slots: ['10:00-11:00', '14:00-15:00', '16:00-17:00'] },
-        { day: 'tuesday', slots: ['10:00-11:00', '14:00-15:00', '16:00-17:00'] },
-        { day: 'wednesday', slots: ['10:00-11:00', '14:00-15:00', '16:00-17:00'] },
-        { day: 'thursday', slots: ['10:00-11:00', '14:00-15:00', '16:00-17:00'] },
+        {
+          day: 'tuesday',
+          slots: ['10:00-11:00', '14:00-15:00', '16:00-17:00'],
+        },
+        {
+          day: 'wednesday',
+          slots: ['10:00-11:00', '14:00-15:00', '16:00-17:00'],
+        },
+        {
+          day: 'thursday',
+          slots: ['10:00-11:00', '14:00-15:00', '16:00-17:00'],
+        },
         { day: 'friday', slots: ['10:00-11:00', '14:00-15:00', '16:00-17:00'] },
         { day: 'saturday', slots: ['10:00-11:00', '14:00-15:00'] },
       ],
@@ -498,11 +527,12 @@ async function main() {
     create: {
       userId: associationUser.id,
       name: 'Espoir Solidaire',
-      description: 'Association d\'aide aux familles demunies. Distribution de repas et denrees alimentaires.',
+      description:
+        "Association d'aide aux familles demunies. Distribution de repas et denrees alimentaires.",
       registrationNumber: 'ASSO-CI-2020-12345',
-      address: '78 Rue de l\'Esperance, Abobo',
-      latitude: 5.4200,
-      longitude: -4.0100,
+      address: "78 Rue de l'Esperance, Abobo",
+      latitude: 5.42,
+      longitude: -4.01,
       serviceArea: ['Abobo', 'Adjame', 'Attécoubé', 'Yopougon'],
       acceptedFoodTypes: ['prepared', 'dry', 'fresh'],
       collectionSchedule: {
@@ -522,7 +552,8 @@ async function main() {
   await prisma.promoCode.create({
     data: {
       code: 'BIENVENUE2024',
-      description: 'Code de bienvenue - 50% sur le premier mois d\'abonnement Pro',
+      description:
+        "Code de bienvenue - 50% sur le premier mois d'abonnement Pro",
       type: 'PERCENTAGE',
       value: 50,
       applicablePlanId: proPlan.id,
@@ -539,7 +570,7 @@ async function main() {
   await prisma.promoCode.create({
     data: {
       code: 'PREMIUM3MOIS',
-      description: '3 mois gratuits sur l\'abonnement Premium annuel',
+      description: "3 mois gratuits sur l'abonnement Premium annuel",
       type: 'FREE_MONTHS',
       value: 3,
       applicablePlanId: premiumPlan.id,
@@ -570,7 +601,9 @@ async function main() {
   console.log('\n📝 Demo Credentials:');
   console.log('  Admin:    admin@yapasgachis.com / Admin@YapaGachis2024!');
   console.log('  Client:   client@demo.yapasgachis.com / Client@Demo2024!');
-  console.log('  Supplier: restaurant@demo.yapasgachis.com / Supplier@Demo2024!');
+  console.log(
+    '  Supplier: restaurant@demo.yapasgachis.com / Supplier@Demo2024!'
+  );
   console.log('  Hotel:    hotel@demo.yapasgachis.com / Supplier@Demo2024!');
   console.log('========================================\n');
 }

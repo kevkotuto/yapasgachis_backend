@@ -1,11 +1,20 @@
-import { Request, Response, NextFunction } from 'express';
-import waveService from '@/infrastructure/payment/wave.service';
+import { Request, Response, RequestHandler } from 'express';
+
 import escrowService from '@/core/services/escrow.service';
-import orderService from '@/core/services/order.service';
 import eventService, { AppEvent } from '@/core/services/event.service';
+import orderService from '@/core/services/order.service';
 import { prisma } from '@/infrastructure/database/prisma';
-import { AppError } from '@/middleware/error-handler.middleware';
 import logger from '@/infrastructure/monitoring/logger';
+import waveService from '@/infrastructure/payment/wave.service';
+import { AppError, asyncHandler } from '@/middleware/error-handler.middleware';
+
+interface WaveWebhookData {
+  client_reference?: string;
+  transaction_id?: string;
+  id?: string;
+  failure_code?: string;
+  failure_description?: string;
+}
 
 /**
  * Payment Controller
@@ -17,61 +26,63 @@ import logger from '@/infrastructure/monitoring/logger';
  * @desc Webhook Wave - Appelé par Wave lors d'un événement de paiement
  * @access Public (vérifié par signature)
  */
-export const handleWaveWebhook = async (
+export const handleWaveWebhook: RequestHandler = (
   req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const signature = req.headers['wave-signature'] as string;
-    const payload = JSON.stringify(req.body);
+  res: Response
+): void => {
+  const signature = req.headers['wave-signature'] as string;
+  const payload = JSON.stringify(req.body);
 
-    // Vérifier la signature du webhook
-    const webhookData = waveService.parseWebhook(payload, signature);
+  // Vérifier la signature du webhook
+  const webhookData = waveService.parseWebhook(payload, signature);
 
-    if (!webhookData) {
-      logger.warn('Invalid Wave webhook signature', {
-        signature,
-      });
-      return res.status(401).json({ error: 'Invalid signature' });
-    }
-
-    logger.info('Wave webhook received', {
-      type: webhookData.type,
-      data: webhookData.data,
+  if (!webhookData) {
+    logger.warn('Invalid Wave webhook signature', {
+      signature,
     });
-
-    switch (webhookData.type) {
-      case 'checkout.session.completed':
-        await handleCheckoutCompleted(webhookData.data);
-        break;
-
-      case 'payout.completed':
-        await handlePayoutCompleted(webhookData.data);
-        break;
-
-      case 'payout.failed':
-        await handlePayoutFailed(webhookData.data);
-        break;
-
-      default:
-        logger.warn('Unknown webhook type', { type: webhookData.type });
-    }
-
-    return res.json({ received: true });
-  } catch (error) {
-    logger.error('Webhook processing error', {
-      error: (error as Error).message,
-    });
-    // Toujours retourner 200 pour éviter les retry de Wave
-    return res.json({ received: true, error: (error as Error).message });
+    res.status(401).json({ error: 'Invalid signature' });
+    return;
   }
+
+  logger.info('Wave webhook received', {
+    type: webhookData.type,
+    data: webhookData.data,
+  });
+
+  // Process webhook asynchronously, respond immediately
+  const processWebhook = async (): Promise<void> => {
+    try {
+      switch (webhookData.type) {
+        case 'checkout.session.completed':
+          await handleCheckoutCompleted(webhookData.data as WaveWebhookData);
+          break;
+
+        case 'payout.completed':
+          await handlePayoutCompleted(webhookData.data as WaveWebhookData);
+          break;
+
+        case 'payout.failed':
+          await handlePayoutFailed(webhookData.data as WaveWebhookData);
+          break;
+
+        default:
+          logger.warn('Unknown webhook type', { type: webhookData.type });
+      }
+    } catch (error) {
+      logger.error('Webhook processing error', {
+        error: (error as Error).message,
+      });
+    }
+  };
+
+  void processWebhook();
+  res.json({ received: true });
 };
 
 /**
  * Traiter un checkout complété (paiement réussi)
  */
-async function handleCheckoutCompleted(data: any) {
+async function handleCheckoutCompleted(data: WaveWebhookData): Promise<void> {
   const { client_reference: orderId, transaction_id: wavePaymentId } = data;
 
   if (!orderId || !wavePaymentId) {
@@ -93,7 +104,7 @@ async function handleCheckoutCompleted(data: any) {
 /**
  * Traiter un payout complété (transfert vers fournisseur réussi)
  */
-async function handlePayoutCompleted(data: any) {
+async function handlePayoutCompleted(data: WaveWebhookData): Promise<void> {
   const { client_reference: orderId, id: transferId } = data;
 
   logger.info('Payout completed', { orderId, transferId });
@@ -103,7 +114,7 @@ async function handlePayoutCompleted(data: any) {
 /**
  * Traiter un payout échoué
  */
-async function handlePayoutFailed(data: any) {
+async function handlePayoutFailed(data: WaveWebhookData): Promise<void> {
   const { client_reference: orderId, failure_code, failure_description } = data;
 
   logger.error('Payout failed', {
@@ -111,6 +122,8 @@ async function handlePayoutFailed(data: any) {
     failureCode: failure_code,
     failureDescription: failure_description,
   });
+
+  if (!orderId) return;
 
   try {
     // Récupérer les informations de l'escrow et du supplier
@@ -149,12 +162,8 @@ async function handlePayoutFailed(data: any) {
  * @desc Callback de succès Wave - Redirige le client après paiement réussi
  * @access Public
  */
-export const handleWaveSuccess = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
+export const handleWaveSuccess = asyncHandler(
+  async (req: Request, res: Response) => {
     const { orderId } = req.query;
 
     if (!orderId) {
@@ -170,14 +179,19 @@ export const handleWaveSuccess = async (
 
     // Si le webhook n'a pas encore été traité, vérifier manuellement
     if (escrow.status === 'PENDING' && escrow.waveCheckoutId) {
-      const checkout = await waveService.getCheckoutStatus(escrow.waveCheckoutId);
+      const checkout = await waveService.getCheckoutStatus(
+        escrow.waveCheckoutId
+      );
 
       if (
         checkout.checkout_status === 'complete' &&
         checkout.payment_status === 'succeeded' &&
         checkout.transaction_id
       ) {
-        await escrowService.confirmPayment(orderId as string, checkout.transaction_id);
+        await escrowService.confirmPayment(
+          orderId as string,
+          checkout.transaction_id
+        );
       }
     }
 
@@ -187,22 +201,16 @@ export const handleWaveSuccess = async (
     logger.info('Wave payment success callback', { orderId });
 
     res.redirect(redirectUrl);
-  } catch (error) {
-    next(error);
   }
-};
+);
 
 /**
  * @route GET /api/v1/payments/wave/error
  * @desc Callback d'erreur Wave - Redirige le client après échec de paiement
  * @access Public
  */
-export const handleWaveError = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
+export const handleWaveError = asyncHandler(
+  async (req: Request, res: Response) => {
     const { orderId } = req.query;
 
     logger.info('Wave payment error callback', { orderId });
@@ -211,24 +219,18 @@ export const handleWaveError = async (
     const redirectUrl = `${process.env.MOBILE_APP_SCHEME || 'yapasgachis'}://order/${orderId}?status=error`;
 
     res.redirect(redirectUrl);
-  } catch (error) {
-    next(error);
   }
-};
+);
 
 /**
  * @route GET /api/v1/payments/status/:orderId
  * @desc Vérifier le statut de paiement d'une commande
  * @access Private
  */
-export const checkPaymentStatus = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
+export const checkPaymentStatus = asyncHandler(
+  async (req: Request, res: Response) => {
     const { orderId } = req.params;
-    const userId = req.user!.id;
+    const userId = req.user.id;
 
     // Vérifier que l'utilisateur a accès à cette commande
     const order = await orderService.getOrderById(orderId, userId);
@@ -246,24 +248,18 @@ export const checkPaymentStatus = async (
         amount: order.total,
       },
     });
-  } catch (error) {
-    next(error);
   }
-};
+);
 
 /**
  * @route POST /api/v1/payments/retry/:orderId
  * @desc Réessayer un paiement Wave (génère une nouvelle URL de checkout)
  * @access Private
  */
-export const retryPayment = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
+export const retryPayment = asyncHandler(
+  async (req: Request, res: Response) => {
     const { orderId } = req.params;
-    const userId = req.user!.id;
+    const userId = req.user.id;
 
     // Vérifier que l'utilisateur a accès et que la commande est en attente de paiement
     const order = await orderService.getOrderById(orderId, userId);
@@ -271,12 +267,12 @@ export const retryPayment = async (
     if (order.status !== 'PENDING_PAYMENT') {
       throw new AppError(
         400,
-        'Cette commande n\'est pas en attente de paiement'
+        "Cette commande n'est pas en attente de paiement"
       );
     }
 
     if (order.paymentMethod !== 'WAVE') {
-      throw new AppError(400, 'Cette commande n\'utilise pas Wave');
+      throw new AppError(400, "Cette commande n'utilise pas Wave");
     }
 
     // Récupérer l'escrow existant
@@ -301,10 +297,8 @@ export const retryPayment = async (
         expiresAt: checkout.when_expires,
       },
     });
-  } catch (error) {
-    next(error);
   }
-};
+);
 
 export default {
   handleWaveWebhook,

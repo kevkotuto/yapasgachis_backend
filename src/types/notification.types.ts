@@ -1,4 +1,8 @@
-import { NotificationType, NotificationPriority, DeviceType } from '@/utils/enums';
+import {
+  NotificationType,
+  NotificationPriority,
+  DeviceType,
+} from '@/utils/enums';
 
 // ==================== NOTIFICATION ====================
 
@@ -224,7 +228,11 @@ export const NotificationCategoryMap: Record<
   NotificationType,
   keyof Pick<
     NotificationPreferenceData,
-    'orderUpdates' | 'paymentAlerts' | 'promotions' | 'productAlerts' | 'systemAnnouncements'
+    | 'orderUpdates'
+    | 'paymentAlerts'
+    | 'promotions'
+    | 'productAlerts'
+    | 'systemAnnouncements'
   >
 > = {
   // Order updates

@@ -1,5 +1,6 @@
-import { prisma } from '@/infrastructure/database/prisma';
 import { SupplierStore, Prisma } from '@prisma/client';
+
+import { prisma } from '@/infrastructure/database/prisma';
 import logger from '@/infrastructure/monitoring/logger';
 
 /**
@@ -124,7 +125,11 @@ export class SupplierStoreRepository {
           OR: [
             { name: { contains: search, mode: 'insensitive' } },
             { address: { contains: search, mode: 'insensitive' } },
-            { supplier: { businessName: { contains: search, mode: 'insensitive' } } },
+            {
+              supplier: {
+                businessName: { contains: search, mode: 'insensitive' },
+              },
+            },
           ],
         }),
         ...(city && { city: { equals: city, mode: 'insensitive' } }),
@@ -294,7 +299,8 @@ export class SupplierStoreRepository {
       ]);
 
       const totalProducts = products.reduce((sum, p) => sum + p._count, 0);
-      const activeProducts = products.find((p) => p.status === 'ACTIVE')?._count || 0;
+      const activeProducts =
+        products.find((p) => p.status === 'ACTIVE')?._count || 0;
       const totalDeals = deals.reduce((sum, d) => sum + d._count, 0);
       const activeDeals = deals.find((d) => d.status === 'ACTIVE')?._count || 0;
 

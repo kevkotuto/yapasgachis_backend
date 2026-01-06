@@ -1,5 +1,7 @@
-import axios, { AxiosInstance } from 'axios';
 import crypto from 'crypto';
+
+import axios, { AxiosInstance } from 'axios';
+
 import config from '@/config';
 import logger from '@/infrastructure/monitoring/logger';
 import { AppError } from '@/middleware/error-handler.middleware';
@@ -109,7 +111,7 @@ export class WaveService {
     this.client = axios.create({
       baseURL: this.apiUrl,
       headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
+        Authorization: `Bearer ${this.apiKey}`,
         'Content-Type': 'application/json',
       },
       timeout: 30000,

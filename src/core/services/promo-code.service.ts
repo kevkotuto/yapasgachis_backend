@@ -4,6 +4,7 @@ import {
   PromoCodeStatus,
   PromoCodeType,
 } from '@prisma/client';
+
 import promoCodeRepository, {
   PromoCodeRepository,
 } from '@/core/repositories/promo-code.repository';
@@ -11,8 +12,8 @@ import subscriptionPlanRepository, {
   SubscriptionPlanRepository,
 } from '@/core/repositories/subscription-plan.repository';
 import supplierRepository from '@/core/repositories/supplier.repository';
-import { AppError } from '@/middleware/error-handler.middleware';
 import logger from '@/infrastructure/monitoring/logger';
+import { AppError } from '@/middleware/error-handler.middleware';
 import { generateRandomCode } from '@/utils/helpers';
 
 /**
@@ -69,9 +70,15 @@ export class PromoCodeService {
 
       // Validate supplier if reserved
       if (data.reservedForSupplierId) {
-        const supplier = await supplierRepository.findById(data.reservedForSupplierId);
+        const supplier = await supplierRepository.findById(
+          data.reservedForSupplierId
+        );
         if (!supplier) {
-          throw new AppError(404, 'Fournisseur non trouvé', 'SUPPLIER_NOT_FOUND');
+          throw new AppError(
+            404,
+            'Fournisseur non trouvé',
+            'SUPPLIER_NOT_FOUND'
+          );
         }
       }
 
@@ -132,7 +139,11 @@ export class PromoCodeService {
     try {
       const promoCode = await this.promoCodeRepo.findById(promoCodeId);
       if (!promoCode) {
-        throw new AppError(404, 'Code promo non trouvé', 'PROMO_CODE_NOT_FOUND');
+        throw new AppError(
+          404,
+          'Code promo non trouvé',
+          'PROMO_CODE_NOT_FOUND'
+        );
       }
 
       // Cannot modify code, type, or value after creation
@@ -159,11 +170,18 @@ export class PromoCodeService {
   /**
    * Disable promo code (admin only)
    */
-  async disablePromoCode(adminId: string, promoCodeId: string): Promise<PromoCode> {
+  async disablePromoCode(
+    adminId: string,
+    promoCodeId: string
+  ): Promise<PromoCode> {
     try {
       const promoCode = await this.promoCodeRepo.findById(promoCodeId);
       if (!promoCode) {
-        throw new AppError(404, 'Code promo non trouvé', 'PROMO_CODE_NOT_FOUND');
+        throw new AppError(
+          404,
+          'Code promo non trouvé',
+          'PROMO_CODE_NOT_FOUND'
+        );
       }
 
       const updated = await this.promoCodeRepo.update(promoCodeId, {
@@ -195,7 +213,11 @@ export class PromoCodeService {
     try {
       const promoCode = await this.promoCodeRepo.findById(promoCodeId);
       if (!promoCode) {
-        throw new AppError(404, 'Code promo non trouvé', 'PROMO_CODE_NOT_FOUND');
+        throw new AppError(
+          404,
+          'Code promo non trouvé',
+          'PROMO_CODE_NOT_FOUND'
+        );
       }
 
       // Don't delete if already used
@@ -293,13 +315,16 @@ export class PromoCodeService {
 
       // Check status
       if (promoCode.status !== 'ACTIVE') {
-        return { isValid: false, error: 'Ce code promo n\'est plus actif' };
+        return { isValid: false, error: "Ce code promo n'est plus actif" };
       }
 
       // Check validity dates
       const now = new Date();
       if (promoCode.validFrom > now) {
-        return { isValid: false, error: 'Ce code promo n\'est pas encore valide' };
+        return {
+          isValid: false,
+          error: "Ce code promo n'est pas encore valide",
+        };
       }
       if (promoCode.validUntil && promoCode.validUntil < now) {
         return { isValid: false, error: 'Ce code promo a expiré' };
@@ -307,17 +332,33 @@ export class PromoCodeService {
 
       // Check max uses
       if (promoCode.maxUses && promoCode.currentUses >= promoCode.maxUses) {
-        return { isValid: false, error: 'Ce code promo a atteint sa limite d\'utilisation' };
+        return {
+          isValid: false,
+          error: "Ce code promo a atteint sa limite d'utilisation",
+        };
       }
 
       // Check if reserved for specific supplier
-      if (promoCode.reservedForSupplierId && promoCode.reservedForSupplierId !== supplierId) {
-        return { isValid: false, error: 'Ce code promo n\'est pas valide pour votre compte' };
+      if (
+        promoCode.reservedForSupplierId &&
+        promoCode.reservedForSupplierId !== supplierId
+      ) {
+        return {
+          isValid: false,
+          error: "Ce code promo n'est pas valide pour votre compte",
+        };
       }
 
       // Check if applicable to this plan
-      if (planId && promoCode.applicablePlanId && promoCode.applicablePlanId !== planId) {
-        return { isValid: false, error: 'Ce code promo n\'est pas applicable à ce plan' };
+      if (
+        planId &&
+        promoCode.applicablePlanId &&
+        promoCode.applicablePlanId !== planId
+      ) {
+        return {
+          isValid: false,
+          error: "Ce code promo n'est pas applicable à ce plan",
+        };
       }
 
       // Check user usage limit
@@ -326,7 +367,10 @@ export class PromoCodeService {
         supplierId
       );
       if (userUsageCount >= promoCode.maxUsesPerUser) {
-        return { isValid: false, error: 'Vous avez déjà utilisé ce code promo' };
+        return {
+          isValid: false,
+          error: 'Vous avez déjà utilisé ce code promo',
+        };
       }
 
       // Build discount description
@@ -358,7 +402,10 @@ export class PromoCodeService {
         supplierId,
         error: (error as Error).message,
       });
-      return { isValid: false, error: 'Erreur lors de la validation du code promo' };
+      return {
+        isValid: false,
+        error: 'Erreur lors de la validation du code promo',
+      };
     }
   }
 
@@ -491,9 +538,15 @@ export class PromoCodeService {
         adminId,
         error: (error as Error).message,
       });
-      throw new AppError(500, 'Erreur lors de la création des codes promo en masse');
+      throw new AppError(
+        500,
+        'Erreur lors de la création des codes promo en masse'
+      );
     }
   }
 }
 
-export default new PromoCodeService(promoCodeRepository, subscriptionPlanRepository);
+export default new PromoCodeService(
+  promoCodeRepository,
+  subscriptionPlanRepository
+);

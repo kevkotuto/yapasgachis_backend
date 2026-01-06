@@ -56,7 +56,7 @@ export class ReviewService {
         if (!order) {
           throw new AppError(
             403,
-            "Vous devez avoir commandé ce produit pour laisser un avis"
+            'Vous devez avoir commandé ce produit pour laisser un avis'
           );
         }
       }
@@ -101,7 +101,8 @@ export class ReviewService {
     const result = await reviewRepository.findByProductId(productId, options);
 
     // Get rating distribution
-    const distribution = await reviewRepository.getRatingDistribution(productId);
+    const distribution =
+      await reviewRepository.getRatingDistribution(productId);
 
     return {
       ...result,

@@ -108,6 +108,9 @@ export const updatePreferencesSchema = z.object({
         }
         return true;
       },
-      { message: 'quietHoursStart et quietHoursEnd sont requis quand quietHoursEnabled est true' }
+      {
+        message:
+          'quietHoursStart et quietHoursEnd sont requis quand quietHoursEnabled est true',
+      }
     ),
 });

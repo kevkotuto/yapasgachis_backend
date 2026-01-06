@@ -5,18 +5,19 @@ import {
   PromoCode,
   PromoCodeType,
 } from '@prisma/client';
-import subscriptionPlanRepository, {
-  SubscriptionPlanRepository,
-} from '@/core/repositories/subscription-plan.repository';
+
 import promoCodeRepository, {
   PromoCodeRepository,
 } from '@/core/repositories/promo-code.repository';
+import subscriptionPlanRepository, {
+  SubscriptionPlanRepository,
+} from '@/core/repositories/subscription-plan.repository';
 import supplierRepository, {
   SupplierRepository,
 } from '@/core/repositories/supplier.repository';
-import { AppError } from '@/middleware/error-handler.middleware';
-import logger from '@/infrastructure/monitoring/logger';
 import { prisma } from '@/infrastructure/database/prisma';
+import logger from '@/infrastructure/monitoring/logger';
+import { AppError } from '@/middleware/error-handler.middleware';
 
 /**
  * Subscription Service
@@ -76,7 +77,7 @@ export class SubscriptionService {
         canCreateDeals: data.canCreateDeals || false,
         priorityListing: data.priorityListing || false,
         analyticsAccess: data.analyticsAccess || false,
-        commissionRate: data.commissionRate || 0.10,
+        commissionRate: data.commissionRate || 0.1,
         trialDays: data.trialDays || 0,
         isPublic: data.isPublic !== false,
       });
@@ -258,15 +259,22 @@ export class SubscriptionService {
       }
 
       if (!plan.isActive) {
-        throw new AppError(400, 'Ce plan n\'est plus disponible', 'PLAN_INACTIVE');
+        throw new AppError(
+          400,
+          "Ce plan n'est plus disponible",
+          'PLAN_INACTIVE'
+        );
       }
 
       // Calculate price
-      let price = data.billingPeriod === 'yearly' && plan.yearlyPrice
-        ? plan.yearlyPrice
-        : plan.monthlyPrice * (data.billingPeriod === 'yearly' ? 12 : 1);
+      let price =
+        data.billingPeriod === 'yearly' && plan.yearlyPrice
+          ? plan.yearlyPrice
+          : plan.monthlyPrice * (data.billingPeriod === 'yearly' ? 12 : 1);
 
-      let discount: { type: string; value: number; savedAmount: number } | undefined;
+      let discount:
+        | { type: string; value: number; savedAmount: number }
+        | undefined;
       let promoCodeUsed: PromoCode | null = null;
 
       // Apply promo code if provided
@@ -361,7 +369,7 @@ export class SubscriptionService {
         supplierId,
         error: (error as Error).message,
       });
-      throw new AppError(500, 'Erreur lors de l\'inscription à l\'abonnement');
+      throw new AppError(500, "Erreur lors de l'inscription à l'abonnement");
     }
   }
 
@@ -386,13 +394,21 @@ export class SubscriptionService {
 
     // Check if code is active
     if (promoCode.status !== 'ACTIVE') {
-      throw new AppError(400, 'Ce code promo n\'est plus actif', 'PROMO_CODE_INACTIVE');
+      throw new AppError(
+        400,
+        "Ce code promo n'est plus actif",
+        'PROMO_CODE_INACTIVE'
+      );
     }
 
     // Check validity dates
     const now = new Date();
     if (promoCode.validFrom > now) {
-      throw new AppError(400, 'Ce code promo n\'est pas encore valide', 'PROMO_CODE_NOT_STARTED');
+      throw new AppError(
+        400,
+        "Ce code promo n'est pas encore valide",
+        'PROMO_CODE_NOT_STARTED'
+      );
     }
     if (promoCode.validUntil && promoCode.validUntil < now) {
       throw new AppError(400, 'Ce code promo a expiré', 'PROMO_CODE_EXPIRED');
@@ -400,17 +416,32 @@ export class SubscriptionService {
 
     // Check max uses
     if (promoCode.maxUses && promoCode.currentUses >= promoCode.maxUses) {
-      throw new AppError(400, 'Ce code promo a atteint sa limite d\'utilisation', 'PROMO_CODE_MAX_USES');
+      throw new AppError(
+        400,
+        "Ce code promo a atteint sa limite d'utilisation",
+        'PROMO_CODE_MAX_USES'
+      );
     }
 
     // Check if reserved for specific supplier
-    if (promoCode.reservedForSupplierId && promoCode.reservedForSupplierId !== supplierId) {
-      throw new AppError(400, 'Ce code promo n\'est pas valide pour votre compte', 'PROMO_CODE_RESERVED');
+    if (
+      promoCode.reservedForSupplierId &&
+      promoCode.reservedForSupplierId !== supplierId
+    ) {
+      throw new AppError(
+        400,
+        "Ce code promo n'est pas valide pour votre compte",
+        'PROMO_CODE_RESERVED'
+      );
     }
 
     // Check if applicable to this plan
     if (promoCode.applicablePlanId && promoCode.applicablePlanId !== planId) {
-      throw new AppError(400, 'Ce code promo n\'est pas applicable à ce plan', 'PROMO_CODE_WRONG_PLAN');
+      throw new AppError(
+        400,
+        "Ce code promo n'est pas applicable à ce plan",
+        'PROMO_CODE_WRONG_PLAN'
+      );
     }
 
     // Check user usage limit
@@ -487,7 +518,7 @@ export class SubscriptionService {
         supplierId,
         error: (error as Error).message,
       });
-      throw new AppError(500, 'Erreur lors de l\'annulation de l\'abonnement');
+      throw new AppError(500, "Erreur lors de l'annulation de l'abonnement");
     }
   }
 
@@ -505,7 +536,11 @@ export class SubscriptionService {
       }
 
       if (!supplier.subscriptionPlanId) {
-        throw new AppError(400, 'Aucun abonnement à renouveler', 'NO_SUBSCRIPTION');
+        throw new AppError(
+          400,
+          'Aucun abonnement à renouveler',
+          'NO_SUBSCRIPTION'
+        );
       }
 
       const plan = await this.planRepo.findById(supplier.subscriptionPlanId);
@@ -541,7 +576,7 @@ export class SubscriptionService {
         supplierId,
         error: (error as Error).message,
       });
-      throw new AppError(500, 'Erreur lors du renouvellement de l\'abonnement');
+      throw new AppError(500, "Erreur lors du renouvellement de l'abonnement");
     }
   }
 

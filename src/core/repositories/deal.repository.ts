@@ -1,4 +1,3 @@
-import { prisma } from '@/infrastructure/database/prisma';
 import {
   Deal,
   DealBooking,
@@ -7,6 +6,8 @@ import {
   BookingStatus,
   Prisma,
 } from '@prisma/client';
+
+import { prisma } from '@/infrastructure/database/prisma';
 import logger from '@/infrastructure/monitoring/logger';
 
 /**
@@ -145,7 +146,11 @@ export class DealRepository {
           OR: [
             { title: { contains: search, mode: 'insensitive' } },
             { description: { contains: search, mode: 'insensitive' } },
-            { supplier: { businessName: { contains: search, mode: 'insensitive' } } },
+            {
+              supplier: {
+                businessName: { contains: search, mode: 'insensitive' },
+              },
+            },
           ],
         }),
         ...(category && { category }),
@@ -195,8 +200,8 @@ export class DealRepository {
             const distance = this.calculateDistance(
               latitude,
               longitude,
-              deal.store!.latitude,
-              deal.store!.longitude
+              deal.store.latitude,
+              deal.store.longitude
             );
             return { ...deal, distance };
           })

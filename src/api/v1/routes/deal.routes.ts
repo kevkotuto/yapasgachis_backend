@@ -1,8 +1,6 @@
 import { Router } from 'express';
+
 import dealController from '@/api/v1/controllers/deal.controller';
-import { authenticate, optionalAuthenticate } from '@/middleware/auth.middleware';
-import { requireRole } from '@/middleware/role-guard.middleware';
-import { validate } from '@/middleware/validation.middleware';
 import {
   createDealSchema,
   updateDealSchema,
@@ -16,24 +14,22 @@ import {
   supplierBookingsQuerySchema,
   supplierDealsQuerySchema,
 } from '@/api/v1/validators/deal.validator';
+import {
+  authenticate,
+  optionalAuthenticate,
+} from '@/middleware/auth.middleware';
+import { requireRole } from '@/middleware/role-guard.middleware';
+import { validate } from '@/middleware/validation.middleware';
 
 const router: Router = Router();
 
 // ==================== PUBLIC ROUTES ====================
 
 // Search deals
-router.get(
-  '/',
-  validate(searchDealsSchema),
-  dealController.searchDeals
-);
+router.get('/', validate(searchDealsSchema), dealController.searchDeals);
 
 // Get deal by ID
-router.get(
-  '/:dealId',
-  validate(dealIdParamSchema),
-  dealController.getDealById
-);
+router.get('/:dealId', validate(dealIdParamSchema), dealController.getDealById);
 
 // ==================== USER ROUTES ====================
 

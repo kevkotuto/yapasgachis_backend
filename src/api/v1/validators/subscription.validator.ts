@@ -1,5 +1,9 @@
+import {
+  SubscriptionTier,
+  PromoCodeType,
+  PromoCodeStatus,
+} from '@prisma/client';
 import { z } from 'zod';
-import { SubscriptionTier, PromoCodeType, PromoCodeStatus } from '@prisma/client';
 
 // ==================== SUBSCRIPTION PLAN VALIDATORS ====================
 
@@ -16,7 +20,7 @@ export const createSubscriptionPlanSchema = z.object({
     canCreateDeals: z.boolean().default(false),
     priorityListing: z.boolean().default(false),
     analyticsAccess: z.boolean().default(false),
-    commissionRate: z.number().min(0).max(1).default(0.10),
+    commissionRate: z.number().min(0).max(1).default(0.1),
     trialDays: z.number().int().min(0).default(0),
     isPublic: z.boolean().default(true),
   }),
@@ -99,8 +103,16 @@ export const searchPromoCodesSchema = z.object({
     status: z.nativeEnum(PromoCodeStatus).optional(),
     type: z.nativeEnum(PromoCodeType).optional(),
     reservedForSupplierId: z.string().uuid().optional(),
-    page: z.string().transform(Number).pipe(z.number().int().positive()).optional(),
-    limit: z.string().transform(Number).pipe(z.number().int().positive().max(100)).optional(),
+    page: z
+      .string()
+      .transform(Number)
+      .pipe(z.number().int().positive())
+      .optional(),
+    limit: z
+      .string()
+      .transform(Number)
+      .pipe(z.number().int().positive().max(100))
+      .optional(),
   }),
 });
 
@@ -134,11 +146,17 @@ export const renewSubscriptionSchema = z.object({
 });
 
 // Export types
-export type CreateSubscriptionPlanInput = z.infer<typeof createSubscriptionPlanSchema>;
-export type UpdateSubscriptionPlanInput = z.infer<typeof updateSubscriptionPlanSchema>;
+export type CreateSubscriptionPlanInput = z.infer<
+  typeof createSubscriptionPlanSchema
+>;
+export type UpdateSubscriptionPlanInput = z.infer<
+  typeof updateSubscriptionPlanSchema
+>;
 export type CreatePromoCodeInput = z.infer<typeof createPromoCodeSchema>;
 export type UpdatePromoCodeInput = z.infer<typeof updatePromoCodeSchema>;
 export type ValidatePromoCodeInput = z.infer<typeof validatePromoCodeSchema>;
-export type CreateBulkPromoCodesInput = z.infer<typeof createBulkPromoCodesSchema>;
+export type CreateBulkPromoCodesInput = z.infer<
+  typeof createBulkPromoCodesSchema
+>;
 export type SubscribeInput = z.infer<typeof subscribeSchema>;
 export type RenewSubscriptionInput = z.infer<typeof renewSubscriptionSchema>;

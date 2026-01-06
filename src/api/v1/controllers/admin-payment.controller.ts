@@ -1,8 +1,9 @@
-import { Request, Response, NextFunction } from 'express';
 import { EscrowStatus } from '@prisma/client';
+import { Request, Response } from 'express';
+
 import escrowService from '@/core/services/escrow.service';
-import { AppError } from '@/middleware/error-handler.middleware';
 import logger from '@/infrastructure/monitoring/logger';
+import { AppError, asyncHandler } from '@/middleware/error-handler.middleware';
 
 /**
  * Admin Payment Controller
@@ -14,12 +15,8 @@ import logger from '@/infrastructure/monitoring/logger';
  * @desc Récupérer toutes les transactions escrow avec filtres
  * @access Admin
  */
-export const getEscrowTransactions = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
+export const getEscrowTransactions = asyncHandler(
+  async (req: Request, res: Response) => {
     const {
       status,
       supplierId,
@@ -48,22 +45,16 @@ export const getEscrowTransactions = async (
         limit: parseInt(limit as string, 10),
       },
     });
-  } catch (error) {
-    next(error);
   }
-};
+);
 
 /**
  * @route GET /api/v1/admin/payments/escrow/:orderId
  * @desc Récupérer une transaction escrow par orderId
  * @access Admin
  */
-export const getEscrowByOrderId = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
+export const getEscrowByOrderId = asyncHandler(
+  async (req: Request, res: Response) => {
     const { orderId } = req.params;
 
     const escrow = await escrowService.getByOrderId(orderId);
@@ -76,53 +67,49 @@ export const getEscrowByOrderId = async (
       success: true,
       data: escrow,
     });
-  } catch (error) {
-    next(error);
   }
-};
+);
 
 /**
  * @route GET /api/v1/admin/payments/statistics
  * @desc Statistiques des paiements escrow
  * @access Admin
  */
-export const getPaymentStatistics = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
+export const getPaymentStatistics = asyncHandler(
+  async (_req: Request, res: Response) => {
     const statistics = await escrowService.getStatistics();
 
     res.json({
       success: true,
       data: statistics,
     });
-  } catch (error) {
-    next(error);
   }
-};
+);
 
 /**
  * @route POST /api/v1/admin/payments/escrow/:orderId/release
  * @desc Libérer manuellement les fonds vers le fournisseur
  * @access Admin
  */
-export const releaseEscrow = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
+export const releaseEscrow = asyncHandler(
+  async (req: Request, res: Response) => {
     const { orderId } = req.params;
-    const { supplierPhoneNumber } = req.body;
-    const adminId = req.user!.id;
+    const { supplierPhoneNumber } = req.body as {
+      supplierPhoneNumber?: string;
+    };
+    const adminId = req.user.id;
 
     if (!supplierPhoneNumber) {
-      throw new AppError(400, 'Le numéro de téléphone du fournisseur est requis');
+      throw new AppError(
+        400,
+        'Le numéro de téléphone du fournisseur est requis'
+      );
     }
 
-    const escrow = await escrowService.releaseToSupplier(orderId, supplierPhoneNumber);
+    const escrow = await escrowService.releaseToSupplier(
+      orderId,
+      supplierPhoneNumber
+    );
 
     logger.info('Admin released escrow funds', {
       orderId,
@@ -135,25 +122,19 @@ export const releaseEscrow = async (
       message: 'Fonds libérés avec succès',
       data: escrow,
     });
-  } catch (error) {
-    next(error);
   }
-};
+);
 
 /**
  * @route POST /api/v1/admin/payments/escrow/:orderId/refund
  * @desc Rembourser le client
  * @access Admin
  */
-export const refundEscrow = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
+export const refundEscrow = asyncHandler(
+  async (req: Request, res: Response) => {
     const { orderId } = req.params;
-    const { reason, amount } = req.body;
-    const adminId = req.user!.id;
+    const { reason, amount } = req.body as { reason?: string; amount?: string };
+    const adminId = req.user.id;
 
     if (!reason) {
       throw new AppError(400, 'La raison du remboursement est requise');
@@ -179,63 +160,52 @@ export const refundEscrow = async (
       message: 'Remboursement effectué avec succès',
       data: escrow,
     });
-  } catch (error) {
-    next(error);
   }
-};
+);
 
 /**
  * @route POST /api/v1/admin/payments/escrow/:orderId/dispute/open
  * @desc Ouvrir un litige sur une transaction
  * @access Admin
  */
-export const openDispute = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { orderId } = req.params;
-    const { reason } = req.body;
-    const adminId = req.user!.id;
+export const openDispute = asyncHandler(async (req: Request, res: Response) => {
+  const { orderId } = req.params;
+  const { reason } = req.body as { reason?: string };
+  const adminId = req.user.id;
 
-    if (!reason) {
-      throw new AppError(400, 'La raison du litige est requise');
-    }
-
-    const escrow = await escrowService.openDispute(orderId, adminId, reason);
-
-    logger.info('Admin opened dispute', {
-      orderId,
-      adminId,
-      escrowId: escrow.id,
-      reason,
-    });
-
-    res.json({
-      success: true,
-      message: 'Litige ouvert avec succès',
-      data: escrow,
-    });
-  } catch (error) {
-    next(error);
+  if (!reason) {
+    throw new AppError(400, 'La raison du litige est requise');
   }
-};
+
+  const escrow = await escrowService.openDispute(orderId, adminId, reason);
+
+  logger.info('Admin opened dispute', {
+    orderId,
+    adminId,
+    escrowId: escrow.id,
+    reason,
+  });
+
+  res.json({
+    success: true,
+    message: 'Litige ouvert avec succès',
+    data: escrow,
+  });
+});
 
 /**
  * @route POST /api/v1/admin/payments/escrow/:orderId/dispute/resolve-supplier
  * @desc Résoudre un litige en faveur du fournisseur
  * @access Admin
  */
-export const resolveDisputeForSupplier = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
+export const resolveDisputeForSupplier = asyncHandler(
+  async (req: Request, res: Response) => {
     const { orderId } = req.params;
-    const { resolution, supplierPhoneNumber } = req.body;
-    const adminId = req.user!.id;
+    const { resolution, supplierPhoneNumber } = req.body as {
+      resolution?: string;
+      supplierPhoneNumber?: string;
+    };
+    const adminId = req.user.id;
 
     if (!resolution || !supplierPhoneNumber) {
       throw new AppError(
@@ -263,25 +233,19 @@ export const resolveDisputeForSupplier = async (
       message: 'Litige résolu en faveur du fournisseur',
       data: escrow,
     });
-  } catch (error) {
-    next(error);
   }
-};
+);
 
 /**
  * @route POST /api/v1/admin/payments/escrow/:orderId/dispute/resolve-client
  * @desc Résoudre un litige en faveur du client (remboursement)
  * @access Admin
  */
-export const resolveDisputeForClient = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
+export const resolveDisputeForClient = asyncHandler(
+  async (req: Request, res: Response) => {
     const { orderId } = req.params;
-    const { resolution } = req.body;
-    const adminId = req.user!.id;
+    const { resolution } = req.body as { resolution?: string };
+    const adminId = req.user.id;
 
     if (!resolution) {
       throw new AppError(400, 'La résolution est requise');
@@ -305,10 +269,8 @@ export const resolveDisputeForClient = async (
       message: 'Litige résolu en faveur du client (remboursement effectué)',
       data: escrow,
     });
-  } catch (error) {
-    next(error);
   }
-};
+);
 
 export default {
   getEscrowTransactions,

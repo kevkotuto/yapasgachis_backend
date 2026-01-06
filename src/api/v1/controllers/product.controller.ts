@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
-import { asyncHandler } from '@/utils/helpers';
-import productService from '@/core/services/product.service';
+
 import {
   CreateProductInput,
   UpdateProductInput,
@@ -14,8 +13,11 @@ import {
   DeleteImageInput,
   GetSupplierProductsInput,
 } from '../validators/product.validator';
+
+import productService from '@/core/services/product.service';
 import logger from '@/infrastructure/monitoring/logger';
 import { AppError } from '@/middleware/error-handler.middleware';
+import { asyncHandler } from '@/utils/helpers';
 
 /**
  * Product Controller
@@ -26,25 +28,26 @@ export class ProductController {
    * Create product
    * POST /api/v1/products
    */
-  createProduct = asyncHandler(
-    async (req: Request, res: Response) => {
-      const userId = req.user!.id;
-      const body = req.body as CreateProductInput;
+  createProduct = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user.id;
+    const body = req.body as CreateProductInput;
 
-      const product = await productService.createProduct(userId, body as Required<CreateProductInput>);
+    const product = await productService.createProduct(
+      userId,
+      body as Required<CreateProductInput>
+    );
 
-      logger.info('Product created via API', {
-        userId,
-        productId: product.id,
-      });
+    logger.info('Product created via API', {
+      userId,
+      productId: product.id,
+    });
 
-      res.status(201).json({
-        success: true,
-        message: 'Produit créé avec succès',
-        data: { product },
-      });
-    }
-  );
+    res.status(201).json({
+      success: true,
+      message: 'Produit créé avec succès',
+      data: { product },
+    });
+  });
 
   /**
    * Get product by ID
@@ -68,8 +71,15 @@ export class ProductController {
    * PUT /api/v1/products/:id
    */
   updateProduct = asyncHandler(
-    async (req: Request<UpdateProductInput['params'], {}, UpdateProductInput['body']>, res: Response) => {
-      const userId = req.user!.id;
+    async (
+      req: Request<
+        UpdateProductInput['params'],
+        {},
+        UpdateProductInput['body']
+      >,
+      res: Response
+    ) => {
+      const userId = req.user.id;
       const { id } = req.params;
 
       const product = await productService.updateProduct(userId, id, req.body);
@@ -93,7 +103,7 @@ export class ProductController {
    */
   deleteProduct = asyncHandler(
     async (req: Request<DeleteProductInput>, res: Response) => {
-      const userId = req.user!.id;
+      const userId = req.user.id;
       const { id } = req.params;
 
       await productService.deleteProduct(userId, id);
@@ -164,8 +174,11 @@ export class ProductController {
    * GET /api/v1/products/my-products
    */
   getMyProducts = asyncHandler(
-    async (req: Request<{}, {}, {}, GetSupplierProductsInput>, res: Response) => {
-      const userId = req.user!.id;
+    async (
+      req: Request<{}, {}, {}, GetSupplierProductsInput>,
+      res: Response
+    ) => {
+      const userId = req.user.id;
 
       const result = await productService.getSupplierProducts(
         userId,
@@ -184,8 +197,11 @@ export class ProductController {
    * PATCH /api/v1/products/:id/stock
    */
   updateStock = asyncHandler(
-    async (req: Request<UpdateStockInput['params'], {}, UpdateStockInput['body']>, res: Response) => {
-      const userId = req.user!.id;
+    async (
+      req: Request<UpdateStockInput['params'], {}, UpdateStockInput['body']>,
+      res: Response
+    ) => {
+      const userId = req.user.id;
       const { id } = req.params;
       const { quantityChange } = req.body;
 
@@ -215,7 +231,7 @@ export class ProductController {
    */
   uploadImages = asyncHandler(
     async (req: Request<UploadImagesInput>, res: Response) => {
-      const userId = req.user!.id;
+      const userId = req.user.id;
       const { id } = req.params;
 
       const files = req.files as Express.Multer.File[] | undefined;
@@ -229,7 +245,11 @@ export class ProductController {
         filename: file.originalname,
       }));
 
-      const imageUrls = await productService.uploadImages(userId, id, filesData);
+      const imageUrls = await productService.uploadImages(
+        userId,
+        id,
+        filesData
+      );
 
       logger.info('Product images uploaded via API', {
         userId,
@@ -250,8 +270,11 @@ export class ProductController {
    * DELETE /api/v1/products/:id/images
    */
   deleteImage = asyncHandler(
-    async (req: Request<DeleteImageInput['params'], {}, DeleteImageInput['body']>, res: Response) => {
-      const userId = req.user!.id;
+    async (
+      req: Request<DeleteImageInput['params'], {}, DeleteImageInput['body']>,
+      res: Response
+    ) => {
+      const userId = req.user.id;
       const { id } = req.params;
       const { imageUrl } = req.body;
 

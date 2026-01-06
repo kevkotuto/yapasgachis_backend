@@ -1,4 +1,5 @@
 import { v2 as cloudinary } from 'cloudinary';
+
 import config from '@/config';
 import logger from '@/infrastructure/monitoring/logger';
 import { AppError } from '@/middleware/error-handler.middleware';

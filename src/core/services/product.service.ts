@@ -1,13 +1,14 @@
 import { Product, ProductStatus, ProductCategory } from '@prisma/client';
+
 import productRepository, {
   ProductRepository,
 } from '@/core/repositories/product.repository';
 import supplierRepository, {
   SupplierRepository,
 } from '@/core/repositories/supplier.repository';
+import logger from '@/infrastructure/monitoring/logger';
 import cloudinaryService from '@/infrastructure/storage/cloudinary.service';
 import { AppError } from '@/middleware/error-handler.middleware';
-import logger from '@/infrastructure/monitoring/logger';
 
 /**
  * Product Service
@@ -162,7 +163,8 @@ export class ProductService {
 
       // Validate prices if provided
       if (data.price || data.originalPrice) {
-        const originalPrice = data.originalPrice || Number(product.originalPrice);
+        const originalPrice =
+          data.originalPrice || Number(product.originalPrice);
         const price = data.price || Number(product.discountedPrice);
 
         if (price >= originalPrice) {

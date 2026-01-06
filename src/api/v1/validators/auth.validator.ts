@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import { UserRole } from '@prisma/client';
+import { z } from 'zod';
 
 import {
   phoneSchema,
@@ -44,7 +44,12 @@ export const verifyOTPSchema = z.object({
   body: z.object({
     phoneNumber: phoneSchema,
     code: otpSchema,
-    purpose: z.enum(['registration', 'login', 'password_reset', 'phone_verification']),
+    purpose: z.enum([
+      'registration',
+      'login',
+      'password_reset',
+      'phone_verification',
+    ]),
   }),
 });
 
@@ -54,7 +59,12 @@ export const verifyOTPSchema = z.object({
 export const resendOTPSchema = z.object({
   body: z.object({
     phoneNumber: phoneSchema,
-    purpose: z.enum(['registration', 'login', 'password_reset', 'phone_verification']),
+    purpose: z.enum([
+      'registration',
+      'login',
+      'password_reset',
+      'phone_verification',
+    ]),
   }),
 });
 
@@ -82,14 +92,16 @@ export const resetPasswordSchema = z.object({
  * Change password validation schema
  */
 export const changePasswordSchema = z.object({
-  body: z.object({
-    currentPassword: z.string().min(1, 'Le mot de passe actuel est requis'),
-    newPassword: passwordSchema,
-    confirmPassword: z.string().min(1, 'La confirmation est requise'),
-  }).refine((data) => data.newPassword === data.confirmPassword, {
-    message: 'Les mots de passe ne correspondent pas',
-    path: ['confirmPassword'],
-  }),
+  body: z
+    .object({
+      currentPassword: z.string().min(1, 'Le mot de passe actuel est requis'),
+      newPassword: passwordSchema,
+      confirmPassword: z.string().min(1, 'La confirmation est requise'),
+    })
+    .refine((data) => data.newPassword === data.confirmPassword, {
+      message: 'Les mots de passe ne correspondent pas',
+      path: ['confirmPassword'],
+    }),
 });
 
 /**
@@ -105,26 +117,30 @@ export const refreshTokenSchema = z.object({
  * Google auth validation schema
  */
 export const googleAuthSchema = z.object({
-  body: z.object({
-    idToken: z.string().optional(),
-    accessToken: z.string().optional(),
-    role: z.nativeEnum(UserRole).optional().default(UserRole.CLIENT),
-    language: z.enum(['fr', 'en', 'ar', 'es', 'bm']).optional().default('fr'),
-  }).refine((data) => data.idToken || data.accessToken, {
-    message: 'Un token Google est requis (idToken ou accessToken)',
-  }),
+  body: z
+    .object({
+      idToken: z.string().optional(),
+      accessToken: z.string().optional(),
+      role: z.nativeEnum(UserRole).optional().default(UserRole.CLIENT),
+      language: z.enum(['fr', 'en', 'ar', 'es', 'bm']).optional().default('fr'),
+    })
+    .refine((data) => data.idToken || data.accessToken, {
+      message: 'Un token Google est requis (idToken ou accessToken)',
+    }),
 });
 
 /**
  * Link Google account validation schema
  */
 export const linkGoogleSchema = z.object({
-  body: z.object({
-    idToken: z.string().optional(),
-    accessToken: z.string().optional(),
-  }).refine((data) => data.idToken || data.accessToken, {
-    message: 'Un token Google est requis (idToken ou accessToken)',
-  }),
+  body: z
+    .object({
+      idToken: z.string().optional(),
+      accessToken: z.string().optional(),
+    })
+    .refine((data) => data.idToken || data.accessToken, {
+      message: 'Un token Google est requis (idToken ou accessToken)',
+    }),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>['body'];

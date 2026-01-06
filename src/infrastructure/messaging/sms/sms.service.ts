@@ -23,7 +23,10 @@ class TwilioProvider implements SMSProvider {
       //   to
       // });
 
-      logger.info('[Twilio] SMS sent (mocked)', { to, messageLength: message.length });
+      logger.info('[Twilio] SMS sent (mocked)', {
+        to,
+        messageLength: message.length,
+      });
       return true;
     } catch (error) {
       logger.error('[Twilio] Failed to send SMS', {
@@ -141,7 +144,11 @@ export class SMSService {
   /**
    * Send OTP SMS
    */
-  static async sendOTP(to: string, code: string, expiresInMinutes: number = 10): Promise<boolean> {
+  static async sendOTP(
+    to: string,
+    code: string,
+    expiresInMinutes: number = 10
+  ): Promise<boolean> {
     const message = `Votre code YapaGachis est: ${code}. Valide pendant ${expiresInMinutes} minutes. Ne partagez ce code avec personne.`;
     return this.sendSMS(to, message);
   }
@@ -169,7 +176,10 @@ export class SMSService {
   /**
    * Send password reset SMS
    */
-  static async sendPasswordResetSMS(to: string, code: string): Promise<boolean> {
+  static async sendPasswordResetSMS(
+    to: string,
+    code: string
+  ): Promise<boolean> {
     const message = `Code de réinitialisation YapaGachis: ${code}. Valide pendant 10 minutes.`;
     return this.sendSMS(to, message);
   }

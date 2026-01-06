@@ -1,8 +1,6 @@
 import { Router } from 'express';
+
 import supplierController from '../controllers/supplier.controller';
-import { authMiddleware } from '@/middleware/auth.middleware';
-import { supplierOnly } from '@/middleware/role-guard.middleware';
-import { validate } from '@/middleware/validation.middleware';
 import {
   createSupplierProfileSchema,
   updateSupplierProfileSchema,
@@ -11,6 +9,10 @@ import {
   updateSubscriptionSchema,
   getNearbySuppliersSchema,
 } from '../validators/supplier.validator';
+
+import { authMiddleware } from '@/middleware/auth.middleware';
+import { supplierOnly } from '@/middleware/role-guard.middleware';
+import { validate } from '@/middleware/validation.middleware';
 
 const router: Router = Router();
 

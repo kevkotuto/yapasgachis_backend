@@ -1,10 +1,11 @@
 import { EscrowStatus, PaymentMethod } from '@prisma/client';
-import { prisma } from '@/infrastructure/database/prisma';
-import waveService from '@/infrastructure/payment/wave.service';
-import eventService, { AppEvent } from '@/core/services/event.service';
-import logger from '@/infrastructure/monitoring/logger';
-import { AppError } from '@/middleware/error-handler.middleware';
+
 import config from '@/config';
+import eventService, { AppEvent } from '@/core/services/event.service';
+import { prisma } from '@/infrastructure/database/prisma';
+import logger from '@/infrastructure/monitoring/logger';
+import waveService from '@/infrastructure/payment/wave.service';
+import { AppError } from '@/middleware/error-handler.middleware';
 
 /**
  * Escrow Service
@@ -324,7 +325,8 @@ export class EscrowService {
           status: EscrowStatus.REFUNDED,
           refundedAt: new Date(),
           disputeResolution: reason,
-          disputeResolvedAt: escrow.status === EscrowStatus.DISPUTED ? new Date() : undefined,
+          disputeResolvedAt:
+            escrow.status === EscrowStatus.DISPUTED ? new Date() : undefined,
         },
       });
 
@@ -457,7 +459,7 @@ export class EscrowService {
         orderId,
         error: (error as Error).message,
       });
-      throw new AppError(500, 'Erreur lors de l\'ouverture du litige');
+      throw new AppError(500, "Erreur lors de l'ouverture du litige");
     }
   }
 
@@ -551,10 +553,7 @@ export class EscrowService {
       }
 
       if (escrow.status !== EscrowStatus.PENDING) {
-        throw new AppError(
-          400,
-          'La transaction ne peut plus être annulée'
-        );
+        throw new AppError(400, 'La transaction ne peut plus être annulée');
       }
 
       const updated = await prisma.escrowTransaction.update({
@@ -576,7 +575,7 @@ export class EscrowService {
         orderId,
         error: (error as Error).message,
       });
-      throw new AppError(500, 'Erreur lors de l\'annulation');
+      throw new AppError(500, "Erreur lors de l'annulation");
     }
   }
 
@@ -611,18 +610,26 @@ export class EscrowService {
     total: number;
     pages: number;
   }> {
-    const { status, supplierId, startDate, endDate, page = 1, limit = 20 } = params;
+    const {
+      status,
+      supplierId,
+      startDate,
+      endDate,
+      page = 1,
+      limit = 20,
+    } = params;
     const skip = (page - 1) * limit;
 
     const where: any = {
       ...(status && { status }),
       ...(supplierId && { supplierId }),
-      ...(startDate && endDate && {
-        createdAt: {
-          gte: startDate,
-          lte: endDate,
-        },
-      }),
+      ...(startDate &&
+        endDate && {
+          createdAt: {
+            gte: startDate,
+            lte: endDate,
+          },
+        }),
     };
 
     const [escrows, total] = await Promise.all([
@@ -694,10 +701,13 @@ export class EscrowService {
       }),
     ]);
 
-    const statusCounts = counts.reduce((acc, item) => {
-      acc[item.status] = item._count.id;
-      return acc;
-    }, {} as Record<string, number>);
+    const statusCounts = counts.reduce(
+      (acc, item) => {
+        acc[item.status] = item._count.id;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
 
     return {
       totalPending: statusCounts[EscrowStatus.PENDING] || 0,

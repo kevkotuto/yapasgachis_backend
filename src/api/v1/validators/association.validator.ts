@@ -115,21 +115,9 @@ export const searchAssociationsSchema = z.object({
     acceptedFoodType: z
       .enum(['dry', 'fresh', 'prepared', 'frozen', 'beverages'])
       .optional(),
-    latitude: z
-      .string()
-      .transform(Number)
-      .pipe(z.number())
-      .optional(),
-    longitude: z
-      .string()
-      .transform(Number)
-      .pipe(z.number())
-      .optional(),
-    radius: z
-      .string()
-      .transform(Number)
-      .pipe(z.number().positive())
-      .optional(),
+    latitude: z.string().transform(Number).pipe(z.number()).optional(),
+    longitude: z.string().transform(Number).pipe(z.number()).optional(),
+    radius: z.string().transform(Number).pipe(z.number().positive()).optional(),
     page: z
       .string()
       .transform(Number)
@@ -147,11 +135,7 @@ export const nearbyAssociationsSchema = z.object({
   query: z.object({
     latitude: z.string().transform(Number).pipe(z.number()),
     longitude: z.string().transform(Number).pipe(z.number()),
-    radius: z
-      .string()
-      .transform(Number)
-      .pipe(z.number().positive())
-      .optional(),
+    radius: z.string().transform(Number).pipe(z.number().positive()).optional(),
     limit: z
       .string()
       .transform(Number)
@@ -245,10 +229,14 @@ export const adminSearchAssociationsSchema = z.object({
 });
 
 // Export types
-export type RegisterAssociationInput = z.infer<typeof registerAssociationSchema>;
+export type RegisterAssociationInput = z.infer<
+  typeof registerAssociationSchema
+>;
 export type UpdateAssociationInput = z.infer<typeof updateAssociationSchema>;
 export type SearchAssociationsInput = z.infer<typeof searchAssociationsSchema>;
 export type NearbyAssociationsInput = z.infer<typeof nearbyAssociationsSchema>;
 export type CreateReportInput = z.infer<typeof createReportSchema>;
 export type GetReportsInput = z.infer<typeof getReportsSchema>;
-export type AdminRejectAssociationInput = z.infer<typeof adminRejectAssociationSchema>;
+export type AdminRejectAssociationInput = z.infer<
+  typeof adminRejectAssociationSchema
+>;

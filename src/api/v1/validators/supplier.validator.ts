@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import { SupplierType, SubscriptionTier } from '@prisma/client';
+import { z } from 'zod';
 
 /**
  * Supplier Validators
@@ -11,8 +11,8 @@ export const createSupplierProfileSchema = z.object({
   body: z.object({
     businessName: z
       .string()
-      .min(2, 'Le nom de l\'entreprise doit contenir au moins 2 caractères')
-      .max(100, 'Le nom de l\'entreprise ne peut pas dépasser 100 caractères'),
+      .min(2, "Le nom de l'entreprise doit contenir au moins 2 caractères")
+      .max(100, "Le nom de l'entreprise ne peut pas dépasser 100 caractères"),
     type: z.nativeEnum(SupplierType, {
       required_error: 'Le type de fournisseur est requis',
     }),
@@ -23,7 +23,7 @@ export const createSupplierProfileSchema = z.object({
       .optional(),
     address: z
       .string()
-      .min(5, 'L\'adresse doit contenir au moins 5 caractères')
+      .min(5, "L'adresse doit contenir au moins 5 caractères")
       .max(200)
       .optional(),
     city: z.string().max(100).optional(),
@@ -50,17 +50,9 @@ export type CreateSupplierProfileInput = z.infer<
 export const updateSupplierProfileSchema = z.object({
   body: z
     .object({
-      businessName: z
-        .string()
-        .min(2)
-        .max(100)
-        .optional(),
+      businessName: z.string().min(2).max(100).optional(),
       type: z.nativeEnum(SupplierType).optional(),
-      description: z
-        .string()
-        .min(10)
-        .max(1000)
-        .optional(),
+      description: z.string().min(10).max(1000).optional(),
       address: z.string().min(5).max(200).optional(),
       city: z.string().max(100).optional(),
       phoneNumber: z
@@ -116,7 +108,9 @@ export const searchSuppliersSchema = z.object({
   }),
 });
 
-export type SearchSuppliersInput = z.infer<typeof searchSuppliersSchema>['query'];
+export type SearchSuppliersInput = z.infer<
+  typeof searchSuppliersSchema
+>['query'];
 
 // Get supplier by ID
 export const getSupplierByIdSchema = z.object({
@@ -125,21 +119,17 @@ export const getSupplierByIdSchema = z.object({
   }),
 });
 
-export type GetSupplierByIdInput = z.infer<typeof getSupplierByIdSchema>['params'];
+export type GetSupplierByIdInput = z.infer<
+  typeof getSupplierByIdSchema
+>['params'];
 
 // Update subscription
 export const updateSubscriptionSchema = z.object({
   body: z.object({
     tier: z.nativeEnum(SubscriptionTier, {
-      required_error: 'Le niveau d\'abonnement est requis',
+      required_error: "Le niveau d'abonnement est requis",
     }),
-    durationMonths: z
-      .number()
-      .int()
-      .min(1)
-      .max(12)
-      .optional()
-      .default(1),
+    durationMonths: z.number().int().min(1).max(12).optional().default(1),
   }),
 });
 
@@ -153,9 +143,7 @@ export const getNearbySuppliersSchema = z.object({
     latitude: z
       .string()
       .transform((val) => parseFloat(val))
-      .pipe(
-        z.number().min(-90).max(90, 'Latitude doit être entre -90 et 90')
-      ),
+      .pipe(z.number().min(-90).max(90, 'Latitude doit être entre -90 et 90')),
     longitude: z
       .string()
       .transform((val) => parseFloat(val))

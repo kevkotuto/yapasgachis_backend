@@ -55,7 +55,10 @@ export const generateRandomCode = (length: number = 8): string => {
 /**
  * Format phone number to international format
  */
-export const formatPhoneNumber = (phone: string, countryCode: string = '+225'): string => {
+export const formatPhoneNumber = (
+  phone: string,
+  countryCode: string = '+225'
+): string => {
   // Remove all non-numeric characters
   const cleaned = phone.replace(/\D/g, '');
 
@@ -264,7 +267,11 @@ export const maskEmail = (email: string): string => {
 };
 
 export const maskPhone = (phone: string): string => {
-  return phone.substring(0, 4) + '*'.repeat(phone.length - 7) + phone.substring(phone.length - 3);
+  return (
+    phone.substring(0, 4) +
+    '*'.repeat(phone.length - 7) +
+    phone.substring(phone.length - 3)
+  );
 };
 
 /**

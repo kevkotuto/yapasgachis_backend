@@ -1,18 +1,20 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction, RequestHandler } from 'express';
+
+import { AppError } from './error-handler.middleware';
 
 import JWTService from '@/core/services/jwt.service';
-import { AppError } from './error-handler.middleware';
 import { APP_CONSTANTS } from '@/utils/constants';
 
 /**
  * Authentication middleware
  * Verifies JWT token and attaches user to request
+ * Note: This is synchronous because JWTService.verifyAccessToken is synchronous
  */
-export const authMiddleware = async (
+export const authMiddleware: RequestHandler = (
   req: Request,
   _res: Response,
   next: NextFunction
-): Promise<void> => {
+): void => {
   try {
     // Get token from header
     const authHeader = req.headers.authorization;
@@ -20,7 +22,7 @@ export const authMiddleware = async (
     if (!authHeader) {
       throw new AppError(
         APP_CONSTANTS.HTTP_STATUS.UNAUTHORIZED,
-        'Token d\'authentification manquant',
+        "Token d'authentification manquant",
         APP_CONSTANTS.ERROR_CODES.UNAUTHORIZED
       );
     }
@@ -37,7 +39,7 @@ export const authMiddleware = async (
 
     const token = parts[1] ?? '';
 
-    // Verify token
+    // Verify token (synchronous operation)
     const payload = JWTService.verifyAccessToken(token);
 
     // Attach user to request
@@ -87,21 +89,23 @@ export const authMiddleware = async (
  * Optional authentication middleware
  * Attaches user if token is valid, but doesn't fail if not present
  */
-export const optionalAuthMiddleware = async (
+export const optionalAuthMiddleware: RequestHandler = (
   req: Request,
   _res: Response,
   next: NextFunction
-): Promise<void> => {
+): void => {
   try {
     const authHeader = req.headers.authorization;
 
     if (!authHeader) {
-      return next();
+      next();
+      return;
     }
 
     const parts = authHeader.split(' ');
     if (parts.length !== 2 || parts[0] !== 'Bearer') {
-      return next();
+      next();
+      return;
     }
 
     const token = parts[1] ?? '';
@@ -114,7 +118,7 @@ export const optionalAuthMiddleware = async (
     };
 
     next();
-  } catch (error) {
+  } catch {
     // Silently fail for optional auth
     next();
   }

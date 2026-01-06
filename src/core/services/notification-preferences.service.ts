@@ -1,12 +1,12 @@
 import { prisma } from '@/infrastructure/database/prisma';
 import logger from '@/infrastructure/monitoring/logger';
 import { AppError } from '@/middleware/error-handler.middleware';
-import { NotificationType } from '@/utils/enums';
 import type {
   NotificationPreferenceData,
   UpdatePreferencesParams,
 } from '@/types/notification.types';
 import { NotificationCategoryMap } from '@/types/notification.types';
+import { NotificationType } from '@/utils/enums';
 
 /**
  * NotificationPreferencesService - Manages user notification preferences
@@ -27,7 +27,8 @@ class NotificationPreferencesService {
    */
   static getInstance(): NotificationPreferencesService {
     if (!NotificationPreferencesService.instance) {
-      NotificationPreferencesService.instance = new NotificationPreferencesService();
+      NotificationPreferencesService.instance =
+        new NotificationPreferencesService();
     }
     return NotificationPreferencesService.instance;
   }
@@ -104,7 +105,9 @@ class NotificationPreferencesService {
   /**
    * Create default preferences for a new user
    */
-  async createDefaultPreferences(userId: string): Promise<NotificationPreferenceData> {
+  async createDefaultPreferences(
+    userId: string
+  ): Promise<NotificationPreferenceData> {
     const prefs = await prisma.notificationPreference.create({
       data: { userId },
     });

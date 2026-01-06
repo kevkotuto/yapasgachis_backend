@@ -1,8 +1,6 @@
 import { Router } from 'express';
+
 import subscriptionController from '@/api/v1/controllers/subscription.controller';
-import { authenticate } from '@/middleware/auth.middleware';
-import { requireRole } from '@/middleware/role-guard.middleware';
-import { validate } from '@/middleware/validation.middleware';
 import {
   createSubscriptionPlanSchema,
   updateSubscriptionPlanSchema,
@@ -16,6 +14,9 @@ import {
   subscribeSchema,
   renewSubscriptionSchema,
 } from '@/api/v1/validators/subscription.validator';
+import { authenticate } from '@/middleware/auth.middleware';
+import { requireRole } from '@/middleware/role-guard.middleware';
+import { validate } from '@/middleware/validation.middleware';
 
 const router: Router = Router();
 

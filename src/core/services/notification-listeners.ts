@@ -1,9 +1,9 @@
 import eventService, { AppEvent } from '@/core/services/event.service';
 import notificationService from '@/core/services/notification.service';
-import socketService from '@/infrastructure/websocket/socket.service';
-import emailService from '@/infrastructure/messaging/email/email.service';
 import { prisma } from '@/infrastructure/database/prisma';
+import emailService from '@/infrastructure/messaging/email/email.service';
 import logger from '@/infrastructure/monitoring/logger';
+import socketService from '@/infrastructure/websocket/socket.service';
 import { NotificationType, NotificationPriority } from '@/utils/enums';
 
 /**

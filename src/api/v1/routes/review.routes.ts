@@ -1,7 +1,6 @@
 import { Router } from 'express';
+
 import reviewController from '@/api/v1/controllers/review.controller';
-import { authenticate, optionalAuth } from '@/middleware/auth.middleware';
-import { validate } from '@/middleware/validation.middleware';
 import {
   createReviewSchema,
   updateReviewSchema,
@@ -11,6 +10,8 @@ import {
   reportReviewSchema,
   paginationSchema,
 } from '@/api/v1/validators/review.validator';
+import { authenticate, optionalAuth } from '@/middleware/auth.middleware';
+import { validate } from '@/middleware/validation.middleware';
 
 const router: Router = Router();
 

@@ -1,7 +1,5 @@
 import { Request, Response } from 'express';
-import { asyncHandler } from '@/utils/helpers';
-import adminService from '@/core/services/admin.service';
-import analyticsService from '@/core/services/analytics.service';
+
 import {
   GetUsersQuery,
   UpdateUserStatusInput,
@@ -13,7 +11,11 @@ import {
   RejectProductInput,
   UpdateProductStatusInput,
 } from '../validators/admin.validator';
+
+import adminService from '@/core/services/admin.service';
+import analyticsService from '@/core/services/analytics.service';
 import logger from '@/infrastructure/monitoring/logger';
+import { asyncHandler } from '@/utils/helpers';
 
 /**
  * Admin Controller
@@ -100,10 +102,15 @@ export class AdminController {
       res: Response
     ) => {
       const { id } = req.params;
-      const adminId = req.user!.id;
+      const adminId = req.user.id;
       const { status, reason } = req.body;
 
-      const user = await adminService.updateUserStatus(id, status, reason, adminId);
+      const user = await adminService.updateUserStatus(
+        id,
+        status,
+        reason,
+        adminId
+      );
 
       logger.info('User status updated via admin API', {
         userId: id,
@@ -129,7 +136,7 @@ export class AdminController {
       res: Response
     ) => {
       const { id } = req.params;
-      const adminId = req.user!.id;
+      const adminId = req.user.id;
       const { role } = req.body;
 
       const user = await adminService.updateUserRole(id, role, adminId);
@@ -155,7 +162,7 @@ export class AdminController {
   deleteUser = asyncHandler(
     async (req: Request<{ id: string }>, res: Response) => {
       const { id } = req.params;
-      const adminId = req.user!.id;
+      const adminId = req.user.id;
 
       await adminService.deleteUser(id, adminId);
 
@@ -213,7 +220,7 @@ export class AdminController {
   verifySupplier = asyncHandler(
     async (req: Request<{ id: string }>, res: Response) => {
       const { id } = req.params;
-      const adminId = req.user!.id;
+      const adminId = req.user.id;
 
       const supplier = await adminService.verifySupplier(id, adminId);
 
@@ -240,7 +247,7 @@ export class AdminController {
       res: Response
     ) => {
       const { id } = req.params;
-      const adminId = req.user!.id;
+      const adminId = req.user.id;
       const { reason } = req.body;
 
       const supplier = await adminService.rejectSupplier(id, reason, adminId);
@@ -269,7 +276,7 @@ export class AdminController {
       res: Response
     ) => {
       const { id } = req.params;
-      const adminId = req.user!.id;
+      const adminId = req.user.id;
       const { commissionRate } = req.body;
 
       const supplier = await adminService.updateSupplierCommission(
@@ -298,10 +305,13 @@ export class AdminController {
    */
   bulkVerifySuppliers = asyncHandler(
     async (req: Request<{}, {}, { supplierIds: string[] }>, res: Response) => {
-      const adminId = req.user!.id;
+      const adminId = req.user.id;
       const { supplierIds } = req.body;
 
-      const result = await adminService.bulkVerifySuppliers(supplierIds, adminId);
+      const result = await adminService.bulkVerifySuppliers(
+        supplierIds,
+        adminId
+      );
 
       logger.info('Suppliers bulk verified via admin API', {
         supplierIds,
@@ -338,19 +348,21 @@ export class AdminController {
    * Get products for moderation
    * GET /api/v1/admin/products/moderation
    */
-  getProductsForModeration = asyncHandler(async (req: Request, res: Response) => {
-    const { page, limit } = req.query as { page?: number; limit?: number };
+  getProductsForModeration = asyncHandler(
+    async (req: Request, res: Response) => {
+      const { page, limit } = req.query as { page?: number; limit?: number };
 
-    const result = await adminService.getProductsForModeration(
-      page || 1,
-      limit || 20
-    );
+      const result = await adminService.getProductsForModeration(
+        page || 1,
+        limit || 20
+      );
 
-    res.json({
-      success: true,
-      data: result,
-    });
-  });
+      res.json({
+        success: true,
+        data: result,
+      });
+    }
+  );
 
   /**
    * Approve product
@@ -359,7 +371,7 @@ export class AdminController {
   approveProduct = asyncHandler(
     async (req: Request<{ id: string }>, res: Response) => {
       const { id } = req.params;
-      const adminId = req.user!.id;
+      const adminId = req.user.id;
 
       const product = await adminService.approveProduct(id, adminId);
 
@@ -386,7 +398,7 @@ export class AdminController {
       res: Response
     ) => {
       const { id } = req.params;
-      const adminId = req.user!.id;
+      const adminId = req.user.id;
       const { reason } = req.body;
 
       const product = await adminService.rejectProduct(id, reason, adminId);
@@ -415,10 +427,14 @@ export class AdminController {
       res: Response
     ) => {
       const { id } = req.params;
-      const adminId = req.user!.id;
+      const adminId = req.user.id;
       const { status } = req.body;
 
-      const product = await adminService.updateProductStatus(id, status, adminId);
+      const product = await adminService.updateProductStatus(
+        id,
+        status,
+        adminId
+      );
 
       logger.info('Product status updated via admin API', {
         productId: id,
@@ -441,7 +457,7 @@ export class AdminController {
   deleteProduct = asyncHandler(
     async (req: Request<{ id: string }>, res: Response) => {
       const { id } = req.params;
-      const adminId = req.user!.id;
+      const adminId = req.user.id;
 
       await adminService.deleteProduct(id, adminId);
 
@@ -463,10 +479,13 @@ export class AdminController {
    */
   bulkApproveProducts = asyncHandler(
     async (req: Request<{}, {}, { productIds: string[] }>, res: Response) => {
-      const adminId = req.user!.id;
+      const adminId = req.user.id;
       const { productIds } = req.body;
 
-      const result = await adminService.bulkApproveProducts(productIds, adminId);
+      const result = await adminService.bulkApproveProducts(
+        productIds,
+        adminId
+      );
 
       logger.info('Products bulk approved via admin API', {
         productIds,
@@ -580,9 +599,8 @@ export class AdminController {
     async (req: Request<{ supplierId: string }>, res: Response) => {
       const { supplierId } = req.params;
 
-      const metrics = await analyticsService.getSupplierPerformanceMetrics(
-        supplierId
-      );
+      const metrics =
+        await analyticsService.getSupplierPerformanceMetrics(supplierId);
 
       res.json({
         success: true,

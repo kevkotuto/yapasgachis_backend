@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction, RequestHandler } from 'express';
 import { AnyZodObject, ZodError } from 'zod';
 
 import { APP_CONSTANTS } from '@/utils/constants';
@@ -7,11 +7,12 @@ import { formatValidationErrors } from '@/utils/validators';
 /**
  * Validation middleware factory
  * Creates a middleware that validates request data against a Zod schema
+ * Uses synchronous parse for better Express compatibility
  */
-export const validate = (schema: AnyZodObject) => {
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const validate = (schema: AnyZodObject): RequestHandler => {
+  return (req: Request, res: Response, next: NextFunction): void => {
     try {
-      await schema.parseAsync({
+      schema.parse({
         body: req.body,
         query: req.query,
         params: req.params,

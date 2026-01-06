@@ -1,4 +1,3 @@
-import { prisma } from '@/infrastructure/database/prisma';
 import {
   PromoCode,
   PromoCodeUsage,
@@ -6,6 +5,8 @@ import {
   PromoCodeType,
   Prisma,
 } from '@prisma/client';
+
+import { prisma } from '@/infrastructure/database/prisma';
 import logger from '@/infrastructure/monitoring/logger';
 
 /**
@@ -296,10 +297,7 @@ export class PromoCodeRepository {
               ],
             },
             {
-              OR: [
-                { validUntil: null },
-                { validUntil: { gte: new Date() } },
-              ],
+              OR: [{ validUntil: null }, { validUntil: { gte: new Date() } }],
             },
           ],
           status: 'ACTIVE',

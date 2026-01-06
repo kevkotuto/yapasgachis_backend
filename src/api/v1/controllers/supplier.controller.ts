@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
-import { asyncHandler } from '@/utils/helpers';
-import supplierService from '@/core/services/supplier.service';
+
 import {
   CreateSupplierProfileInput,
   UpdateSupplierProfileInput,
@@ -9,7 +8,10 @@ import {
   UpdateSubscriptionInput,
   GetNearbySuppliersInput,
 } from '../validators/supplier.validator';
+
+import supplierService from '@/core/services/supplier.service';
 import logger from '@/infrastructure/monitoring/logger';
+import { asyncHandler } from '@/utils/helpers';
 
 /**
  * Supplier Controller
@@ -20,32 +22,33 @@ export class SupplierController {
    * Create supplier profile
    * POST /api/v1/suppliers/profile
    */
-  createProfile = asyncHandler(
-    async (req: Request, res: Response) => {
-      const userId = req.user!.id;
-      const body = req.body as CreateSupplierProfileInput;
+  createProfile = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user.id;
+    const body = req.body as CreateSupplierProfileInput;
 
-      const profile = await supplierService.createProfile(userId, body as Required<CreateSupplierProfileInput>);
+    const profile = await supplierService.createProfile(
+      userId,
+      body as Required<CreateSupplierProfileInput>
+    );
 
-      logger.info('Supplier profile created via API', {
-        userId,
-        profileId: profile.id,
-      });
+    logger.info('Supplier profile created via API', {
+      userId,
+      profileId: profile.id,
+    });
 
-      res.status(201).json({
-        success: true,
-        message: 'Profil fournisseur créé avec succès',
-        data: { profile },
-      });
-    }
-  );
+    res.status(201).json({
+      success: true,
+      message: 'Profil fournisseur créé avec succès',
+      data: { profile },
+    });
+  });
 
   /**
    * Get current supplier's profile
    * GET /api/v1/suppliers/profile
    */
   getMyProfile = asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.id;
+    const userId = req.user.id;
 
     const profile = await supplierService.getProfile(userId);
 
@@ -77,11 +80,8 @@ export class SupplierController {
    * PUT /api/v1/suppliers/profile
    */
   updateProfile = asyncHandler(
-    async (
-      req: Request<{}, {}, UpdateSupplierProfileInput>,
-      res: Response
-    ) => {
-      const userId = req.user!.id;
+    async (req: Request<{}, {}, UpdateSupplierProfileInput>, res: Response) => {
+      const userId = req.user.id;
 
       const profile = await supplierService.updateProfile(userId, req.body);
 
@@ -118,7 +118,7 @@ export class SupplierController {
    * GET /api/v1/suppliers/statistics
    */
   getStatistics = asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.id;
+    const userId = req.user.id;
 
     const statistics = await supplierService.getStatistics(userId);
 
@@ -134,7 +134,7 @@ export class SupplierController {
    */
   updateSubscription = asyncHandler(
     async (req: Request<{}, {}, UpdateSubscriptionInput>, res: Response) => {
-      const userId = req.user!.id;
+      const userId = req.user.id;
       const { tier, durationMonths } = req.body;
 
       const profile = await supplierService.updateSubscription(
@@ -162,7 +162,10 @@ export class SupplierController {
    * GET /api/v1/suppliers/nearby
    */
   getNearbySuppliers = asyncHandler(
-    async (req: Request<{}, {}, {}, GetNearbySuppliersInput>, res: Response) => {
+    async (
+      req: Request<{}, {}, {}, GetNearbySuppliersInput>,
+      res: Response
+    ) => {
       const { latitude, longitude, radius, limit } = req.query;
 
       const suppliers = await supplierService.getNearbySuppliers(
@@ -184,7 +187,7 @@ export class SupplierController {
    * DELETE /api/v1/suppliers/profile
    */
   deleteProfile = asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.id;
+    const userId = req.user.id;
 
     await supplierService.deleteProfile(userId);
 
@@ -201,7 +204,7 @@ export class SupplierController {
    * GET /api/v1/suppliers/can-create-products
    */
   canCreateProducts = asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.id;
+    const userId = req.user.id;
 
     const result = await supplierService.canCreateProducts(userId);
 

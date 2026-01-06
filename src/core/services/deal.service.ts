@@ -5,15 +5,18 @@ import {
   DealCategory,
   BookingStatus,
 } from '@prisma/client';
-import dealRepository, { DealRepository } from '@/core/repositories/deal.repository';
+
 import dealBookingRepository, {
   DealBookingRepository,
 } from '@/core/repositories/deal-booking.repository';
-import supplierRepository from '@/core/repositories/supplier.repository';
+import dealRepository, {
+  DealRepository,
+} from '@/core/repositories/deal.repository';
 import supplierStoreRepository from '@/core/repositories/supplier-store.repository';
+import supplierRepository from '@/core/repositories/supplier.repository';
 import subscriptionService from '@/core/services/subscription.service';
-import { AppError } from '@/middleware/error-handler.middleware';
 import logger from '@/infrastructure/monitoring/logger';
+import { AppError } from '@/middleware/error-handler.middleware';
 import { generateRandomCode } from '@/utils/helpers';
 import { generateQRCode } from '@/utils/qr-code.utils';
 
@@ -189,9 +192,16 @@ export class DealService {
       // Cannot modify if active with bookings
       if (deal.status === 'ACTIVE' && deal.bookingsCount > 0) {
         // Only allow certain updates
-        const allowedFields = ['description', 'terms', 'contactPhone', 'contactEmail'];
+        const allowedFields = [
+          'description',
+          'terms',
+          'contactPhone',
+          'contactEmail',
+        ];
         const dataKeys = Object.keys(data);
-        const hasRestrictedChanges = dataKeys.some((key) => !allowedFields.includes(key));
+        const hasRestrictedChanges = dataKeys.some(
+          (key) => !allowedFields.includes(key)
+        );
 
         if (hasRestrictedChanges) {
           throw new AppError(
@@ -203,7 +213,7 @@ export class DealService {
       }
 
       // Recalculate discount if prices change
-      let updateData: any = { ...data };
+      const updateData: any = { ...data };
       if (data.originalPrice || data.dealPrice) {
         const originalPrice = data.originalPrice || deal.originalPrice;
         const dealPrice = data.dealPrice || deal.dealPrice;
@@ -267,7 +277,11 @@ export class DealService {
       const newStatus = deal.status === 'PAUSED' ? 'ACTIVE' : 'PAUSED';
 
       if (newStatus === 'ACTIVE' && deal.status !== 'PAUSED') {
-        throw new AppError(400, 'Seul un deal en pause peut être réactivé', 'INVALID_STATUS');
+        throw new AppError(
+          400,
+          'Seul un deal en pause peut être réactivé',
+          'INVALID_STATUS'
+        );
       }
 
       const updated = await this.dealRepo.update(dealId, { status: newStatus });
@@ -413,7 +427,11 @@ export class DealService {
       }
 
       if (deal.status !== 'ACTIVE') {
-        throw new AppError(400, 'Ce deal n\'est plus disponible', 'DEAL_NOT_ACTIVE');
+        throw new AppError(
+          400,
+          "Ce deal n'est plus disponible",
+          'DEAL_NOT_ACTIVE'
+        );
       }
 
       const quantity = data.quantity || 1;
@@ -424,7 +442,10 @@ export class DealService {
       }
 
       // Check user hasn't exceeded max per user
-      const userBookings = await this.bookingRepo.countUserBookingsForDeal(userId, dealId);
+      const userBookings = await this.bookingRepo.countUserBookingsForDeal(
+        userId,
+        dealId
+      );
       if (userBookings + quantity > deal.maxPerUser) {
         throw new AppError(
           400,
@@ -435,10 +456,13 @@ export class DealService {
 
       // Check booking date is within deal availability
       const bookingDate = new Date(data.bookingDate);
-      if (bookingDate < deal.availableFrom || bookingDate > deal.availableUntil) {
+      if (
+        bookingDate < deal.availableFrom ||
+        bookingDate > deal.availableUntil
+      ) {
         throw new AppError(
           400,
-          'La date de réservation n\'est pas dans la période de validité',
+          "La date de réservation n'est pas dans la période de validité",
           'INVALID_BOOKING_DATE'
         );
       }
@@ -446,7 +470,9 @@ export class DealService {
       // Check booking lead time
       if (deal.bookingLeadTime > 0) {
         const minBookingTime = new Date();
-        minBookingTime.setHours(minBookingTime.getHours() + deal.bookingLeadTime);
+        minBookingTime.setHours(
+          minBookingTime.getHours() + deal.bookingLeadTime
+        );
         if (bookingDate < minBookingTime) {
           throw new AppError(
             400,
@@ -458,12 +484,14 @@ export class DealService {
 
       // Check off-peak restrictions
       if (deal.isOffPeakOnly && deal.offPeakDays) {
-        const dayName = bookingDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+        const dayName = bookingDate
+          .toLocaleDateString('en-US', { weekday: 'long' })
+          .toLowerCase();
         const offPeakDays = deal.offPeakDays as string[];
         if (!offPeakDays.includes(dayName)) {
           throw new AppError(
             400,
-            'Ce deal n\'est disponible que certains jours',
+            "Ce deal n'est disponible que certains jours",
             'OFF_PEAK_ONLY'
           );
         }
@@ -471,7 +499,11 @@ export class DealService {
 
       // Check slot if required
       if (deal.availableSlots && !data.bookingSlot) {
-        throw new AppError(400, 'Veuillez sélectionner un créneau horaire', 'SLOT_REQUIRED');
+        throw new AppError(
+          400,
+          'Veuillez sélectionner un créneau horaire',
+          'SLOT_REQUIRED'
+        );
       }
 
       // Generate validation code
@@ -532,12 +564,20 @@ export class DealService {
       }
 
       if (booking.status !== 'PENDING') {
-        throw new AppError(400, 'Réservation déjà traitée', 'BOOKING_ALREADY_PROCESSED');
+        throw new AppError(
+          400,
+          'Réservation déjà traitée',
+          'BOOKING_ALREADY_PROCESSED'
+        );
       }
 
-      const updated = await this.bookingRepo.updateStatus(bookingId, 'CONFIRMED', {
-        paidAt: new Date(),
-      });
+      const updated = await this.bookingRepo.updateStatus(
+        bookingId,
+        'CONFIRMED',
+        {
+          paidAt: new Date(),
+        }
+      );
 
       await this.bookingRepo.update(bookingId, { paymentReference });
 
@@ -576,7 +616,11 @@ export class DealService {
       }
 
       if (!['PENDING', 'CONFIRMED'].includes(booking.status)) {
-        throw new AppError(400, 'Cette réservation ne peut pas être annulée', 'CANNOT_CANCEL');
+        throw new AppError(
+          400,
+          'Cette réservation ne peut pas être annulée',
+          'CANNOT_CANCEL'
+        );
       }
 
       // Check cancellation deadline
@@ -602,10 +646,14 @@ export class DealService {
         });
       }
 
-      const updated = await this.bookingRepo.updateStatus(bookingId, 'CANCELLED', {
-        cancelledAt: new Date(),
-        cancelReason: reason,
-      });
+      const updated = await this.bookingRepo.updateStatus(
+        bookingId,
+        'CANCELLED',
+        {
+          cancelledAt: new Date(),
+          cancelReason: reason,
+        }
+      );
 
       // TODO: Process refund if payment was made
 
@@ -623,7 +671,7 @@ export class DealService {
         bookingId,
         error: (error as Error).message,
       });
-      throw new AppError(500, 'Erreur lors de l\'annulation');
+      throw new AppError(500, "Erreur lors de l'annulation");
     }
   }
 
@@ -636,9 +684,14 @@ export class DealService {
     staffId?: string
   ): Promise<DealBooking> {
     try {
-      const booking = await this.bookingRepo.findByValidationCode(validationCode);
+      const booking =
+        await this.bookingRepo.findByValidationCode(validationCode);
       if (!booking) {
-        throw new AppError(404, 'Code de validation invalide', 'INVALID_VALIDATION_CODE');
+        throw new AppError(
+          404,
+          'Code de validation invalide',
+          'INVALID_VALIDATION_CODE'
+        );
       }
 
       // Verify supplier ownership
@@ -648,9 +701,17 @@ export class DealService {
 
       if (booking.status !== 'CONFIRMED') {
         if (booking.status === 'USED') {
-          throw new AppError(400, 'Cette réservation a déjà été utilisée', 'ALREADY_USED');
+          throw new AppError(
+            400,
+            'Cette réservation a déjà été utilisée',
+            'ALREADY_USED'
+          );
         }
-        throw new AppError(400, 'Cette réservation ne peut pas être validée', 'CANNOT_VALIDATE');
+        throw new AppError(
+          400,
+          'Cette réservation ne peut pas être validée',
+          'CANNOT_VALIDATE'
+        );
       }
 
       // Check booking date
@@ -662,7 +723,7 @@ export class DealService {
       if (bookingDay.getTime() !== today.getTime()) {
         throw new AppError(
           400,
-          'Cette réservation n\'est pas pour aujourd\'hui',
+          "Cette réservation n'est pas pour aujourd'hui",
           'WRONG_DATE'
         );
       }
@@ -705,7 +766,10 @@ export class DealService {
       limit?: number;
     }
   ): Promise<{ bookings: DealBooking[]; total: number; pages: number }> {
-    const { bookings, total } = await this.bookingRepo.findByUserId(userId, params);
+    const { bookings, total } = await this.bookingRepo.findByUserId(
+      userId,
+      params
+    );
     const limit = params?.limit || 20;
     const pages = Math.ceil(total / limit);
 
@@ -779,7 +843,11 @@ export class DealService {
       }
 
       if (deal.status !== 'PENDING_APPROVAL') {
-        throw new AppError(400, 'Ce deal ne nécessite pas d\'approbation', 'INVALID_STATUS');
+        throw new AppError(
+          400,
+          "Ce deal ne nécessite pas d'approbation",
+          'INVALID_STATUS'
+        );
       }
 
       const updated = await this.dealRepo.update(dealId, {
@@ -804,7 +872,7 @@ export class DealService {
         dealId,
         error: (error as Error).message,
       });
-      throw new AppError(500, 'Erreur lors de l\'approbation du deal');
+      throw new AppError(500, "Erreur lors de l'approbation du deal");
     }
   }
 
@@ -823,7 +891,11 @@ export class DealService {
       }
 
       if (deal.status !== 'PENDING_APPROVAL') {
-        throw new AppError(400, 'Ce deal ne peut pas être rejeté', 'INVALID_STATUS');
+        throw new AppError(
+          400,
+          'Ce deal ne peut pas être rejeté',
+          'INVALID_STATUS'
+        );
       }
 
       const updated = await this.dealRepo.update(dealId, {

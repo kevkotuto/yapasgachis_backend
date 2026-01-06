@@ -1,9 +1,6 @@
 import { Router } from 'express';
 
 import authController from '../controllers/auth.controller';
-import { validate } from '@/middleware/validation.middleware';
-import { authMiddleware } from '@/middleware/auth.middleware';
-import { authLimiter } from '@/middleware/rate-limit.middleware';
 import {
   registerSchema,
   loginSchema,
@@ -16,6 +13,10 @@ import {
   googleAuthSchema,
   linkGoogleSchema,
 } from '../validators/auth.validator';
+
+import { authMiddleware } from '@/middleware/auth.middleware';
+import { authLimiter } from '@/middleware/rate-limit.middleware';
+import { validate } from '@/middleware/validation.middleware';
 
 const router: Router = Router();
 
@@ -83,12 +84,7 @@ router.post(
  *       403:
  *         description: Compte non vérifié ou suspendu
  */
-router.post(
-  '/login',
-  authLimiter,
-  validate(loginSchema),
-  authController.login
-);
+router.post('/login', authLimiter, validate(loginSchema), authController.login);
 
 /**
  * @swagger
@@ -299,11 +295,7 @@ router.post(
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  */
-router.post(
-  '/logout',
-  authMiddleware,
-  authController.logout
-);
+router.post('/logout', authMiddleware, authController.logout);
 
 /**
  * @swagger
@@ -327,11 +319,7 @@ router.post(
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  */
-router.get(
-  '/me',
-  authMiddleware,
-  authController.me
-);
+router.get('/me', authMiddleware, authController.me);
 
 // ==================== GOOGLE OAUTH ROUTES ====================
 
@@ -416,10 +404,6 @@ router.post(
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  */
-router.post(
-  '/google/unlink',
-  authMiddleware,
-  authController.unlinkGoogle
-);
+router.post('/google/unlink', authMiddleware, authController.unlinkGoogle);
 
 export default router;

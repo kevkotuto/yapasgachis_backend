@@ -1,4 +1,3 @@
-import { prisma } from '@/infrastructure/database/prisma';
 import {
   AdvertiserProfile,
   AdCampaign,
@@ -6,6 +5,8 @@ import {
   AdFormat,
   Prisma,
 } from '@prisma/client';
+
+import { prisma } from '@/infrastructure/database/prisma';
 import logger from '@/infrastructure/monitoring/logger';
 
 /**
@@ -659,7 +660,14 @@ export class AdvertiserRepository {
     page?: number;
     limit?: number;
   }): Promise<{ campaigns: AdCampaign[]; total: number }> {
-    const { status, format, startDate, endDate, page = 1, limit = 20 } = options;
+    const {
+      status,
+      format,
+      startDate,
+      endDate,
+      page = 1,
+      limit = 20,
+    } = options;
     const skip = (page - 1) * limit;
 
     try {

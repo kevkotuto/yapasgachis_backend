@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+
 import logger from '@/infrastructure/monitoring/logger';
 
 /**
@@ -218,7 +219,9 @@ export interface EventPayload {
 /**
  * Type-safe event listener type
  */
-type EventListener<T extends AppEvent> = (payload: EventPayload[T]) => void | Promise<void>;
+type EventListener<T extends AppEvent> = (
+  payload: EventPayload[T]
+) => void | Promise<void>;
 
 /**
  * EventService - Central event bus for application-wide events

@@ -82,74 +82,66 @@ export class AuthController {
    * Forgot password
    * POST /api/v1/auth/forgot-password
    */
-  forgotPassword = asyncHandler(
-    async (req: Request, res: Response) => {
-      const result = await this.authService.forgotPassword(req.body.phoneNumber);
+  forgotPassword = asyncHandler(async (req: Request, res: Response) => {
+    const result = await this.authService.forgotPassword(req.body.phoneNumber);
 
-      res.status(APP_CONSTANTS.HTTP_STATUS.OK).json({
-        success: true,
-        message: result.message,
-      });
-    }
-  );
+    res.status(APP_CONSTANTS.HTTP_STATUS.OK).json({
+      success: true,
+      message: result.message,
+    });
+  });
 
   /**
    * Reset password
    * POST /api/v1/auth/reset-password
    */
-  resetPassword = asyncHandler(
-    async (req: Request, res: Response) => {
-      const result = await this.authService.resetPassword(req.body);
+  resetPassword = asyncHandler(async (req: Request, res: Response) => {
+    const result = await this.authService.resetPassword(req.body);
 
-      res.status(APP_CONSTANTS.HTTP_STATUS.OK).json({
-        success: true,
-        message: result.message,
-      });
-    }
-  );
+    res.status(APP_CONSTANTS.HTTP_STATUS.OK).json({
+      success: true,
+      message: result.message,
+    });
+  });
 
   /**
    * Change password
    * POST /api/v1/auth/change-password
    * Requires authentication
    */
-  changePassword = asyncHandler(
-    async (req: Request, res: Response) => {
-      if (!req.user) {
-        throw new Error('User not authenticated');
-      }
-
-      const result = await this.authService.changePassword(
-        req.user.id,
-        req.body.currentPassword,
-        req.body.newPassword
-      );
-
-      res.status(APP_CONSTANTS.HTTP_STATUS.OK).json({
-        success: true,
-        message: result.message,
-      });
+  changePassword = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new Error('User not authenticated');
     }
-  );
+
+    const result = await this.authService.changePassword(
+      req.user.id,
+      req.body.currentPassword,
+      req.body.newPassword
+    );
+
+    res.status(APP_CONSTANTS.HTTP_STATUS.OK).json({
+      success: true,
+      message: result.message,
+    });
+  });
 
   /**
    * Refresh access token
    * POST /api/v1/auth/refresh-token
    */
-  refreshToken = asyncHandler(
-    async (req: Request, res: Response) => {
-      const result = await this.authService.refreshToken(req.body.refreshToken);
+  refreshToken = asyncHandler(async (req: Request, res: Response) => {
+    const result = await this.authService.refreshToken(req.body.refreshToken);
 
-      res.status(APP_CONSTANTS.HTTP_STATUS.OK).json({
-        success: true,
-        message: 'Token rafraîchi avec succès',
-        data: {
-          accessToken: result.accessToken,
-          expiresIn: result.expiresIn,
-        },
-      });
-    }
-  );
+    res.status(APP_CONSTANTS.HTTP_STATUS.OK).json({
+      success: true,
+      message: 'Token rafraîchi avec succès',
+      data: {
+        accessToken: result.accessToken,
+        expiresIn: result.expiresIn,
+      },
+    });
+  });
 
   /**
    * Logout user
@@ -194,7 +186,9 @@ export class AuthController {
 
     res.status(APP_CONSTANTS.HTTP_STATUS.OK).json({
       success: true,
-      message: result.isNewUser ? 'Inscription via Google réussie' : 'Connexion via Google réussie',
+      message: result.isNewUser
+        ? 'Inscription via Google réussie'
+        : 'Connexion via Google réussie',
       data: {
         user: result.user,
         tokens: result.tokens,
@@ -213,7 +207,10 @@ export class AuthController {
       throw new Error('User not authenticated');
     }
 
-    const result = await this.authService.linkGoogleAccount(req.user.id, req.body);
+    const result = await this.authService.linkGoogleAccount(
+      req.user.id,
+      req.body
+    );
 
     res.status(APP_CONSTANTS.HTTP_STATUS.OK).json({
       success: true,

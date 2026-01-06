@@ -1,7 +1,6 @@
 import { Router } from 'express';
+
 import notificationController from '../controllers/notification.controller';
-import { authMiddleware } from '@/middleware/auth.middleware';
-import { validate } from '@/middleware/validation.middleware';
 import {
   registerDeviceTokenSchema,
   unregisterDeviceTokenSchema,
@@ -10,6 +9,9 @@ import {
   deleteNotificationSchema,
   updatePreferencesSchema,
 } from '../validators/notification.validator';
+
+import { authMiddleware } from '@/middleware/auth.middleware';
+import { validate } from '@/middleware/validation.middleware';
 
 const router: Router = Router();
 
@@ -42,7 +44,10 @@ router.delete(
  * Unregister all device tokens for current user (for logout)
  * DELETE /api/v1/notifications/device-tokens
  */
-router.delete('/device-tokens', notificationController.unregisterAllDeviceTokens);
+router.delete(
+  '/device-tokens',
+  notificationController.unregisterAllDeviceTokens
+);
 
 // ==================== NOTIFICATION CRUD ====================
 

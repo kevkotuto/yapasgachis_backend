@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+
 import bcrypt from 'bcrypt';
 
 import config from '@/config';

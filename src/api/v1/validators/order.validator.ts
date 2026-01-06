@@ -1,5 +1,6 @@
-import { z } from 'zod';
 import { OrderStatus } from '@prisma/client';
+import { z } from 'zod';
+
 import { MobileMoneyProvider } from '@/infrastructure/payment/mobile-money.service';
 
 /**
@@ -20,7 +21,7 @@ export const createOrderSchema = z.object({
       .min(1, 'Au moins un produit est requis'),
     deliveryAddress: z
       .string()
-      .min(5, 'L\'adresse doit contenir au moins 5 caractères')
+      .min(5, "L'adresse doit contenir au moins 5 caractères")
       .max(500),
     deliveryCity: z.string().min(2).max(100),
     deliveryPhone: z

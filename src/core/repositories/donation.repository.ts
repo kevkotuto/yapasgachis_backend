@@ -1,5 +1,6 @@
-import { prisma } from '@/infrastructure/database/prisma';
 import { Donation, DonationType, DonationStatus, Prisma } from '@prisma/client';
+
+import { prisma } from '@/infrastructure/database/prisma';
 import logger from '@/infrastructure/monitoring/logger';
 
 /**
@@ -28,7 +29,9 @@ export class DonationRepository {
           donor: { connect: { id: data.donorId } },
           association: { connect: { id: data.associationId } },
           type: data.type,
-          ...(data.productId && { product: { connect: { id: data.productId } } }),
+          ...(data.productId && {
+            product: { connect: { id: data.productId } },
+          }),
           quantity: data.quantity,
           unit: data.unit,
           amount: data.amount,
@@ -405,7 +408,9 @@ export class DonationRepository {
       const donations = await prisma.donation.findMany({
         where: {
           donorId,
-          status: { in: [DonationStatus.COMPLETED, DonationStatus.DISTRIBUTED] },
+          status: {
+            in: [DonationStatus.COMPLETED, DonationStatus.DISTRIBUTED],
+          },
         },
         select: {
           type: true,
@@ -461,7 +466,9 @@ export class DonationRepository {
         prisma.donation.findMany({
           where: {
             associationId,
-            status: { in: [DonationStatus.COMPLETED, DonationStatus.DISTRIBUTED] },
+            status: {
+              in: [DonationStatus.COMPLETED, DonationStatus.DISTRIBUTED],
+            },
           },
           select: {
             type: true,
@@ -512,10 +519,7 @@ export class DonationRepository {
   /**
    * Generate donation receipt
    */
-  async generateReceipt(
-    id: string,
-    receiptUrl: string
-  ): Promise<Donation> {
+  async generateReceipt(id: string, receiptUrl: string): Promise<Donation> {
     try {
       return await prisma.donation.update({
         where: { id },

@@ -1,5 +1,5 @@
-import nodemailer from 'nodemailer';
-import { Transporter } from 'nodemailer';
+import nodemailer, { Transporter } from 'nodemailer';
+
 import config from '@/config';
 import logger from '@/infrastructure/monitoring/logger';
 
@@ -108,7 +108,7 @@ class EmailService {
     try {
       const { smtp } = config.email;
 
-      const info = await this.transporter!.sendMail({
+      const info = await this.transporter.sendMail({
         from: `"${smtp.fromName}" <${smtp.fromEmail}>`,
         to: Array.isArray(to) ? to.join(', ') : to,
         subject,
