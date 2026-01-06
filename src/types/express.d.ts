@@ -8,6 +8,9 @@ declare global {
         role: UserRole;
         phoneNumber: string;
         email?: string;
+        supplierProfileId?: string;
+        associationProfileId?: string;
+        advertiserProfileId?: string;
       };
       file?: {
         fieldname: string;

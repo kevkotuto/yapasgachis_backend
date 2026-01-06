@@ -12,6 +12,7 @@ export class OrderRepository {
    */
   async create(data: {
     userId: string;
+    supplierId: string;
     items: Array<{
       productId: string;
       quantity: number;
@@ -19,32 +20,41 @@ export class OrderRepository {
     }>;
     subtotal: number;
     deliveryFee: number;
-    totalAmount: number;
-    deliveryAddress: string;
-    deliveryCity: string;
-    deliveryPhone: string;
+    total: number;
+    commission: number;
+    supplierAmount: number;
     deliveryMethod: 'PICKUP' | 'DELIVERY';
-    notes?: string;
+    deliveryAddress?: string;
+    deliveryLatitude?: number;
+    deliveryLongitude?: number;
+    deliveryNotes?: string;
+    paymentMethod: 'WAVE' | 'CASH_ON_DELIVERY';
+    pickupSlot?: Date;
   }): Promise<Order> {
     try {
       const order = await prisma.order.create({
         data: {
-          userId: data.userId,
+          clientId: data.userId,
+          supplierId: data.supplierId,
           subtotal: data.subtotal,
           deliveryFee: data.deliveryFee,
-          totalAmount: data.totalAmount,
-          status: OrderStatus.PENDING,
+          total: data.total,
+          commission: data.commission,
+          supplierAmount: data.supplierAmount,
+          status: OrderStatus.PENDING_PAYMENT,
           deliveryMethod: data.deliveryMethod,
           deliveryAddress: data.deliveryAddress,
-          deliveryCity: data.deliveryCity,
-          deliveryPhone: data.deliveryPhone,
-          notes: data.notes,
+          deliveryLatitude: data.deliveryLatitude,
+          deliveryLongitude: data.deliveryLongitude,
+          deliveryNotes: data.deliveryNotes,
+          paymentMethod: data.paymentMethod,
+          pickupSlot: data.pickupSlot,
           items: {
             create: data.items.map((item) => ({
               productId: item.productId,
               quantity: item.quantity,
-              price: item.price,
-              subtotal: item.price * item.quantity,
+              unitPrice: item.price,
+              totalPrice: item.price * item.quantity,
             })),
           },
         },
@@ -58,7 +68,7 @@ export class OrderRepository {
               },
             },
           },
-          user: {
+          client: {
             select: {
               id: true,
               firstName: true,
@@ -108,7 +118,7 @@ export class OrderRepository {
               },
             },
           },
-          user: {
+          client: {
             select: {
               id: true,
               firstName: true,
@@ -144,11 +154,11 @@ export class OrderRepository {
 
       // Set timestamps based on status
       switch (status) {
-        case OrderStatus.CONFIRMED:
-          updateData.confirmedAt = new Date();
+        case OrderStatus.PAID:
+          updateData.paidAt = new Date();
           break;
-        case OrderStatus.IN_TRANSIT:
-          updateData.shippedAt = new Date();
+        case OrderStatus.IN_DELIVERY:
+          updateData.deliveredAt = new Date();
           break;
         case OrderStatus.COMPLETED:
           updateData.deliveredAt = new Date();
@@ -167,7 +177,7 @@ export class OrderRepository {
               product: true,
             },
           },
-          user: {
+          client: {
             select: {
               id: true,
               firstName: true,
@@ -203,7 +213,7 @@ export class OrderRepository {
 
     try {
       const where: Prisma.OrderWhereInput = {
-        userId,
+        clientId: userId,
         ...(status && { status }),
       };
 
@@ -283,7 +293,7 @@ export class OrderRepository {
                 },
               },
             },
-            user: {
+            client: {
               select: {
                 id: true,
                 firstName: true,
@@ -320,18 +330,18 @@ export class OrderRepository {
   }> {
     try {
       const [totalOrders, completedOrders, orders] = await Promise.all([
-        prisma.order.count({ where: { userId } }),
+        prisma.order.count({ where: { clientId: userId } }),
         prisma.order.count({
-          where: { userId, status: OrderStatus.COMPLETED },
+          where: { clientId: userId, status: OrderStatus.COMPLETED },
         }),
         prisma.order.findMany({
-          where: { userId, status: OrderStatus.COMPLETED },
-          select: { totalAmount: true },
+          where: { clientId: userId, status: OrderStatus.COMPLETED },
+          select: { total: true },
         }),
       ]);
 
       const totalSpent = orders.reduce(
-        (sum, order) => sum + Number(order.totalAmount),
+        (sum, order) => sum + Number(order.total),
         0
       );
       const averageOrderValue =
@@ -461,7 +471,7 @@ export class OrderRepository {
               product: true,
             },
           },
-          user: {
+          client: {
             select: {
               id: true,
               firstName: true,
@@ -508,7 +518,7 @@ export class OrderRepository {
 
     try {
       const where: Prisma.OrderWhereInput = {
-        ...(userId && { userId }),
+        ...(userId && { clientId: userId }),
         ...(supplierId && {
           items: {
             some: {
@@ -531,7 +541,7 @@ export class OrderRepository {
             { id: { contains: search, mode: 'insensitive' } },
             { deliveryAddress: { contains: search, mode: 'insensitive' } },
             {
-              user: {
+              client: {
                 OR: [
                   { firstName: { contains: search, mode: 'insensitive' } },
                   { lastName: { contains: search, mode: 'insensitive' } },
@@ -556,7 +566,7 @@ export class OrderRepository {
                 },
               },
             },
-            user: {
+            client: {
               select: {
                 id: true,
                 firstName: true,

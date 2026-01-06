@@ -17,7 +17,7 @@ import userRepository, {
 import { AppError } from '@/middleware/error-handler.middleware';
 import logger from '@/infrastructure/monitoring/logger';
 import { prisma } from '@/infrastructure/database/prisma';
-import eventService from '@/core/services/event.service';
+import eventService, { AppEvent } from '@/core/services/event.service';
 
 /**
  * Donation Service
@@ -130,7 +130,7 @@ export class DonationService {
       }
 
       // Emit event for notifications
-      eventService.emit('donation:created', {
+      eventService.emit(AppEvent.DONATION_CREATED, {
         donationId: donation.id,
         donorId,
         associationId: data.associationId,
@@ -213,7 +213,7 @@ export class DonationService {
       }
 
       // Emit event for notifications
-      eventService.emit('donation:created', {
+      eventService.emit(AppEvent.DONATION_CREATED, {
         donationId: donation.id,
         donorId,
         associationId: data.associationId,
@@ -318,7 +318,7 @@ export class DonationService {
       }
 
       // Emit event
-      eventService.emit('donation:statusUpdated', {
+      eventService.emit(AppEvent.DONATION_STATUS_UPDATED, {
         donationId,
         oldStatus: donation.status,
         newStatus: status,
@@ -393,7 +393,7 @@ export class DonationService {
       });
 
       // Notify donor
-      eventService.emit('donation:pickupScheduled', {
+      eventService.emit(AppEvent.DONATION_PICKUP_SCHEDULED, {
         donationId,
         donorId: donation.donorId,
         associationId: donation.associationId,
@@ -516,7 +516,7 @@ export class DonationService {
       );
 
       // Emit event
-      eventService.emit('donation:cancelled', {
+      eventService.emit(AppEvent.DONATION_CANCELLED, {
         donationId,
         donorId: donation.donorId,
         associationId: donation.associationId,

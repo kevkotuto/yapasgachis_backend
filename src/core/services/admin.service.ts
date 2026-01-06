@@ -136,7 +136,7 @@ export class AdminService {
     });
 
     if (!user) {
-      throw new AppError('Utilisateur non trouvé', 404);
+      throw new AppError(404, 'Utilisateur non trouvé');
     }
 
     return user;
@@ -156,15 +156,12 @@ export class AdminService {
     });
 
     if (!user) {
-      throw new AppError('Utilisateur non trouvé', 404);
+      throw new AppError(404, 'Utilisateur non trouvé');
     }
 
     // Prevent changing status of SUPER_ADMIN
     if (user.role === UserRole.SUPER_ADMIN) {
-      throw new AppError(
-        'Impossible de modifier le statut d\'un super administrateur',
-        403
-      );
+      throw new AppError(403, 'Impossible de modifier le statut d\'un super administrateur');
     }
 
     const updatedUser = await prisma.user.update({
@@ -196,15 +193,12 @@ export class AdminService {
     });
 
     if (!user) {
-      throw new AppError('Utilisateur non trouvé', 404);
+      throw new AppError(404, 'Utilisateur non trouvé');
     }
 
     // Prevent changing SUPER_ADMIN role
     if (user.role === UserRole.SUPER_ADMIN || role === UserRole.SUPER_ADMIN) {
-      throw new AppError(
-        'Impossible d\'attribuer ou retirer le rôle de super administrateur',
-        403
-      );
+      throw new AppError(403, 'Impossible d\'attribuer ou retirer le rôle de super administrateur');
     }
 
     const updatedUser = await prisma.user.update({
@@ -231,14 +225,11 @@ export class AdminService {
     });
 
     if (!user) {
-      throw new AppError('Utilisateur non trouvé', 404);
+      throw new AppError(404, 'Utilisateur non trouvé');
     }
 
     if (user.role === UserRole.SUPER_ADMIN) {
-      throw new AppError(
-        'Impossible de supprimer un super administrateur',
-        403
-      );
+      throw new AppError(403, 'Impossible de supprimer un super administrateur');
     }
 
     await prisma.user.update({
@@ -390,11 +381,11 @@ export class AdminService {
     });
 
     if (!supplier) {
-      throw new AppError('Fournisseur non trouvé', 404);
+      throw new AppError(404, 'Fournisseur non trouvé');
     }
 
     if (supplier.isVerified) {
-      throw new AppError('Ce fournisseur est déjà vérifié', 400);
+      throw new AppError(400, 'Ce fournisseur est déjà vérifié');
     }
 
     const updatedSupplier = await prisma.supplierProfile.update({
@@ -431,7 +422,7 @@ export class AdminService {
     });
 
     if (!supplier) {
-      throw new AppError('Fournisseur non trouvé', 404);
+      throw new AppError(404, 'Fournisseur non trouvé');
     }
 
     const updatedSupplier = await prisma.supplierProfile.update({
@@ -463,10 +454,7 @@ export class AdminService {
     adminId: string
   ) {
     if (commissionRate < 0 || commissionRate > 1) {
-      throw new AppError(
-        'Le taux de commission doit être entre 0 et 1 (0% - 100%)',
-        400
-      );
+      throw new AppError(400, 'Le taux de commission doit être entre 0 et 1 (0% - 100%)');
     }
 
     const supplier = await prisma.supplierProfile.findUnique({
@@ -474,7 +462,7 @@ export class AdminService {
     });
 
     if (!supplier) {
-      throw new AppError('Fournisseur non trouvé', 404);
+      throw new AppError(404, 'Fournisseur non trouvé');
     }
 
     const updatedSupplier = await prisma.supplierProfile.update({
@@ -632,14 +620,11 @@ export class AdminService {
     });
 
     if (!product) {
-      throw new AppError('Produit non trouvé', 404);
+      throw new AppError(404, 'Produit non trouvé');
     }
 
     if (product.status !== ProductStatus.DRAFT) {
-      throw new AppError(
-        'Seuls les produits en brouillon peuvent être approuvés',
-        400
-      );
+      throw new AppError(400, 'Seuls les produits en brouillon peuvent être approuvés');
     }
 
     const updatedProduct = await prisma.product.update({
@@ -672,7 +657,7 @@ export class AdminService {
     });
 
     if (!product) {
-      throw new AppError('Produit non trouvé', 404);
+      throw new AppError(404, 'Produit non trouvé');
     }
 
     const updatedProduct = await prisma.product.update({
@@ -705,7 +690,7 @@ export class AdminService {
     });
 
     if (!product) {
-      throw new AppError('Produit non trouvé', 404);
+      throw new AppError(404, 'Produit non trouvé');
     }
 
     const updatedProduct = await prisma.product.update({
@@ -732,7 +717,7 @@ export class AdminService {
     });
 
     if (!product) {
-      throw new AppError('Produit non trouvé', 404);
+      throw new AppError(404, 'Produit non trouvé');
     }
 
     await prisma.product.update({

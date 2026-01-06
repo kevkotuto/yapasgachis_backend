@@ -23,12 +23,12 @@ export class ReviewService {
   ) {
     // Validate rating
     if (data.rating < 1 || data.rating > 5) {
-      throw new AppError('La note doit être entre 1 et 5', 400);
+      throw new AppError(400, 'La note doit être entre 1 et 5');
     }
 
     // Must have either productId or orderId
     if (!data.productId && !data.orderId) {
-      throw new AppError('Un produit ou une commande est requis', 400);
+      throw new AppError(400, 'Un produit ou une commande est requis');
     }
 
     // Check if user has already reviewed this product
@@ -38,7 +38,7 @@ export class ReviewService {
         data.productId
       );
       if (hasReviewed) {
-        throw new AppError('Vous avez déjà donné un avis sur ce produit', 400);
+        throw new AppError(400, 'Vous avez déjà donné un avis sur ce produit');
       }
 
       // If orderId is provided, verify the user actually ordered this product
@@ -55,8 +55,8 @@ export class ReviewService {
 
         if (!order) {
           throw new AppError(
-            "Vous devez avoir commandé ce produit pour laisser un avis",
-            403
+            403,
+            "Vous devez avoir commandé ce produit pour laisser un avis"
           );
         }
       }
@@ -145,15 +145,15 @@ export class ReviewService {
     const review = await reviewRepository.findById(reviewId);
 
     if (!review) {
-      throw new AppError('Avis non trouvé', 404);
+      throw new AppError(404, 'Avis non trouvé');
     }
 
     if (review.userId !== userId) {
-      throw new AppError("Vous n'êtes pas autorisé à modifier cet avis", 403);
+      throw new AppError(403, "Vous n'êtes pas autorisé à modifier cet avis");
     }
 
     if (data.rating && (data.rating < 1 || data.rating > 5)) {
-      throw new AppError('La note doit être entre 1 et 5', 400);
+      throw new AppError(400, 'La note doit être entre 1 et 5');
     }
 
     const updatedReview = await reviewRepository.update(reviewId, data);
@@ -178,11 +178,11 @@ export class ReviewService {
     const review = await reviewRepository.findById(reviewId);
 
     if (!review) {
-      throw new AppError('Avis non trouvé', 404);
+      throw new AppError(404, 'Avis non trouvé');
     }
 
     if (!isAdmin && review.userId !== userId) {
-      throw new AppError("Vous n'êtes pas autorisé à supprimer cet avis", 403);
+      throw new AppError(403, "Vous n'êtes pas autorisé à supprimer cet avis");
     }
 
     const productId = review.productId;
@@ -210,7 +210,7 @@ export class ReviewService {
     const review = await reviewRepository.findById(reviewId);
 
     if (!review) {
-      throw new AppError('Avis non trouvé', 404);
+      throw new AppError(404, 'Avis non trouvé');
     }
 
     return await reviewRepository.markHelpful(reviewId);
@@ -223,11 +223,11 @@ export class ReviewService {
     const review = await reviewRepository.findById(reviewId);
 
     if (!review) {
-      throw new AppError('Avis non trouvé', 404);
+      throw new AppError(404, 'Avis non trouvé');
     }
 
     if (review.userId === userId) {
-      throw new AppError('Vous ne pouvez pas signaler votre propre avis', 400);
+      throw new AppError(400, 'Vous ne pouvez pas signaler votre propre avis');
     }
 
     await reviewRepository.report(reviewId);
@@ -264,7 +264,7 @@ export class ReviewService {
     const review = await reviewRepository.findById(reviewId);
 
     if (!review) {
-      throw new AppError('Avis non trouvé', 404);
+      throw new AppError(404, 'Avis non trouvé');
     }
 
     return await reviewRepository.clearReport(reviewId);

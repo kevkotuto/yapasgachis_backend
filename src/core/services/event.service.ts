@@ -39,6 +39,12 @@ export enum AppEvent {
 
   // Delivery Events
   DELIVERY_LOCATION_UPDATE = 'delivery:location_update',
+
+  // Donation Events
+  DONATION_CREATED = 'donation:created',
+  DONATION_STATUS_UPDATED = 'donation:statusUpdated',
+  DONATION_PICKUP_SCHEDULED = 'donation:pickupScheduled',
+  DONATION_CANCELLED = 'donation:cancelled',
 }
 
 /**
@@ -179,6 +185,31 @@ export interface EventPayload {
     userId: string;
     latitude: number;
     longitude: number;
+  };
+  [AppEvent.DONATION_CREATED]: {
+    donationId: string;
+    donorId: string;
+    associationId: string;
+    type: string;
+  };
+  [AppEvent.DONATION_STATUS_UPDATED]: {
+    donationId: string;
+    donorId: string;
+    associationId: string;
+    oldStatus: string;
+    newStatus: string;
+  };
+  [AppEvent.DONATION_PICKUP_SCHEDULED]: {
+    donationId: string;
+    donorId: string;
+    associationId: string;
+    pickupDate: Date;
+  };
+  [AppEvent.DONATION_CANCELLED]: {
+    donationId: string;
+    donorId: string;
+    associationId: string;
+    reason?: string;
   };
 }
 

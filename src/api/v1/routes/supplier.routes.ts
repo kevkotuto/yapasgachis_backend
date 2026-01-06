@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import supplierController from '../controllers/supplier.controller';
 import { authMiddleware } from '@/middleware/auth.middleware';
-import { roleGuard } from '@/middleware/role-guard.middleware';
+import { supplierOnly } from '@/middleware/role-guard.middleware';
 import { validate } from '@/middleware/validation.middleware';
 import {
   createSupplierProfileSchema,
@@ -11,7 +11,6 @@ import {
   updateSubscriptionSchema,
   getNearbySuppliersSchema,
 } from '../validators/supplier.validator';
-import { UserRole } from '@prisma/client';
 
 const router: Router = Router();
 
@@ -62,7 +61,7 @@ router.get(
 router.post(
   '/profile',
   authMiddleware,
-  roleGuard(UserRole.SUPPLIER),
+  supplierOnly,
   validate(createSupplierProfileSchema),
   supplierController.createProfile
 );
@@ -75,7 +74,7 @@ router.post(
 router.get(
   '/profile',
   authMiddleware,
-  roleGuard(UserRole.SUPPLIER),
+  supplierOnly,
   supplierController.getMyProfile
 );
 
@@ -87,7 +86,7 @@ router.get(
 router.put(
   '/profile',
   authMiddleware,
-  roleGuard(UserRole.SUPPLIER),
+  supplierOnly,
   validate(updateSupplierProfileSchema),
   supplierController.updateProfile
 );
@@ -100,7 +99,7 @@ router.put(
 router.delete(
   '/profile',
   authMiddleware,
-  roleGuard(UserRole.SUPPLIER),
+  supplierOnly,
   supplierController.deleteProfile
 );
 
@@ -112,7 +111,7 @@ router.delete(
 router.get(
   '/statistics',
   authMiddleware,
-  roleGuard(UserRole.SUPPLIER),
+  supplierOnly,
   supplierController.getStatistics
 );
 
@@ -124,7 +123,7 @@ router.get(
 router.post(
   '/subscription',
   authMiddleware,
-  roleGuard(UserRole.SUPPLIER),
+  supplierOnly,
   validate(updateSubscriptionSchema),
   supplierController.updateSubscription
 );
@@ -137,7 +136,7 @@ router.post(
 router.get(
   '/can-create-products',
   authMiddleware,
-  roleGuard(UserRole.SUPPLIER),
+  supplierOnly,
   supplierController.canCreateProducts
 );
 

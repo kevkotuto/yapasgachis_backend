@@ -148,20 +148,20 @@ export class ProductRepository {
       const product = await prisma.product.findUnique({ where: { id } });
       if (!product) return null;
 
-      const newQuantity = product.quantity + quantityChange;
+      const newQuantity = product.quantityAvailable + quantityChange;
 
       // Automatically update status based on quantity
       let status = product.status;
       if (newQuantity <= 0) {
         status = ProductStatus.SOLD_OUT;
       } else if (status === ProductStatus.SOLD_OUT && newQuantity > 0) {
-        status = ProductStatus.AVAILABLE;
+        status = ProductStatus.ACTIVE;
       }
 
       return await prisma.product.update({
         where: { id },
         data: {
-          quantity: Math.max(0, newQuantity),
+          quantityAvailable: Math.max(0, newQuantity),
           status,
         },
       });
@@ -185,7 +185,6 @@ export class ProductRepository {
     supplierId?: string;
     minPrice?: number;
     maxPrice?: number;
-    minDiscount?: number;
     city?: string;
     latitude?: number;
     longitude?: number;
@@ -203,7 +202,6 @@ export class ProductRepository {
       supplierId,
       minPrice,
       maxPrice,
-      minDiscount,
       city,
       latitude,
       longitude,
@@ -221,23 +219,20 @@ export class ProductRepository {
       const where: Prisma.ProductWhereInput = {
         ...(search && {
           OR: [
-            { name: { contains: search, mode: 'insensitive' } },
+            { title: { contains: search, mode: 'insensitive' } },
             { description: { contains: search, mode: 'insensitive' } },
           ],
         }),
         ...(category && { category }),
         ...(status && { status }),
         ...(supplierId && { supplierId }),
-        ...(minPrice !== undefined && { price: { gte: minPrice } }),
-        ...(maxPrice !== undefined && { price: { lte: maxPrice } }),
-        ...(minDiscount !== undefined && {
-          discountPercentage: { gte: minDiscount },
-        }),
+        ...(minPrice !== undefined && { discountedPrice: { gte: minPrice } }),
+        ...(maxPrice !== undefined && { discountedPrice: { lte: maxPrice } }),
         ...(city && {
           supplier: { user: { city: { equals: city, mode: 'insensitive' } } },
         }),
         ...(expiresWithin && {
-          expiresAt: {
+          expiryDate: {
             lte: new Date(Date.now() + expiresWithin * 60 * 60 * 1000),
             gte: new Date(),
           },
@@ -248,13 +243,13 @@ export class ProductRepository {
       let orderBy: Prisma.ProductOrderByWithRelationInput = {};
       switch (sortBy) {
         case 'price':
-          orderBy = { price: sortOrder };
+          orderBy = { discountedPrice: sortOrder };
           break;
         case 'discount':
-          orderBy = { discountPercentage: sortOrder };
+          orderBy = { discountedPrice: sortOrder };
           break;
         case 'expiry':
-          orderBy = { expiresAt: sortOrder };
+          orderBy = { expiryDate: sortOrder };
           break;
         default:
           orderBy = { createdAt: sortOrder };
@@ -310,8 +305,12 @@ export class ProductRepository {
           })
           .filter((product) => product.distance <= radius)
           .sort((a, b) => {
-            if (sortBy === 'price') return sortOrder === 'asc' ? a.price - b.price : b.price - a.price;
-            if (sortBy === 'discount') return sortOrder === 'asc' ? a.discountPercentage - b.discountPercentage : b.discountPercentage - a.discountPercentage;
+            if (sortBy === 'price') return sortOrder === 'asc' ? a.discountedPrice - b.discountedPrice : b.discountedPrice - a.discountedPrice;
+            if (sortBy === 'discount') {
+              const aDiscount = ((a.originalPrice - a.discountedPrice) / a.originalPrice) * 100;
+              const bDiscount = ((b.originalPrice - b.discountedPrice) / b.originalPrice) * 100;
+              return sortOrder === 'asc' ? aDiscount - bDiscount : bDiscount - aDiscount;
+            }
             return a.distance - b.distance;
           });
 
@@ -370,8 +369,8 @@ export class ProductRepository {
 
       return await prisma.product.findMany({
         where: {
-          status: ProductStatus.AVAILABLE,
-          expiresAt: {
+          status: ProductStatus.ACTIVE,
+          expiryDate: {
             lte: expiryDate,
             gte: new Date(),
           },
@@ -389,7 +388,7 @@ export class ProductRepository {
             },
           },
         },
-        orderBy: { expiresAt: 'asc' },
+        orderBy: { expiryDate: 'asc' },
       });
     } catch (error) {
       logger.error('Error getting expiring products', {
@@ -410,12 +409,12 @@ export class ProductRepository {
       // Get products with order count
       const products = await prisma.product.findMany({
         where: {
-          status: ProductStatus.AVAILABLE,
+          status: ProductStatus.ACTIVE,
           orderItems: {
             some: {
               order: {
                 createdAt: { gte: sevenDaysAgo },
-                status: { in: ['CONFIRMED', 'IN_TRANSIT', 'COMPLETED'] },
+                status: { in: ['PAID', 'PREPARING', 'READY_FOR_PICKUP', 'IN_DELIVERY', 'DELIVERED', 'COMPLETED'] },
               },
             },
           },
@@ -524,8 +523,8 @@ export class ProductRepository {
     try {
       const result = await prisma.product.updateMany({
         where: {
-          status: ProductStatus.AVAILABLE,
-          expiresAt: {
+          status: ProductStatus.ACTIVE,
+          expiryDate: {
             lte: new Date(),
           },
         },

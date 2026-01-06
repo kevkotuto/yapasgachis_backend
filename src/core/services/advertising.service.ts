@@ -25,10 +25,7 @@ export class AdvertisingService {
     // Check if user already has an advertiser profile
     const existing = await advertiserRepository.findProfileByUserId(userId);
     if (existing) {
-      throw new AppError(
-        'Vous avez déjà un profil annonceur',
-        400
-      );
+      throw new AppError(400, 'Vous avez déjà un profil annonceur');
     }
 
     // Update user role
@@ -54,7 +51,7 @@ export class AdvertisingService {
     const profile = await advertiserRepository.findProfileByUserId(userId);
 
     if (!profile) {
-      throw new AppError('Profil annonceur non trouvé', 404);
+      throw new AppError(404, 'Profil annonceur non trouvé');
     }
 
     return profile;
@@ -67,7 +64,7 @@ export class AdvertisingService {
     const profile = await advertiserRepository.findProfileById(id);
 
     if (!profile) {
-      throw new AppError('Profil annonceur non trouvé', 404);
+      throw new AppError(404, 'Profil annonceur non trouvé');
     }
 
     return profile;
@@ -86,7 +83,7 @@ export class AdvertisingService {
     const profile = await advertiserRepository.findProfileByUserId(userId);
 
     if (!profile) {
-      throw new AppError('Profil annonceur non trouvé', 404);
+      throw new AppError(404, 'Profil annonceur non trouvé');
     }
 
     const updatedProfile = await advertiserRepository.updateProfile(
@@ -146,39 +143,27 @@ export class AdvertisingService {
     const profile = await advertiserRepository.findProfileByUserId(userId);
 
     if (!profile) {
-      throw new AppError('Profil annonceur non trouvé', 404);
+      throw new AppError(404, 'Profil annonceur non trouvé');
     }
 
     // Validate dates
     const now = new Date();
     if (new Date(data.startDate) < now) {
-      throw new AppError(
-        'La date de début doit être dans le futur',
-        400
-      );
+      throw new AppError(400, 'La date de début doit être dans le futur');
     }
 
     if (new Date(data.endDate) <= new Date(data.startDate)) {
-      throw new AppError(
-        'La date de fin doit être après la date de début',
-        400
-      );
+      throw new AppError(400, 'La date de fin doit être après la date de début');
     }
 
     // Validate budget
     if (data.budget < 10000) {
-      throw new AppError(
-        'Le budget minimum est de 10 000 XOF',
-        400
-      );
+      throw new AppError(400, 'Le budget minimum est de 10 000 XOF');
     }
 
     // Validate bid amount
     if (data.bidAmount < 100) {
-      throw new AppError(
-        'L\'enchère minimum est de 100 XOF',
-        400
-      );
+      throw new AppError(400, 'L\'enchère minimum est de 100 XOF');
     }
 
     const campaign = await advertiserRepository.createCampaign(profile.id, {
@@ -203,17 +188,14 @@ export class AdvertisingService {
     const campaign = await advertiserRepository.findCampaignById(campaignId);
 
     if (!campaign) {
-      throw new AppError('Campagne non trouvée', 404);
+      throw new AppError(404, 'Campagne non trouvée');
     }
 
     // If userId is provided, check ownership (unless admin)
     if (userId) {
       const profile = await advertiserRepository.findProfileByUserId(userId);
       if (profile && campaign.advertiserId !== profile.id) {
-        throw new AppError(
-          "Vous n'êtes pas autorisé à voir cette campagne",
-          403
-        );
+        throw new AppError(403, "Vous n'êtes pas autorisé à voir cette campagne");
       }
     }
 
@@ -234,7 +216,7 @@ export class AdvertisingService {
     const profile = await advertiserRepository.findProfileByUserId(userId);
 
     if (!profile) {
-      throw new AppError('Profil annonceur non trouvé', 404);
+      throw new AppError(404, 'Profil annonceur non trouvé');
     }
 
     const result = await advertiserRepository.getCampaignsByAdvertiser(
@@ -277,22 +259,16 @@ export class AdvertisingService {
     const campaign = await advertiserRepository.findCampaignById(campaignId);
 
     if (!campaign) {
-      throw new AppError('Campagne non trouvée', 404);
+      throw new AppError(404, 'Campagne non trouvée');
     }
 
     if (!profile || campaign.advertiserId !== profile.id) {
-      throw new AppError(
-        "Vous n'êtes pas autorisé à modifier cette campagne",
-        403
-      );
+      throw new AppError(403, "Vous n'êtes pas autorisé à modifier cette campagne");
     }
 
     // Can only update DRAFT or PAUSED campaigns
     if (!['DRAFT', 'PAUSED'].includes(campaign.status)) {
-      throw new AppError(
-        'Seules les campagnes en brouillon ou en pause peuvent être modifiées',
-        400
-      );
+      throw new AppError(400, 'Seules les campagnes en brouillon ou en pause peuvent être modifiées');
     }
 
     const updatedCampaign = await advertiserRepository.updateCampaign(
@@ -316,21 +292,15 @@ export class AdvertisingService {
     const campaign = await advertiserRepository.findCampaignById(campaignId);
 
     if (!campaign) {
-      throw new AppError('Campagne non trouvée', 404);
+      throw new AppError(404, 'Campagne non trouvée');
     }
 
     if (!profile || campaign.advertiserId !== profile.id) {
-      throw new AppError(
-        "Vous n'êtes pas autorisé à soumettre cette campagne",
-        403
-      );
+      throw new AppError(403, "Vous n'êtes pas autorisé à soumettre cette campagne");
     }
 
     if (campaign.status !== 'DRAFT') {
-      throw new AppError(
-        'Seules les campagnes en brouillon peuvent être soumises',
-        400
-      );
+      throw new AppError(400, 'Seules les campagnes en brouillon peuvent être soumises');
     }
 
     const updatedCampaign = await advertiserRepository.updateCampaignStatus(
@@ -354,21 +324,15 @@ export class AdvertisingService {
     const campaign = await advertiserRepository.findCampaignById(campaignId);
 
     if (!campaign) {
-      throw new AppError('Campagne non trouvée', 404);
+      throw new AppError(404, 'Campagne non trouvée');
     }
 
     if (!profile || campaign.advertiserId !== profile.id) {
-      throw new AppError(
-        "Vous n'êtes pas autorisé à mettre cette campagne en pause",
-        403
-      );
+      throw new AppError(403, "Vous n'êtes pas autorisé à mettre cette campagne en pause");
     }
 
     if (campaign.status !== 'ACTIVE') {
-      throw new AppError(
-        'Seules les campagnes actives peuvent être mises en pause',
-        400
-      );
+      throw new AppError(400, 'Seules les campagnes actives peuvent être mises en pause');
     }
 
     const updatedCampaign = await advertiserRepository.updateCampaignStatus(
@@ -392,38 +356,26 @@ export class AdvertisingService {
     const campaign = await advertiserRepository.findCampaignById(campaignId);
 
     if (!campaign) {
-      throw new AppError('Campagne non trouvée', 404);
+      throw new AppError(404, 'Campagne non trouvée');
     }
 
     if (!profile || campaign.advertiserId !== profile.id) {
-      throw new AppError(
-        "Vous n'êtes pas autorisé à reprendre cette campagne",
-        403
-      );
+      throw new AppError(403, "Vous n'êtes pas autorisé à reprendre cette campagne");
     }
 
     if (campaign.status !== 'PAUSED') {
-      throw new AppError(
-        'Seules les campagnes en pause peuvent être reprises',
-        400
-      );
+      throw new AppError(400, 'Seules les campagnes en pause peuvent être reprises');
     }
 
     // Check if campaign is still within date range
     const now = new Date();
     if (now >= campaign.endDate) {
-      throw new AppError(
-        'Cette campagne a expiré et ne peut pas être reprise',
-        400
-      );
+      throw new AppError(400, 'Cette campagne a expiré et ne peut pas être reprise');
     }
 
     // Check if budget is exhausted
     if (campaign.spent >= campaign.budget) {
-      throw new AppError(
-        'Le budget de cette campagne est épuisé',
-        400
-      );
+      throw new AppError(400, 'Le budget de cette campagne est épuisé');
     }
 
     const updatedCampaign = await advertiserRepository.updateCampaignStatus(
@@ -447,22 +399,16 @@ export class AdvertisingService {
     const campaign = await advertiserRepository.findCampaignById(campaignId);
 
     if (!campaign) {
-      throw new AppError('Campagne non trouvée', 404);
+      throw new AppError(404, 'Campagne non trouvée');
     }
 
     if (!profile || campaign.advertiserId !== profile.id) {
-      throw new AppError(
-        "Vous n'êtes pas autorisé à supprimer cette campagne",
-        403
-      );
+      throw new AppError(403, "Vous n'êtes pas autorisé à supprimer cette campagne");
     }
 
     // Can only delete DRAFT or REJECTED campaigns
     if (!['DRAFT', 'REJECTED'].includes(campaign.status)) {
-      throw new AppError(
-        'Seules les campagnes en brouillon ou rejetées peuvent être supprimées',
-        400
-      );
+      throw new AppError(400, 'Seules les campagnes en brouillon ou rejetées peuvent être supprimées');
     }
 
     await advertiserRepository.deleteCampaign(campaignId);
@@ -483,14 +429,11 @@ export class AdvertisingService {
     const campaign = await advertiserRepository.findCampaignById(campaignId);
 
     if (!campaign) {
-      throw new AppError('Campagne non trouvée', 404);
+      throw new AppError(404, 'Campagne non trouvée');
     }
 
     if (!profile || campaign.advertiserId !== profile.id) {
-      throw new AppError(
-        "Vous n'êtes pas autorisé à voir les statistiques de cette campagne",
-        403
-      );
+      throw new AppError(403, "Vous n'êtes pas autorisé à voir les statistiques de cette campagne");
     }
 
     return await advertiserRepository.getCampaignStats(campaignId);
@@ -521,14 +464,11 @@ export class AdvertisingService {
     const campaign = await advertiserRepository.findCampaignById(campaignId);
 
     if (!campaign) {
-      throw new AppError('Campagne non trouvée', 404);
+      throw new AppError(404, 'Campagne non trouvée');
     }
 
     if (campaign.status !== 'PENDING_APPROVAL') {
-      throw new AppError(
-        'Seules les campagnes en attente peuvent être approuvées',
-        400
-      );
+      throw new AppError(400, 'Seules les campagnes en attente peuvent être approuvées');
     }
 
     // Check if start date is in the future
@@ -562,14 +502,11 @@ export class AdvertisingService {
     const campaign = await advertiserRepository.findCampaignById(campaignId);
 
     if (!campaign) {
-      throw new AppError('Campagne non trouvée', 404);
+      throw new AppError(404, 'Campagne non trouvée');
     }
 
     if (campaign.status !== 'PENDING_APPROVAL') {
-      throw new AppError(
-        'Seules les campagnes en attente peuvent être rejetées',
-        400
-      );
+      throw new AppError(400, 'Seules les campagnes en attente peuvent être rejetées');
     }
 
     const updatedCampaign = await advertiserRepository.updateCampaign(

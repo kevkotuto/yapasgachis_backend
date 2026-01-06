@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import productController from '../controllers/product.controller';
 import { authMiddleware } from '@/middleware/auth.middleware';
-import { roleGuard } from '@/middleware/role-guard.middleware';
+import { supplierOnly } from '@/middleware/role-guard.middleware';
 import { validate } from '@/middleware/validation.middleware';
 import {
   uploadImages,
@@ -21,7 +21,6 @@ import {
   deleteImageSchema,
   getSupplierProductsSchema,
 } from '../validators/product.validator';
-import { UserRole } from '@prisma/client';
 
 const router: Router = Router();
 
@@ -82,7 +81,7 @@ router.get(
 router.post(
   '/',
   authMiddleware,
-  roleGuard(UserRole.SUPPLIER),
+  supplierOnly,
   validate(createProductSchema),
   productController.createProduct
 );
@@ -95,7 +94,7 @@ router.post(
 router.get(
   '/my-products',
   authMiddleware,
-  roleGuard(UserRole.SUPPLIER),
+  supplierOnly,
   validate(getSupplierProductsSchema),
   productController.getMyProducts
 );
@@ -108,7 +107,7 @@ router.get(
 router.put(
   '/:id',
   authMiddleware,
-  roleGuard(UserRole.SUPPLIER),
+  supplierOnly,
   validate(updateProductSchema),
   productController.updateProduct
 );
@@ -121,7 +120,7 @@ router.put(
 router.delete(
   '/:id',
   authMiddleware,
-  roleGuard(UserRole.SUPPLIER),
+  supplierOnly,
   validate(deleteProductSchema),
   productController.deleteProduct
 );
@@ -134,7 +133,7 @@ router.delete(
 router.patch(
   '/:id/stock',
   authMiddleware,
-  roleGuard(UserRole.SUPPLIER),
+  supplierOnly,
   validate(updateStockSchema),
   productController.updateStock
 );
@@ -147,7 +146,7 @@ router.patch(
 router.post(
   '/:id/images',
   authMiddleware,
-  roleGuard(UserRole.SUPPLIER),
+  supplierOnly,
   uploadImages,
   handleUploadError,
   requireFiles('images'),
@@ -163,7 +162,7 @@ router.post(
 router.delete(
   '/:id/images',
   authMiddleware,
-  roleGuard(UserRole.SUPPLIER),
+  supplierOnly,
   validate(deleteImageSchema),
   productController.deleteImage
 );

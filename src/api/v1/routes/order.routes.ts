@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import orderController from '../controllers/order.controller';
 import { authMiddleware } from '@/middleware/auth.middleware';
-import { roleGuard } from '@/middleware/role-guard.middleware';
+import { supplierOnly, clientOnly } from '@/middleware/role-guard.middleware';
 import { validate } from '@/middleware/validation.middleware';
 import {
   createOrderSchema,
@@ -11,16 +11,91 @@ import {
   cancelOrderSchema,
   checkPaymentStatusSchema,
 } from '../validators/order.validator';
-import { UserRole } from '@prisma/client';
 
 const router: Router = Router();
 
 /**
  * Order Routes
  * Base path: /api/v1/orders
+ *
+ * IMPORTANT: Static routes MUST be defined BEFORE parameterized routes (/:id)
+ * to avoid route conflicts where "my-orders" would be treated as an ID
  */
 
-// ==================== PROTECTED ROUTES (CLIENT) ====================
+// ==================== PAYMENT ROUTES (PUBLIC/AUTH) ====================
+
+/**
+ * Get supported payment providers
+ * GET /payments/providers
+ * Public route
+ */
+router.get('/payments/providers', orderController.getPaymentProviders);
+
+/**
+ * Check payment status
+ * GET /payments/:transactionId/status
+ * Requires: Authentication
+ */
+router.get(
+  '/payments/:transactionId/status',
+  authMiddleware,
+  validate(checkPaymentStatusSchema),
+  orderController.checkPaymentStatus
+);
+
+// ==================== STATIC ROUTES (BEFORE /:id) ====================
+
+/**
+ * Get user's orders
+ * GET /my-orders
+ * Requires: Authentication + CLIENT role
+ */
+router.get(
+  '/my-orders',
+  authMiddleware,
+  clientOnly,
+  validate(getUserOrdersSchema),
+  orderController.getMyOrders
+);
+
+/**
+ * Get order statistics
+ * GET /statistics
+ * Requires: Authentication + CLIENT role
+ */
+router.get(
+  '/statistics',
+  authMiddleware,
+  clientOnly,
+  orderController.getStatistics
+);
+
+/**
+ * Get supplier's orders
+ * GET /supplier-orders
+ * Requires: Authentication + SUPPLIER role
+ */
+router.get(
+  '/supplier-orders',
+  authMiddleware,
+  supplierOnly,
+  validate(getUserOrdersSchema),
+  orderController.getSupplierOrders
+);
+
+/**
+ * Get supplier order statistics
+ * GET /supplier-statistics
+ * Requires: Authentication + SUPPLIER role
+ */
+router.get(
+  '/supplier-statistics',
+  authMiddleware,
+  supplierOnly,
+  orderController.getSupplierStatistics
+);
+
+// ==================== PARAMETERIZED ROUTES (/:id) ====================
 
 /**
  * Create order with payment
@@ -30,7 +105,7 @@ const router: Router = Router();
 router.post(
   '/',
   authMiddleware,
-  roleGuard(UserRole.CLIENT),
+  clientOnly,
   validate(createOrderSchema),
   orderController.createOrder
 );
@@ -48,19 +123,6 @@ router.get(
 );
 
 /**
- * Get user's orders
- * GET /my-orders
- * Requires: Authentication + CLIENT role
- */
-router.get(
-  '/my-orders',
-  authMiddleware,
-  roleGuard(UserRole.CLIENT),
-  validate(getUserOrdersSchema),
-  orderController.getMyOrders
-);
-
-/**
  * Cancel order
  * POST /:id/cancel
  * Requires: Authentication + CLIENT role
@@ -68,36 +130,9 @@ router.get(
 router.post(
   '/:id/cancel',
   authMiddleware,
-  roleGuard(UserRole.CLIENT),
+  clientOnly,
   validate(cancelOrderSchema),
   orderController.cancelOrder
-);
-
-/**
- * Get order statistics
- * GET /statistics
- * Requires: Authentication + CLIENT role
- */
-router.get(
-  '/statistics',
-  authMiddleware,
-  roleGuard(UserRole.CLIENT),
-  orderController.getStatistics
-);
-
-// ==================== PROTECTED ROUTES (SUPPLIER) ====================
-
-/**
- * Get supplier's orders
- * GET /supplier-orders
- * Requires: Authentication + SUPPLIER role
- */
-router.get(
-  '/supplier-orders',
-  authMiddleware,
-  roleGuard(UserRole.SUPPLIER),
-  validate(getUserOrdersSchema),
-  orderController.getSupplierOrders
 );
 
 /**
@@ -108,42 +143,9 @@ router.get(
 router.patch(
   '/:id/status',
   authMiddleware,
-  roleGuard(UserRole.SUPPLIER),
+  supplierOnly,
   validate(updateOrderStatusSchema),
   orderController.updateOrderStatus
 );
-
-/**
- * Get supplier order statistics
- * GET /supplier-statistics
- * Requires: Authentication + SUPPLIER role
- */
-router.get(
-  '/supplier-statistics',
-  authMiddleware,
-  roleGuard(UserRole.SUPPLIER),
-  orderController.getSupplierStatistics
-);
-
-// ==================== PAYMENT ROUTES ====================
-
-/**
- * Check payment status
- * GET /payments/:transactionId/status
- * Requires: Authentication
- */
-router.get(
-  '/payments/:transactionId/status',
-  authMiddleware,
-  validate(checkPaymentStatusSchema),
-  orderController.checkPaymentStatus
-);
-
-/**
- * Get supported payment providers
- * GET /payments/providers
- * Public route
- */
-router.get('/payments/providers', orderController.getPaymentProviders);
 
 export default router;
