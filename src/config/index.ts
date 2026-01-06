@@ -111,6 +111,8 @@ interface Config {
       apiUrl: string;
       webhookSecret: string;
       businessId: string;
+      paymentFeeRate: number; // Frais de paiement Wave (1%)
+      transferFeeRate: number; // Frais de transfert Wave (1%)
     };
     stripe: {
       secretKey: string;
@@ -300,6 +302,8 @@ const config: Config = {
       apiUrl: process.env.WAVE_API_URL || 'https://api.wave.com/v1',
       webhookSecret: process.env.WAVE_WEBHOOK_SECRET || '',
       businessId: process.env.WAVE_BUSINESS_ID || '',
+      paymentFeeRate: parseFloat(process.env.WAVE_PAYMENT_FEE_RATE || '0.01'), // 1%
+      transferFeeRate: parseFloat(process.env.WAVE_TRANSFER_FEE_RATE || '0.01'), // 1%
     },
     stripe: {
       secretKey: process.env.STRIPE_SECRET_KEY || '',

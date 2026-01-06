@@ -25,6 +25,7 @@ export interface CreateEscrowParams {
   orderId: string;
   amount: number;
   commission: number;
+  waveTransferFee: number; // Frais de transfert Wave (1%) - déduit du fournisseur
   supplierId: string;
   supplierWaveId?: string;
 }
@@ -34,6 +35,7 @@ export interface EscrowTransaction {
   orderId: string;
   amount: number;
   commission: number;
+  waveTransferFee: number;
   supplierAmount: number;
   status: EscrowStatus;
   waveCheckoutId?: string;
@@ -68,7 +70,8 @@ export class EscrowService {
     checkoutUrl: string;
   }> {
     try {
-      const supplierAmount = params.amount - params.commission;
+      // Montant fournisseur = montant total - commission - frais de transfert Wave
+      const supplierAmount = params.amount - params.commission - params.waveTransferFee;
 
       // Créer le checkout Wave
       const checkout = await waveService.createCheckout({
@@ -84,6 +87,7 @@ export class EscrowService {
           orderId: params.orderId,
           amount: params.amount,
           commission: params.commission,
+          waveTransferFee: params.waveTransferFee,
           supplierAmount,
           status: EscrowStatus.PENDING,
           waveCheckoutId: checkout.id,

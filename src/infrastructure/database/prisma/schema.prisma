@@ -531,8 +531,10 @@ model Order {
   subtotal       Float
   deliveryFee    Float @default(0)
   commission     Float // Commission prélevée par la plateforme
-  supplierAmount Float // Montant à reverser au fournisseur (total - commission)
-  total          Float
+  wavePaymentFee Float @default(0) // Frais de paiement Wave (1%) - payé par le client
+  waveTransferFee Float @default(0) // Frais de transfert Wave (1%) - déduit du fournisseur
+  supplierAmount Float // Montant net à reverser au fournisseur (total - commission - waveTransferFee)
+  total          Float // Total payé par le client (subtotal + deliveryFee + wavePaymentFee)
 
   // Pickup/Delivery
   pickupCode String?   // QR code / PIN
@@ -946,7 +948,8 @@ model EscrowTransaction {
   // Montants
   amount           Float   // Montant total payé par le client
   commission       Float   // Commission de la plateforme
-  supplierAmount   Float   // Montant à verser au fournisseur
+  waveTransferFee  Float   @default(0) // Frais de transfert Wave (1%) - déduit du fournisseur
+  supplierAmount   Float   // Montant net à verser au fournisseur (après commission et frais Wave)
 
   // Status
   status           EscrowStatus @default(PENDING)

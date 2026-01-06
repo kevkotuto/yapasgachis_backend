@@ -171,13 +171,31 @@ export class OrderService {
         params.deliveryMethod === 'DELIVERY'
           ? config.business.defaultDeliveryFee
           : 0;
-      const total = subtotal + deliveryFee;
 
       // Commission basée sur le tier du fournisseur
       const commissionRate =
         supplier.commissionRate || config.business.defaultCommissionRate / 100;
       const commission = Math.round(subtotal * commissionRate);
-      const supplierAmount = total - commission;
+
+      // Frais Wave (uniquement pour paiement Wave)
+      const isWavePayment = params.paymentMethod === 'WAVE';
+      const baseAmount = subtotal + deliveryFee;
+
+      // Frais de paiement Wave (1%) - payé par le client
+      const wavePaymentFee = isWavePayment
+        ? Math.round(baseAmount * config.payment.wave.paymentFeeRate)
+        : 0;
+
+      // Frais de transfert Wave (1%) - déduit du montant fournisseur
+      const waveTransferFee = isWavePayment
+        ? Math.round((baseAmount - commission) * config.payment.wave.transferFeeRate)
+        : 0;
+
+      // Total payé par le client (inclut les frais de paiement Wave)
+      const total = baseAmount + wavePaymentFee;
+
+      // Montant net pour le fournisseur (déduit commission + frais de transfert)
+      const supplierAmount = baseAmount - commission - waveTransferFee;
 
       // 7. Générer le code de pickup/livraison
       const pickupCode = this.generatePickupCode();
@@ -196,6 +214,8 @@ export class OrderService {
           subtotal,
           deliveryFee,
           commission,
+          wavePaymentFee,
+          waveTransferFee,
           supplierAmount,
           total,
           pickupCode,
@@ -248,6 +268,7 @@ export class OrderService {
           orderId: order.id,
           amount: total,
           commission,
+          waveTransferFee,
           supplierId: supplier.id,
           supplierWaveId: supplier.waveAccountId || undefined,
         });
