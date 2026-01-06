@@ -141,11 +141,7 @@ export class SupplierStoreRepository {
       // If geolocation provided, filter by distance
       if (latitude && longitude) {
         const allStores = await prisma.supplierStore.findMany({
-          where: {
-            ...where,
-            latitude: { not: { equals: null } },
-            longitude: { not: { equals: null } },
-          },
+          where,
           include: {
             supplier: {
               select: {
@@ -158,13 +154,15 @@ export class SupplierStoreRepository {
           },
         });
 
+        // Filter stores with valid coordinates and calculate distance
         const storesWithDistance = allStores
+          .filter((store) => store.latitude !== null && store.longitude !== null)
           .map((store) => {
             const distance = this.calculateDistance(
               latitude,
               longitude,
-              store.latitude,
-              store.longitude
+              store.latitude as number,
+              store.longitude as number
             );
             return { ...store, distance };
           })
