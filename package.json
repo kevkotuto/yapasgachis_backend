@@ -126,6 +126,7 @@
     ]
   },
   "prisma": {
-    "schema": "src/infrastructure/database/prisma/schema.prisma"
+    "schema": "src/infrastructure/database/prisma/schema.prisma",
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} src/infrastructure/database/prisma/seed.ts"
   }
 }
