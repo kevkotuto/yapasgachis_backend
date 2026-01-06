@@ -54,10 +54,17 @@ interface Config {
     s3Bucket: string;
   };
   email: {
-    sendgrid: {
-      apiKey: string;
+    smtp: {
+      host: string;
+      port: number;
+      secure: boolean;
+      user: string;
+      password: string;
       fromEmail: string;
       fromName: string;
+    };
+    sendgrid: {
+      apiKey: string;
     };
     mailgun: {
       apiKey: string;
@@ -235,10 +242,17 @@ const config: Config = {
     s3Bucket: process.env.AWS_S3_BUCKET || '',
   },
   email: {
+    smtp: {
+      host: process.env.SMTP_HOST || '',
+      port: parseInt(process.env.SMTP_PORT || '465', 10),
+      secure: process.env.SMTP_SECURE !== 'false',
+      user: process.env.SMTP_USER || '',
+      password: process.env.SMTP_PASSWORD || '',
+      fromEmail: process.env.SMTP_FROM_EMAIL || 'noreply@yapasgachis.com',
+      fromName: process.env.SMTP_FROM_NAME || 'YapaGachis',
+    },
     sendgrid: {
       apiKey: process.env.SENDGRID_API_KEY || '',
-      fromEmail: process.env.SENDGRID_FROM_EMAIL || '',
-      fromName: process.env.SENDGRID_FROM_NAME || 'YapaGachis',
     },
     mailgun: {
       apiKey: process.env.MAILGUN_API_KEY || '',
