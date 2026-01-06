@@ -21,20 +21,25 @@ jest.mock('@/utils/helpers', () => ({
   generateOTP: jest.fn().mockReturnValue('123456'),
 }));
 
-jest.mock('@/config', () => ({
-  default: {
-    security: {
-      otpLength: 6,
-      otpExpiration: 600000, // 10 minutes in ms
-    },
+const mockOtpConfig = {
+  security: {
+    otpLength: 6,
+    otpExpiration: 600000, // 10 minutes in ms
   },
+};
+
+jest.mock('@/config', () => ({
+  __esModule: true,
+  default: mockOtpConfig,
 }));
 
 jest.mock('@/infrastructure/monitoring/logger', () => ({
+  __esModule: true,
   default: {
     info: jest.fn(),
     warn: jest.fn(),
     error: jest.fn(),
+    debug: jest.fn(),
   },
 }));
 

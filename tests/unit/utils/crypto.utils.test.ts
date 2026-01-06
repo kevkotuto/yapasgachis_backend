@@ -7,12 +7,15 @@ jest.mock('bcrypt', () => ({
 }));
 
 // Mock config
-jest.mock('@/config', () => ({
-  default: {
-    security: {
-      bcryptRounds: 12,
-    },
+const mockCryptoConfig = {
+  security: {
+    bcryptRounds: 12,
   },
+};
+
+jest.mock('@/config', () => ({
+  __esModule: true,
+  default: mockCryptoConfig,
 }));
 
 // Import the functions to test

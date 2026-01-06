@@ -185,17 +185,20 @@ describe('Helper Utils', () => {
       return `${formatter.format(amount)} ${currency}`;
     };
 
+    // Helper to normalize spaces (NBSP and narrow NBSP to regular space) for consistent testing
+    const normalizeSpaces = (str: string): string => str.replace(/[\u00A0\u202F]/g, ' ');
+
     it('should format amount in XOF', () => {
-      expect(formatCurrency(1500)).toBe('1 500 XOF');
-      expect(formatCurrency(25000)).toBe('25 000 XOF');
+      expect(normalizeSpaces(formatCurrency(1500))).toBe('1 500 XOF');
+      expect(normalizeSpaces(formatCurrency(25000))).toBe('25 000 XOF');
     });
 
     it('should format large amounts', () => {
-      expect(formatCurrency(1000000)).toBe('1 000 000 XOF');
+      expect(normalizeSpaces(formatCurrency(1000000))).toBe('1 000 000 XOF');
     });
 
     it('should handle different currencies', () => {
-      expect(formatCurrency(1500, 'EUR')).toBe('1 500 EUR');
+      expect(normalizeSpaces(formatCurrency(1500, 'EUR'))).toBe('1 500 EUR');
     });
 
     it('should handle zero', () => {

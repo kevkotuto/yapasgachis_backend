@@ -1,13 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 import { UserRole } from '@prisma/client';
 
-// Mock JWTService
+// Mock JWTService with static methods
+const mockVerifyAccessToken = jest.fn();
 jest.mock('@/core/services/jwt.service', () => ({
+  __esModule: true,
   default: {
-    verifyAccessToken: jest.fn(),
+    verifyAccessToken: mockVerifyAccessToken,
   },
   JWTService: {
-    verifyAccessToken: jest.fn(),
+    verifyAccessToken: mockVerifyAccessToken,
   },
 }));
 
@@ -94,7 +96,7 @@ describe('Auth Middleware', () => {
         sessionId: payload.sessionId,
       };
 
-      next();
+      return next();
     } catch (error: any) {
       if (error.message === 'TOKEN_EXPIRED') {
         return res.status(APP_CONSTANTS.HTTP_STATUS.UNAUTHORIZED).json({
@@ -253,7 +255,7 @@ describe('Auth Middleware', () => {
           });
         }
 
-        next();
+        return next();
       };
     };
 

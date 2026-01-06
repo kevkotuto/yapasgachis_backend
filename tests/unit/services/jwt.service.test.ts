@@ -1,20 +1,24 @@
 import jwt from 'jsonwebtoken';
 import { UserRole } from '@prisma/client';
 
+// Mock config values
+const mockConfig = {
+  jwt: {
+    secret: 'test-jwt-secret-key-for-unit-tests',
+    refreshSecret: 'test-refresh-secret-key-for-unit-tests',
+    accessExpiration: '15m',
+    refreshExpiration: '7d',
+  },
+  app: {
+    name: 'YapaGachis-Test',
+    url: 'http://localhost:3000',
+  },
+};
+
 // Mock dependencies before importing the service
 jest.mock('@/config', () => ({
-  default: {
-    jwt: {
-      secret: 'test-jwt-secret-key-for-unit-tests',
-      refreshSecret: 'test-refresh-secret-key-for-unit-tests',
-      accessExpiration: '15m',
-      refreshExpiration: '7d',
-    },
-    app: {
-      name: 'YapaGachis-Test',
-      url: 'http://localhost:3000',
-    },
-  },
+  __esModule: true,
+  default: mockConfig,
 }));
 
 jest.mock('@/infrastructure/database/redis/client', () => ({
@@ -28,10 +32,12 @@ jest.mock('@/infrastructure/database/redis/client', () => ({
 }));
 
 jest.mock('@/infrastructure/monitoring/logger', () => ({
+  __esModule: true,
   default: {
     info: jest.fn(),
     warn: jest.fn(),
     error: jest.fn(),
+    debug: jest.fn(),
   },
 }));
 
