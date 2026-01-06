@@ -143,7 +143,8 @@ export class SupplierStoreRepository {
         const allStores = await prisma.supplierStore.findMany({
           where: {
             ...where,
-            NOT: [{ latitude: null }, { longitude: null }],
+            latitude: { not: { equals: null } },
+            longitude: { not: { equals: null } },
           },
           include: {
             supplier: {
