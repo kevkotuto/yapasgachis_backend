@@ -687,33 +687,71 @@ export class OrderService {
       ...(status && { status }),
     };
 
-    const [orders, total] = await Promise.all([
-      prisma.order.findMany({
+    try {
+      logger.info('Starting getUserOrders', {
+        userId,
+        params,
         where,
-        include: {
-          items: true,
-          client: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              phoneNumber: true,
-              email: true,
+        skip,
+        limit,
+      });
+
+      const [orders, total] = await Promise.all([
+        prisma.order.findMany({
+          where,
+          include: {
+            items: {
+              include: {
+                product: {
+                  select: {
+                    id: true,
+                    title: true,
+                    originalPrice: true,
+                    discountedPrice: true,
+                    images: true,
+                    category: true,
+                  },
+                },
+              },
+            },
+            client: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                phoneNumber: true,
+                email: true,
+              },
             },
           },
-        },
-        skip,
-        take: limit,
-        orderBy: { createdAt: 'desc' },
-      }),
-      prisma.order.count({ where }),
-    ]);
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+        }),
+        prisma.order.count({ where }),
+      ]);
 
-    return {
-      orders: orders as unknown as OrderWithDetails[],
-      total,
-      pages: Math.ceil(total / limit),
-    };
+      logger.info('Successfully fetched user orders', {
+        userId,
+        ordersCount: orders.length,
+        total,
+      });
+
+      return {
+        orders: orders as unknown as OrderWithDetails[],
+        total,
+        pages: Math.ceil(total / limit),
+      };
+    } catch (error) {
+      logger.error('Error fetching user orders', {
+        userId,
+        params,
+        where,
+        error: (error as Error).message,
+        stack: (error as Error).stack,
+      });
+      throw error;
+    }
   }
 
   /**

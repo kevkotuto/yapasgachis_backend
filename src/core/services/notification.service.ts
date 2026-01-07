@@ -199,38 +199,62 @@ class NotificationService {
     const { read, type, page = 1, limit = 20 } = filters;
     const skip = (page - 1) * limit;
 
-    const where: any = {
-      userId,
-      // Exclude expired notifications
-      OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
-    };
+    // Build where clause properly with AND to avoid Prisma conflicts
+    const whereConditions: any[] = [
+      { userId },
+    ];
 
+    // Add expiry filter (active notifications only)
+    const now = new Date();
+    whereConditions.push({
+      OR: [
+        { expiresAt: null },
+        { expiresAt: { gt: now } }
+      ]
+    });
+
+    // Add optional filters
     if (read !== undefined) {
-      where.read = read;
+      whereConditions.push({ read });
     }
 
     if (type) {
-      where.type = type;
+      whereConditions.push({ type });
     }
 
-    const [notifications, total, unreadCount] = await Promise.all([
-      prisma.notification.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit,
-      }),
-      prisma.notification.count({ where }),
-      prisma.notification.count({ where: { userId, read: false } }),
-    ]);
-
-    return {
-      notifications: notifications as unknown as NotificationWithMeta[],
-      total,
-      unreadCount,
-      pages: Math.ceil(total / limit),
-      currentPage: page,
+    const where = {
+      AND: whereConditions
     };
+
+    try {
+      const [notifications, total, unreadCount] = await Promise.all([
+        prisma.notification.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+        }),
+        prisma.notification.count({ where }),
+        prisma.notification.count({ where: { userId, read: false } }),
+      ]);
+
+      return {
+        notifications: notifications as unknown as NotificationWithMeta[],
+        total,
+        unreadCount,
+        pages: Math.ceil(total / limit),
+        currentPage: page,
+      };
+    } catch (error) {
+      logger.error('Error fetching user notifications', {
+        userId,
+        filters,
+        where,
+        error: (error as Error).message,
+        stack: (error as Error).stack,
+      });
+      throw error;
+    }
   }
 
   /**

@@ -280,6 +280,8 @@ export class ProductRepository {
                     phoneNumber: true,
                     city: true,
                     commune: true,
+                    latitude: true,
+                    longitude: true,
                   },
                 },
               },
@@ -303,12 +305,23 @@ export class ProductRepository {
           },
         });
 
-        // Calculate distance using store coordinates if available, otherwise supplier
+        // Calculate distance using store coordinates if available, otherwise supplier user coordinates
         const productsWithDistance = allProducts
           .map((product) => {
-            // Priorité: coordonnées du store > coordonnées du supplier
-            const productLat = product.store?.latitude ?? product.supplier.latitude;
-            const productLng = product.store?.longitude ?? product.supplier.longitude;
+            // Priorité: coordonnées du store > coordonnées de l'utilisateur du supplier
+            let productLat: number | null = null;
+            let productLng: number | null = null;
+
+            // D'abord essayer les coordonnées du store
+            if (product.store?.latitude && product.store?.longitude) {
+              productLat = product.store.latitude;
+              productLng = product.store.longitude;
+            }
+            // Sinon utiliser les coordonnées de l'utilisateur du supplier
+            else if (product.supplier?.user?.latitude && product.supplier?.user?.longitude) {
+              productLat = product.supplier.user.latitude;
+              productLng = product.supplier.user.longitude;
+            }
 
             // Si pas de coordonnées, distance = Infinity (sera affiché en dernier)
             const distance =
@@ -426,6 +439,7 @@ export class ProductRepository {
       logger.error('Error searching products', {
         params,
         error: (error as Error).message,
+        stack: (error as Error).stack,
       });
       throw error;
     }
@@ -563,7 +577,7 @@ export class ProductRepository {
     const skip = (page - 1) * limit;
 
     try {
-      const where: Prisma.ProductWhereInput = {
+      const where: any = {
         supplierId,
         ...(status && { status }),
         ...(category && { category }),
