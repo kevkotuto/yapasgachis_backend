@@ -141,6 +141,26 @@ Tests are in `tests/` directory:
 - Swagger UI: `/api-docs` (when running)
 - Base URL: `https://api.yapasgachis.com/api/v1`
 - Health check: `GET /health`
+- Documentation site: `https://doc.yapasgachis.com`
+
+### Documentation Project (Next.js)
+
+Located in `docs/yapasgachis-docs/`:
+- Built with Next.js 16, shadcn/ui, Tailwind CSS
+- Static export to `out/` folder
+- Postman collection: `docs/YapaGachis_API.postman_collection.json`
+
+**Build & Deploy:**
+```bash
+cd docs/yapasgachis-docs
+npm run build  # Generates static files in out/
+```
+
+**FTP Deployment:**
+- Host: doc.yapasgachis.com
+- User: kevine@doc.yapasgachis.com
+- Password: Ecolfa@961
+- Upload the contents of `docs/yapasgachis-docs/out/` to the FTP root
 
 ## Important Notes
 
