@@ -54,20 +54,62 @@ export const generateRandomCode = (length: number = 8): string => {
 
 /**
  * Format phone number to international format
+ * For pan-African support, preserves any international prefix starting with +
+ * Only adds default country code (+225) for local numbers without prefix
  */
 export const formatPhoneNumber = (
   phone: string,
-  countryCode: string = '+225'
+  defaultCountryCode: string = '+225'
 ): string => {
-  // Remove all non-numeric characters
-  const cleaned = phone.replace(/\D/g, '');
+  // Trim whitespace
+  const trimmed = phone.trim();
 
-  // Add country code if not present
-  if (!cleaned.startsWith(countryCode.replace('+', ''))) {
-    return `${countryCode}${cleaned}`;
+  // If already starts with +, it's international - just clean and return
+  if (trimmed.startsWith('+')) {
+    // Remove any non-numeric characters except the leading +
+    return '+' + trimmed.slice(1).replace(/\D/g, '');
   }
 
-  return `+${cleaned}`;
+  // Remove all non-numeric characters
+  const cleaned = trimmed.replace(/\D/g, '');
+
+  // Check if it starts with a known African country code (without +)
+  // Common African codes: 20, 27, 212, 213, 216, 221-229, 233, 234, 237, 241-243, 254-256
+  const africanPrefixes = [
+    '20',   // Egypt
+    '27',   // South Africa
+    '212',  // Morocco
+    '213',  // Algeria
+    '216',  // Tunisia
+    '221',  // Senegal
+    '222',  // Mauritania
+    '223',  // Mali
+    '224',  // Guinea
+    '225',  // Côte d'Ivoire
+    '226',  // Burkina Faso
+    '227',  // Niger
+    '228',  // Togo
+    '229',  // Benin
+    '233',  // Ghana
+    '234',  // Nigeria
+    '237',  // Cameroon
+    '241',  // Gabon
+    '242',  // Congo
+    '243',  // DRC
+    '254',  // Kenya
+    '255',  // Tanzania
+    '256',  // Uganda
+  ];
+
+  // Check if number starts with any known African prefix
+  for (const prefix of africanPrefixes) {
+    if (cleaned.startsWith(prefix)) {
+      return `+${cleaned}`;
+    }
+  }
+
+  // Otherwise, assume local number and add default country code
+  return `${defaultCountryCode}${cleaned}`;
 };
 
 /**
@@ -79,10 +121,10 @@ export const isValidEmail = (email: string): boolean => {
 };
 
 /**
- * Validate phone number format
+ * Validate phone number format (pan-African)
  */
 export const isValidPhoneNumber = (phone: string): boolean => {
-  const phoneRegex = /^(\+225|225)?[0-9]{8,10}$/;
+  const phoneRegex = /^\+?[0-9]{8,15}$/;
   return phoneRegex.test(phone);
 };
 
