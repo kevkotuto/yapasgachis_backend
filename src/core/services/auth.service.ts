@@ -122,21 +122,38 @@ export class AuthService {
       phoneNumber,
       OTPPurpose.REGISTRATION
     );
+
+    // Send OTP via SMS
     await SMSService.sendOTP(phoneNumber, otpCode);
+
+    // Also send OTP via email if provided
+    if (data.email) {
+      await emailService.sendOTPEmail({
+        to: data.email,
+        firstName: data.firstName,
+        code: otpCode,
+        purpose: 'registration',
+      });
+    }
 
     logger.info('User registered', {
       userId: user.id,
       phoneNumber,
+      email: data.email || null,
       role: user.role,
     });
 
     // Return user without sensitive data
     const { passwordHash: _, ...userWithoutPassword } = user;
 
+    // Determine message based on whether email was provided
+    const message = data.email
+      ? 'Inscription réussie. Veuillez vérifier votre téléphone ou email pour le code OTP.'
+      : 'Inscription réussie. Veuillez vérifier votre téléphone pour le code OTP.';
+
     return {
       user: userWithoutPassword,
-      message:
-        'Inscription réussie. Veuillez vérifier votre téléphone pour le code OTP.',
+      message,
     };
   }
 
@@ -429,15 +446,36 @@ export class AuthService {
       );
     }
 
+    // Map OTPPurpose to email purpose
+    const emailPurposeMap: Record<OTPPurpose, 'login' | 'registration' | 'verification'> = {
+      [OTPPurpose.REGISTRATION]: 'registration',
+      [OTPPurpose.LOGIN]: 'login',
+      [OTPPurpose.PASSWORD_RESET]: 'verification',
+      [OTPPurpose.PHONE_VERIFICATION]: 'verification',
+      [OTPPurpose.EMAIL_VERIFICATION]: 'verification',
+    };
+
     // Generate and send new OTP
     const otpCode = await OTPService.generateOTP(formattedPhone, purpose);
     await SMSService.sendOTP(formattedPhone, otpCode);
 
-    logger.info('OTP resent', { phoneNumber: formattedPhone, purpose });
+    // Also send via email if user has email
+    if (user.email) {
+      await emailService.sendOTPEmail({
+        to: user.email,
+        firstName: user.firstName,
+        code: otpCode,
+        purpose: emailPurposeMap[purpose],
+      });
+    }
 
-    return {
-      message: 'Un nouveau code OTP vous a été envoyé',
-    };
+    logger.info('OTP resent', { phoneNumber: formattedPhone, email: user.email, purpose });
+
+    const message = user.email
+      ? 'Un nouveau code OTP vous a été envoyé par SMS et email'
+      : 'Un nouveau code OTP vous a été envoyé';
+
+    return { message };
   }
 
   /**
@@ -463,14 +501,26 @@ export class AuthService {
     );
     await SMSService.sendPasswordResetSMS(formattedPhone, otpCode);
 
+    // Also send via email if user has email
+    if (user.email) {
+      await emailService.sendPasswordResetEmail({
+        to: user.email,
+        firstName: user.firstName,
+        resetCode: otpCode,
+      });
+    }
+
     logger.info('Password reset OTP sent', {
       userId: user.id,
       phoneNumber: formattedPhone,
+      email: user.email,
     });
 
-    return {
-      message: 'Un code de réinitialisation vous a été envoyé par SMS',
-    };
+    const message = user.email
+      ? 'Un code de réinitialisation vous a été envoyé par SMS et email'
+      : 'Un code de réinitialisation vous a été envoyé par SMS';
+
+    return { message };
   }
 
   /**
