@@ -156,6 +156,15 @@ export const searchProductsSchema = z.object({
       .transform((val) => parseInt(val, 10))
       .pipe(z.number().min(1).max(100))
       .optional(),
+    nearbyFirst: z
+      .string()
+      .transform((val) => val === 'true')
+      .optional(),
+    nearbyRadius: z
+      .string()
+      .transform((val) => parseInt(val, 10))
+      .pipe(z.number().min(1).max(50))
+      .optional(),
     expiresWithin: z
       .string()
       .transform((val) => parseInt(val, 10))
@@ -171,7 +180,7 @@ export const searchProductsSchema = z.object({
       .transform((val) => parseInt(val, 10))
       .pipe(z.number().min(1).max(100))
       .optional(),
-    sortBy: z.enum(['price', 'discount', 'expiry', 'createdAt']).optional(),
+    sortBy: z.enum(['price', 'discount', 'expiry', 'createdAt', 'distance']).optional(),
     sortOrder: z.enum(['asc', 'desc']).optional(),
   }),
 });

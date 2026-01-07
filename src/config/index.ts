@@ -188,6 +188,20 @@ interface Config {
       long: number;
     };
   };
+  kycVerification: {
+    enabled: boolean;
+    provider: 'aws-rekognition' | 'azure' | 'google' | 'mock';
+    autoApproveThreshold: number; // Score minimum pour approbation automatique (0-100)
+    manualReviewThreshold: number; // Score en dessous = review manuel obligatoire
+    faceSimilarityThreshold: number; // Score minimum de correspondance faciale
+    livenessThreshold: number; // Score minimum de vivacité
+    maxAttemptsPerSupplier: number; // Nombre max de tentatives
+    processingTimeoutMs: number; // Timeout de traitement en ms
+    enableLivenessDetection: boolean;
+    enableDocumentAuthenticity: boolean;
+    supportedDocumentTypes: string[];
+    webhookUrl: string; // URL de callback après vérification
+  };
 }
 
 const config: Config = {
@@ -391,6 +405,41 @@ const config: Config = {
       medium: parseInt(process.env.CACHE_TTL_MEDIUM || '1800', 10),
       long: parseInt(process.env.CACHE_TTL_LONG || '86400', 10),
     },
+  },
+  kycVerification: {
+    enabled: process.env.KYC_VERIFICATION_ENABLED === 'true',
+    provider: (process.env.KYC_PROVIDER || 'aws-rekognition') as
+      | 'aws-rekognition'
+      | 'azure'
+      | 'google'
+      | 'mock',
+    autoApproveThreshold: parseFloat(
+      process.env.KYC_AUTO_APPROVE_THRESHOLD || '85'
+    ),
+    manualReviewThreshold: parseFloat(
+      process.env.KYC_MANUAL_REVIEW_THRESHOLD || '60'
+    ),
+    faceSimilarityThreshold: parseFloat(
+      process.env.KYC_FACE_SIMILARITY_THRESHOLD || '80'
+    ),
+    livenessThreshold: parseFloat(process.env.KYC_LIVENESS_THRESHOLD || '75'),
+    maxAttemptsPerSupplier: parseInt(
+      process.env.KYC_MAX_ATTEMPTS_PER_SUPPLIER || '5',
+      10
+    ),
+    processingTimeoutMs: parseInt(
+      process.env.KYC_PROCESSING_TIMEOUT_MS || '60000',
+      10
+    ), // 60 seconds
+    enableLivenessDetection:
+      process.env.KYC_ENABLE_LIVENESS_DETECTION !== 'false',
+    enableDocumentAuthenticity:
+      process.env.KYC_ENABLE_DOCUMENT_AUTHENTICITY !== 'false',
+    supportedDocumentTypes: (
+      process.env.KYC_SUPPORTED_DOCUMENT_TYPES ||
+      'CNI,PASSPORT,DRIVING_LICENSE,RESIDENCE_CARD'
+    ).split(','),
+    webhookUrl: process.env.KYC_WEBHOOK_URL || '',
   },
 };
 

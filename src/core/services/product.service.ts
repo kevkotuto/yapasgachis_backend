@@ -261,6 +261,7 @@ export class ProductService {
 
   /**
    * Search products
+   * @param nearbyFirst - Si true avec lat/lng, affiche les produits proches en premier puis les autres
    */
   async searchProducts(params: {
     search?: string;
@@ -274,10 +275,12 @@ export class ProductService {
     latitude?: number;
     longitude?: number;
     radius?: number;
+    nearbyFirst?: boolean;
+    nearbyRadius?: number;
     expiresWithin?: number;
     page?: number;
     limit?: number;
-    sortBy?: 'price' | 'discount' | 'expiry' | 'createdAt';
+    sortBy?: 'price' | 'discount' | 'expiry' | 'createdAt' | 'distance';
     sortOrder?: 'asc' | 'desc';
   }): Promise<{ products: Product[]; total: number; pages: number }> {
     const { products, total } = await this.productRepo.search(params);

@@ -389,6 +389,7 @@ model SupplierProfile {
   subscriptionPayments SubscriptionPayment[]
   deals                Deal[]                 // Bons plans
   promoCodes           PromoCode[]            // Codes promo créés par admin pour ce fournisseur
+  kycVerificationAttempts KycVerificationAttempt[] // Tentatives de vérification KYC
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -397,6 +398,7 @@ model SupplierProfile {
   @@index([supplierType])
   @@index([subscriptionTier, subscriptionActive])
   @@index([isVerified])
+  @@index([kycStatus])
   @@map("supplier_profiles")
 }
 
@@ -1353,3 +1355,186 @@ model PlatformSettingsAudit {
 
 // Add latitude/longitude to Product for geolocation search
 // Note: In production, use PostGIS extension for better geospatial queries
+
+// ==================== PHASE 12: KYC AI VERIFICATION ====================
+
+enum KycVerificationStatus {
+  PENDING          // En attente de traitement
+  PROCESSING       // En cours de vérification par l'IA
+  AI_APPROVED      // Approuvé automatiquement par l'IA
+  AI_REJECTED      // Rejeté automatiquement par l'IA
+  MANUAL_REVIEW    // Score trop bas, nécessite review manuel
+  MANUALLY_APPROVED // Approuvé manuellement par admin
+  MANUALLY_REJECTED // Rejeté manuellement par admin
+  FAILED           // Erreur technique lors de la vérification
+}
+
+enum IdCardType {
+  CNI             // Carte Nationale d'Identité
+  PASSPORT        // Passeport
+  DRIVING_LICENSE // Permis de conduire
+  RESIDENCE_CARD  // Carte de séjour
+}
+
+enum KycCheckType {
+  DOCUMENT_OCR       // Extraction de texte du document
+  DOCUMENT_VALIDITY  // Vérification de validité (format, expiration)
+  DOCUMENT_AUTHENTICITY // Détection de falsification
+  FACE_MATCH         // Correspondance visage ID vs selfie
+  LIVENESS_DETECTION // Détection de vivacité (anti-spoofing)
+}
+
+// Tentative de vérification KYC
+model KycVerificationAttempt {
+  id           String                  @id @default(uuid())
+  supplierId   String
+  supplier     SupplierProfile         @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  // Documents soumis
+  idCardFrontUrl   String              // URL de la pièce d'identité recto
+  idCardBackUrl    String?             // URL de la pièce d'identité verso (optionnel selon le type)
+  selfieUrl        String              // URL du selfie
+  idCardType       IdCardType          // Type de document
+
+  // Status de la vérification
+  status           KycVerificationStatus @default(PENDING)
+
+  // Scores globaux (0-100)
+  overallScore         Float?           // Score global de confiance
+  documentScore        Float?           // Score qualité/authenticité document
+  faceMatchScore       Float?           // Score correspondance visage
+  livenessScore        Float?           // Score de vivacité
+
+  // Seuils utilisés pour cette vérification
+  autoApproveThreshold Float   @default(85)  // Score minimum pour approbation auto
+  manualReviewThreshold Float  @default(60)  // Score en dessous = review manuel
+
+  // Résultats détaillés (JSON)
+  ocrResults           Json?            // Données extraites par OCR
+  documentAnalysis     Json?            // Analyse du document (authenticité, validité)
+  faceAnalysis         Json?            // Analyse de la correspondance faciale
+  livenessAnalysis     Json?            // Analyse de la vivacité
+
+  // Erreurs éventuelles
+  errorCode            String?          // Code d'erreur si échec
+  errorMessage         String?          // Message d'erreur détaillé
+
+  // Provider utilisé
+  aiProvider           String           @default("aws-rekognition") // aws-rekognition, azure, google
+
+  // Timing
+  processingStartedAt  DateTime?
+  processingCompletedAt DateTime?
+  processingDurationMs Int?             // Durée en millisecondes
+
+  // Review manuel (si nécessaire)
+  reviewedByAdminId    String?
+  reviewedAt           DateTime?
+  reviewNotes          String?
+
+  // Relations
+  checks               KycVerificationCheck[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([supplierId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("kyc_verification_attempts")
+}
+
+// Détail de chaque vérification individuelle (OCR, Face Match, etc.)
+model KycVerificationCheck {
+  id              String                   @id @default(uuid())
+  attemptId       String
+  attempt         KycVerificationAttempt   @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  // Type de vérification
+  checkType       KycCheckType
+
+  // Résultat
+  passed          Boolean?                 // null = en cours, true = réussi, false = échoué
+  score           Float?                   // Score de confiance (0-100)
+  confidence      Float?                   // Niveau de confiance de l'IA
+
+  // Détails du résultat (JSON spécifique au type de check)
+  result          Json?
+
+  // Raison d'échec si applicable
+  failureReason   String?
+
+  // Timing
+  startedAt       DateTime?
+  completedAt     DateTime?
+  durationMs      Int?
+
+  createdAt DateTime @default(now())
+
+  @@index([attemptId])
+  @@index([checkType])
+  @@map("kyc_verification_checks")
+}
+
+// Données extraites par OCR du document d'identité
+model KycExtractedData {
+  id              String                   @id @default(uuid())
+  attemptId       String                   @unique
+
+  // Informations extraites
+  documentNumber  String?                  // Numéro du document
+  firstName       String?                  // Prénom
+  lastName        String?                  // Nom
+  dateOfBirth     DateTime?                // Date de naissance
+  placeOfBirth    String?                  // Lieu de naissance
+  gender          String?                  // Sexe (M/F)
+  nationality     String?                  // Nationalité
+
+  // Dates du document
+  issueDate       DateTime?                // Date d'émission
+  expiryDate      DateTime?                // Date d'expiration
+  issuingAuthority String?                 // Autorité émettrice
+  issuingCountry  String?                  // Pays d'émission
+
+  // Adresse (si présente)
+  address         String?
+
+  // Confiance de l'extraction
+  extractionConfidence Float?              // Confiance globale de l'extraction (0-100)
+  fieldConfidences     Json?               // Confiance par champ {"firstName": 95.5, "lastName": 92.3, ...}
+
+  // Validation
+  isExpired       Boolean?                 // Document expiré ?
+  isValid         Boolean?                 // Format valide ?
+
+  createdAt DateTime @default(now())
+
+  @@map("kyc_extracted_data")
+}
+
+// Historique des notifications KYC envoyées
+model KycNotification {
+  id              String   @id @default(uuid())
+  supplierId      String
+
+  // Type de notification
+  notificationType String  // KYC_SUBMITTED, KYC_APPROVED, KYC_REJECTED, KYC_MANUAL_REVIEW, KYC_RESUBMIT_REQUIRED
+
+  // Contenu
+  title           String
+  message         String
+
+  // Méthodes de livraison
+  pushSent        Boolean  @default(false)
+  emailSent       Boolean  @default(false)
+  smsSent         Boolean  @default(false)
+
+  // Référence à la tentative
+  attemptId       String?
+
+  createdAt DateTime @default(now())
+
+  @@index([supplierId])
+  @@index([attemptId])
+  @@map("kyc_notifications")
+}

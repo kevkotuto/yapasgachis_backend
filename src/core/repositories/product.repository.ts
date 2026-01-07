@@ -178,6 +178,7 @@ export class ProductRepository {
 
   /**
    * Search products with filters
+   * @param nearbyFirst - Si true avec lat/lng, affiche d'abord les produits proches puis les autres
    */
   async search(params: {
     search?: string;
@@ -189,11 +190,13 @@ export class ProductRepository {
     city?: string;
     latitude?: number;
     longitude?: number;
-    radius?: number; // in km
+    radius?: number; // in km (ignored if nearbyFirst is true)
+    nearbyFirst?: boolean; // Show nearby products first, then others
+    nearbyRadius?: number; // Radius for "nearby" products (default 10km)
     expiresWithin?: number; // hours
     page?: number;
     limit?: number;
-    sortBy?: 'price' | 'discount' | 'expiry' | 'createdAt';
+    sortBy?: 'price' | 'discount' | 'expiry' | 'createdAt' | 'distance';
     sortOrder?: 'asc' | 'desc';
   }): Promise<{ products: Product[]; total: number }> {
     const {
@@ -207,6 +210,8 @@ export class ProductRepository {
       latitude,
       longitude,
       radius = 10,
+      nearbyFirst = false,
+      nearbyRadius = 10,
       expiresWithin,
       page = 1,
       limit = 20,
@@ -256,20 +261,14 @@ export class ProductRepository {
           orderBy = { createdAt: sortOrder };
       }
 
-      // If geolocation provided, filter by distance
+      // If geolocation provided, calculate distances
       let products: Product[];
       let total: number;
 
       if (latitude && longitude) {
-        // Fetch all matching products with supplier location
+        // Fetch all matching products with supplier and store location
         const allProducts = await prisma.product.findMany({
-          where: {
-            ...where,
-            supplier: {
-              latitude: { not: null },
-              longitude: { not: null },
-            },
-          },
+          where,
           include: {
             supplier: {
               include: {
@@ -285,6 +284,17 @@ export class ProductRepository {
                 },
               },
             },
+            store: {
+              select: {
+                id: true,
+                name: true,
+                latitude: true,
+                longitude: true,
+                address: true,
+                city: true,
+                commune: true,
+              },
+            },
             reviews: {
               select: {
                 rating: true,
@@ -293,37 +303,79 @@ export class ProductRepository {
           },
         });
 
-        // Calculate distance and filter
+        // Calculate distance using store coordinates if available, otherwise supplier
         const productsWithDistance = allProducts
           .map((product) => {
-            const distance = this.calculateDistance(
-              latitude,
-              longitude,
-              product.supplier.latitude,
-              product.supplier.longitude
-            );
+            // Priorité: coordonnées du store > coordonnées du supplier
+            const productLat = product.store?.latitude ?? product.supplier.latitude;
+            const productLng = product.store?.longitude ?? product.supplier.longitude;
+
+            // Si pas de coordonnées, distance = Infinity (sera affiché en dernier)
+            const distance =
+              productLat && productLng
+                ? this.calculateDistance(latitude, longitude, productLat, productLng)
+                : Infinity;
+
             return { ...product, distance };
-          })
-          .filter((product) => product.distance <= radius)
-          .sort((a, b) => {
-            if (sortBy === 'price')
-              return sortOrder === 'asc'
-                ? a.discountedPrice - b.discountedPrice
-                : b.discountedPrice - a.discountedPrice;
-            if (sortBy === 'discount') {
-              const aDiscount =
-                ((a.originalPrice - a.discountedPrice) / a.originalPrice) * 100;
-              const bDiscount =
-                ((b.originalPrice - b.discountedPrice) / b.originalPrice) * 100;
-              return sortOrder === 'asc'
-                ? aDiscount - bDiscount
-                : bDiscount - aDiscount;
-            }
-            return a.distance - b.distance;
           });
 
-        total = productsWithDistance.length;
-        products = productsWithDistance.slice(skip, skip + limit);
+        // Mode nearbyFirst: affiche les proches d'abord, puis les autres
+        // Mode normal (radius): filtre uniquement les produits dans le rayon
+        let sortedProducts: typeof productsWithDistance;
+
+        if (nearbyFirst) {
+          // Séparer produits proches et éloignés
+          const nearby = productsWithDistance.filter((p) => p.distance <= nearbyRadius);
+          const faraway = productsWithDistance.filter((p) => p.distance > nearbyRadius);
+
+          // Trier chaque groupe
+          const sortProducts = (arr: typeof productsWithDistance) => {
+            return arr.sort((a, b) => {
+              if (sortBy === 'distance') {
+                return sortOrder === 'asc' ? a.distance - b.distance : b.distance - a.distance;
+              }
+              if (sortBy === 'price') {
+                return sortOrder === 'asc'
+                  ? a.discountedPrice - b.discountedPrice
+                  : b.discountedPrice - a.discountedPrice;
+              }
+              if (sortBy === 'discount') {
+                const aDiscount = ((a.originalPrice - a.discountedPrice) / a.originalPrice) * 100;
+                const bDiscount = ((b.originalPrice - b.discountedPrice) / b.originalPrice) * 100;
+                return sortOrder === 'asc' ? aDiscount - bDiscount : bDiscount - aDiscount;
+              }
+              // Default: par distance pour les proches
+              return a.distance - b.distance;
+            });
+          };
+
+          // Proches triés par distance, puis éloignés triés par le critère demandé
+          sortedProducts = [...sortProducts(nearby), ...sortProducts(faraway)];
+          total = sortedProducts.length;
+        } else {
+          // Mode radius: filtrer uniquement les produits dans le rayon
+          sortedProducts = productsWithDistance
+            .filter((product) => product.distance <= radius)
+            .sort((a, b) => {
+              if (sortBy === 'distance') {
+                return sortOrder === 'asc' ? a.distance - b.distance : b.distance - a.distance;
+              }
+              if (sortBy === 'price') {
+                return sortOrder === 'asc'
+                  ? a.discountedPrice - b.discountedPrice
+                  : b.discountedPrice - a.discountedPrice;
+              }
+              if (sortBy === 'discount') {
+                const aDiscount = ((a.originalPrice - a.discountedPrice) / a.originalPrice) * 100;
+                const bDiscount = ((b.originalPrice - b.discountedPrice) / b.originalPrice) * 100;
+                return sortOrder === 'asc' ? aDiscount - bDiscount : bDiscount - aDiscount;
+              }
+              return a.distance - b.distance;
+            });
+          total = sortedProducts.length;
+        }
+
+        products = sortedProducts.slice(skip, skip + limit);
       } else {
         // No geolocation, use standard pagination
         [products, total] = await Promise.all([
@@ -342,6 +394,17 @@ export class ProductRepository {
                       commune: true,
                     },
                   },
+                },
+              },
+              store: {
+                select: {
+                  id: true,
+                  name: true,
+                  latitude: true,
+                  longitude: true,
+                  address: true,
+                  city: true,
+                  commune: true,
                 },
               },
               reviews: {
