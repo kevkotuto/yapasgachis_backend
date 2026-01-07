@@ -1,35 +1,25 @@
 /**
  * KYC AI Verification Types
  * Phase 12: AI-based identity verification system
- *
- * Note: Ces enums seront migrés vers Prisma quand la Phase 12 sera implémentée
  */
 
-// Types temporaires - seront remplacés par Prisma enums en Phase 12
-export enum IdCardType {
-  CNI = 'CNI',
-  PASSPORT = 'PASSPORT',
-  DRIVING_LICENSE = 'DRIVING_LICENSE',
-  RESIDENCE_PERMIT = 'RESIDENCE_PERMIT',
-}
+import type {
+  IdCardType as PrismaIdCardType,
+  KycCheckType as PrismaKycCheckType,
+  KycVerificationStatus as PrismaKycVerificationStatus,
+} from '@prisma/client';
 
-export enum KycCheckType {
-  DOCUMENT_OCR = 'DOCUMENT_OCR',
-  DOCUMENT_AUTHENTICITY = 'DOCUMENT_AUTHENTICITY',
-  FACE_COMPARISON = 'FACE_COMPARISON',
-  LIVENESS_DETECTION = 'LIVENESS_DETECTION',
-}
+// Re-export Prisma enums for use in the application
+export {
+  IdCardType,
+  KycCheckType,
+  KycVerificationStatus,
+} from '@prisma/client';
 
-export enum KycVerificationStatus {
-  PENDING = 'PENDING',
-  PROCESSING = 'PROCESSING',
-  AI_APPROVED = 'AI_APPROVED',
-  AI_REJECTED = 'AI_REJECTED',
-  MANUAL_REVIEW = 'MANUAL_REVIEW',
-  MANUALLY_APPROVED = 'MANUALLY_APPROVED',
-  MANUALLY_REJECTED = 'MANUALLY_REJECTED',
-  FAILED = 'FAILED',
-}
+// Type aliases for use in this file
+type IdCardType = PrismaIdCardType;
+type KycCheckType = PrismaKycCheckType;
+type KycVerificationStatus = PrismaKycVerificationStatus;
 
 // ==================== ENUMS ====================
 

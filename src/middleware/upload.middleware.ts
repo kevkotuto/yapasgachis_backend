@@ -277,3 +277,23 @@ export const cleanupOnError = (req: Request, res: any, next: any) => {
   });
   next();
 };
+
+/**
+ * KYC Upload Middleware
+ * Handles KYC document uploads with specific field names
+ * Phase 12: AI-based identity verification
+ */
+const kycUploadMulter = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB per file
+    files: 3, // Max 3 files (front, back, selfie)
+  },
+  fileFilter: fileFilter(ALLOWED_IMAGE_TYPES),
+});
+
+export const uploadKycDocuments = kycUploadMulter.fields([
+  { name: 'idCardFront', maxCount: 1 },
+  { name: 'idCardBack', maxCount: 1 },
+  { name: 'selfie', maxCount: 1 },
+]);

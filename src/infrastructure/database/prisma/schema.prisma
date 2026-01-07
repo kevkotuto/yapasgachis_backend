@@ -214,6 +214,23 @@ enum DealCategory {
   OTHER
 }
 
+// ==================== PHASE 13: STORE STAFF MANAGEMENT ====================
+
+enum StoreStaffRole {
+  OWNER           // Propriétaire - tous les droits
+  MANAGER         // Gérant - peut tout faire sauf supprimer le magasin/gérer le propriétaire
+  CASHIER         // Caissier - peut gérer les commandes
+  STOCK_CLERK     // Magasinier - peut gérer les produits/stock
+}
+
+enum StoreStaffInviteStatus {
+  PENDING         // Invitation envoyée
+  ACCEPTED        // Invitation acceptée
+  REJECTED        // Invitation refusée
+  EXPIRED         // Invitation expirée
+  REVOKED         // Invitation révoquée par le propriétaire
+}
+
 enum BookingStatus {
   PENDING
   CONFIRMED
@@ -289,6 +306,10 @@ model User {
 
   // Admin: Settings audit logs
   settingsAuditLogs      PlatformSettingsAudit[] @relation("SettingsAudit")
+
+  // Store Staff: employé dans des magasins
+  storeStaffMemberships  StoreStaff[] @relation("StoreStaffUser")
+  storeStaffInvitations  StoreStaff[] @relation("StoreStaffInviter")
 
   // Timestamps
   createdAt DateTime  @default(now())
@@ -452,6 +473,7 @@ model SupplierStore {
   products       Product[]       // Produits de ce magasin
   orders         Order[]         // Commandes de ce magasin
   deals          Deal[]          // Deals de ce magasin
+  staff          StoreStaff[]    // Personnel du magasin
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -461,6 +483,50 @@ model SupplierStore {
   @@index([city, commune])
   @@index([isActive])
   @@map("supplier_stores")
+}
+
+// Personnel d'un magasin (employés, gérants, etc.)
+model StoreStaff {
+  id        String          @id @default(uuid())
+  storeId   String
+  store     SupplierStore   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User            @relation("StoreStaffUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Rôle et statut
+  role      StoreStaffRole
+  isActive  Boolean         @default(true)
+
+  // Permissions granulaires (surcharge du rôle si nécessaire)
+  canManageProducts  Boolean @default(false)  // Créer/modifier/supprimer des produits
+  canManageOrders    Boolean @default(false)  // Voir et gérer les commandes
+  canViewStats       Boolean @default(false)  // Voir les statistiques du magasin
+  canManageStaff     Boolean @default(false)  // Inviter/supprimer du personnel
+  canManageDeals     Boolean @default(false)  // Créer/modifier des deals
+  canManageSettings  Boolean @default(false)  // Modifier les paramètres du magasin
+
+  // Invitation
+  invitedById   String?
+  invitedBy     User?           @relation("StoreStaffInviter", fields: [invitedById], references: [id])
+  invitedAt     DateTime        @default(now())
+  acceptedAt    DateTime?
+  inviteStatus  StoreStaffInviteStatus @default(PENDING)
+  inviteToken   String?         @unique  // Token pour accepter l'invitation
+  inviteExpiresAt DateTime?     // Expiration de l'invitation
+
+  // Métadonnées
+  notes         String?         // Notes sur l'employé
+  lastActiveAt  DateTime?       // Dernière activité
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([storeId, userId])
+  @@index([storeId])
+  @@index([userId])
+  @@index([inviteStatus])
+  @@index([role])
+  @@map("store_staff")
 }
 
 model Product {

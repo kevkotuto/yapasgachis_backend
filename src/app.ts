@@ -6,10 +6,12 @@ import adminAdvertisingRoutes from '@/api/v1/routes/admin-advertising.routes';
 import adminAssociationRoutes from '@/api/v1/routes/admin-association.routes';
 import adminDealRoutes from '@/api/v1/routes/admin-deal.routes';
 import adminDonationRoutes from '@/api/v1/routes/admin-donation.routes';
+import adminKycRoutes from '@/api/v1/routes/admin-kyc.routes';
 import adminSubscriptionRoutes from '@/api/v1/routes/admin-subscription.routes';
 import adminRoutes from '@/api/v1/routes/admin.routes';
 import adminSettingsRoutes from '@/api/v1/routes/admin-settings.routes';
 import advertisingRoutes from '@/api/v1/routes/advertising.routes';
+import kycRoutes from '@/api/v1/routes/kyc.routes';
 import associationDonationRoutes from '@/api/v1/routes/association-donation.routes';
 import associationRoutes from '@/api/v1/routes/association.routes';
 import authRoutes from '@/api/v1/routes/auth.routes';
@@ -24,6 +26,7 @@ import subscriptionRoutes from '@/api/v1/routes/subscription.routes';
 import supplierDealRoutes from '@/api/v1/routes/supplier-deal.routes';
 import supplierStoreRoutes from '@/api/v1/routes/supplier-store.routes';
 import supplierRoutes from '@/api/v1/routes/supplier.routes';
+import storeStaffRoutes from '@/api/v1/routes/store-staff.routes';
 import config from '@/config';
 import { initializeNotificationListeners } from '@/core/services/notification-listeners';
 import { setupSwagger } from '@/infrastructure/docs/swagger';
@@ -165,6 +168,13 @@ app.use(
   `/api/${config.app.apiVersion}/admin/advertising`,
   adminAdvertisingRoutes
 );
+
+// Phase 12: KYC AI Verification
+app.use(`/api/${config.app.apiVersion}/kyc`, kycRoutes);
+app.use(`/api/${config.app.apiVersion}/admin/kyc`, adminKycRoutes);
+
+// Phase 13: Store Staff Management
+app.use(`/api/${config.app.apiVersion}/staff`, storeStaffRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

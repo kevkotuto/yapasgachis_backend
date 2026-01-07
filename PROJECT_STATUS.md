@@ -1,6 +1,6 @@
 # YapaGachis Backend - État du Projet
 
-> **Dernière mise à jour** : 2026-01-06 (Phase 10 complétée - Déploiement & Post-Production)
+> **Dernière mise à jour** : 2026-01-07 (Phase 12 complétée - Vérification IA / KYC)
 
 ---
 
@@ -19,6 +19,8 @@
 | 8 | Publicité | ✅ Complet | 100% |
 | 9 | Production & Optimisation | ✅ Complet | 100% |
 | 10 | Déploiement & Post-Production | ✅ Complet | 100% |
+| 11 | Améliorations Admin & KYC | ✅ Complet | 100% |
+| 12 | Vérification IA / KYC | ✅ Complet | 100% |
 
 ---
 
@@ -1674,40 +1676,158 @@ npm run start:prod       # Démarrer en production
 
 ---
 
-## 🔮 PHASE 12 : VÉRIFICATION IA (Future)
+## ✅ PHASE 12 : VÉRIFICATION IA / KYC (Complété)
 
-### Fonctionnalités Prévues
+### Spécifications Système de Vérification IA
 
 #### Vérification Automatique KYC par IA
-- [ ] **OCR sur pièce d'identité**
+- ✅ **OCR sur pièce d'identité (AWS Textract)**
   - Extraction automatique des informations (nom, prénom, date de naissance)
   - Vérification de la validité du document (date d'expiration)
   - Détection des documents falsifiés
+  - Analyse de la qualité du document (luminosité, netteté, reflets)
 
-- [ ] **Reconnaissance faciale**
+- ✅ **Reconnaissance faciale (AWS Rekognition)**
   - Comparaison selfie vs photo de la pièce d'identité
   - Score de correspondance (0-100%)
   - Détection de liveness (anti-spoofing)
+  - Détection de multiples visages
 
-- [ ] **Workflow automatisé**
+- ✅ **Workflow automatisé**
   1. Fournisseur upload pièce d'identité (recto/verso) + selfie
-  2. IA extrait les informations et vérifie le document
-  3. IA compare le visage du selfie avec la photo ID
-  4. Si score > 80% → Vérification automatique
-  5. Si score 50-80% → Review manuel par admin
-  6. Si score < 50% → Rejet automatique
+  2. Job BullMQ créé pour traitement asynchrone
+  3. IA extrait les informations et vérifie le document
+  4. IA compare le visage du selfie avec la photo ID
+  5. Si score > 80% → Vérification automatique (AI_APPROVED)
+  6. Si score 50-80% → Review manuel par admin (MANUAL_REVIEW)
+  7. Si score < 50% → Rejet automatique (AI_REJECTED)
+  8. Notification envoyée au fournisseur
 
-#### Technologies Envisagées
-- **AWS Rekognition** : Reconnaissance faciale + comparaison
-- **AWS Textract** : OCR pour extraction de texte
-- **Google Cloud Vision** : Alternative à AWS
-- **Veriff / Onfido** : Solutions SaaS spécialisées KYC
+#### Architecture Multi-Provider
+- ✅ **AWS Rekognition** : Reconnaissance faciale + comparaison
+- ✅ **AWS Textract** : OCR pour extraction de texte
+- ✅ **Mock Provider** : Pour développement/tests sans API externes
+- ✅ **Factory Pattern** : Sélection dynamique du provider
 
-#### Intégration Prévue
-- Service `src/core/services/kyc-ai.service.ts`
-- Queue BullMQ pour traitement asynchrone
-- Webhook pour notification du résultat
-- Dashboard admin pour review manuel
+### Fichiers créés Phase 12
+
+#### Schéma Prisma (ajouts)
+- `KycVerificationStatus` enum - PENDING, PROCESSING, AI_APPROVED, AI_REJECTED, MANUAL_REVIEW, MANUALLY_APPROVED, MANUALLY_REJECTED, FAILED
+- `IdCardType` enum - CNI, PASSPORT, DRIVING_LICENSE, RESIDENCE_CARD
+- `KycCheckType` enum - DOCUMENT_OCR, DOCUMENT_VALIDITY, DOCUMENT_AUTHENTICITY, FACE_MATCH, LIVENESS_DETECTION
+- `KycVerificationAttempt` model - Tentatives de vérification avec scores
+- `KycVerificationCheck` model - Résultats détaillés par type de vérification
+- `KycExtractedData` model - Données extraites du document (MRZ, infos personnelles)
+- `KycNotification` model - Notifications KYC dédiées
+
+#### Types
+- `src/types/kyc.types.ts` - Types complets pour le système KYC (DTOs, résultats, jobs)
+
+#### Services de Vérification
+- `src/infrastructure/verification/aws-rekognition.service.ts` - Service AWS Rekognition complet
+- `src/infrastructure/verification/mock-verification.service.ts` - Mock pour dev/tests
+- `src/infrastructure/verification/verification-provider.service.ts` - Factory + orchestration
+
+#### Repository
+- `src/core/repositories/kyc.repository.ts` - CRUD KYC avec statistiques admin
+
+#### Service
+- `src/core/services/kyc.service.ts` - Business logic KYC (submit, process, review, stats)
+
+#### Queue (BullMQ)
+- `src/infrastructure/queue/queues/kyc.queue.ts` - Queues verification + notification
+- `src/infrastructure/queue/processors/kyc.processor.ts` - Workers pour traitement async
+
+#### Validators
+- `src/api/v1/validators/kyc.validator.ts` - Schémas Zod pour validation
+
+#### Controller
+- `src/api/v1/controllers/kyc.controller.ts` - Endpoints KYC
+
+#### Routes
+- `src/api/v1/routes/kyc.routes.ts` - Routes fournisseur
+- `src/api/v1/routes/admin-kyc.routes.ts` - Routes admin
+
+### Endpoints API Phase 12
+
+#### KYC Fournisseur
+- `POST /api/v1/kyc/submit` - Soumettre documents KYC (multipart: idCardFront, idCardBack, selfie)
+- `GET /api/v1/kyc/status` - Obtenir le statut de vérification KYC
+
+#### KYC Admin
+- `GET /api/v1/admin/kyc/pending` - Liste des vérifications en attente de review
+- `GET /api/v1/admin/kyc/attempts` - Liste de toutes les tentatives (avec filtres)
+- `GET /api/v1/admin/kyc/attempts/:attemptId` - Détails d'une tentative
+- `POST /api/v1/admin/kyc/attempts/:attemptId/review` - Approuver/rejeter manuellement
+- `GET /api/v1/admin/kyc/stats` - Statistiques globales KYC
+- `GET /api/v1/admin/kyc/queue-stats` - Statistiques des queues BullMQ
+
+### Configuration
+
+Ajout dans `src/config/index.ts` :
+```typescript
+kycVerification: {
+  enabled: true,
+  provider: 'aws-rekognition' | 'azure' | 'google' | 'mock',
+  autoApproveThreshold: 80,      // Score minimum pour approbation auto
+  manualReviewThreshold: 50,     // Score minimum pour review manuel
+  faceSimilarityThreshold: 80,   // Seuil de similarité faciale
+  livenessThreshold: 70,         // Seuil de détection liveness
+  maxAttemptsPerSupplier: 3,     // Tentatives max par fournisseur
+  processingTimeoutMs: 300000,   // Timeout traitement (5 min)
+  enableLivenessDetection: true,
+  enableDocumentAuthenticity: true,
+  supportedDocumentTypes: ['CNI', 'PASSPORT', 'DRIVING_LICENSE', 'RESIDENCE_CARD'],
+  webhookUrl: ''
+}
+```
+
+### Tâches Phase 12
+
+- [x] **Schéma Prisma**
+  - [x] Enums KycVerificationStatus, IdCardType, KycCheckType
+  - [x] Model KycVerificationAttempt
+  - [x] Model KycVerificationCheck
+  - [x] Model KycExtractedData
+  - [x] Model KycNotification
+
+- [x] **Types TypeScript**
+  - [x] DTOs pour soumission et résultats
+  - [x] Types pour jobs BullMQ
+  - [x] Types pour providers AI
+
+- [x] **Services de Vérification**
+  - [x] AWS Rekognition (face comparison, liveness)
+  - [x] AWS Textract (OCR)
+  - [x] Mock provider pour développement
+  - [x] Factory pattern pour sélection provider
+
+- [x] **Repository KYC**
+  - [x] CRUD tentatives de vérification
+  - [x] Statistiques admin
+  - [x] Filtres et pagination
+
+- [x] **Service KYC**
+  - [x] Soumission documents
+  - [x] Traitement vérification
+  - [x] Review admin
+  - [x] Statistiques
+
+- [x] **Queue BullMQ**
+  - [x] Queue de vérification
+  - [x] Queue de notifications
+  - [x] Processors avec retry
+
+- [x] **API Endpoints**
+  - [x] Routes fournisseur (submit, status)
+  - [x] Routes admin (pending, attempts, review, stats)
+  - [x] Validators Zod
+
+- [x] **Middleware Upload**
+  - [x] uploadKycDocuments pour multipart
+
+- [x] **Migration SQL**
+  - [x] Fichier migration créé
 
 ---
 

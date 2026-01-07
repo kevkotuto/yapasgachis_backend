@@ -27,7 +27,7 @@ import {
 import axios from 'axios';
 
 import config from '@config/index';
-import { logger } from '@infrastructure/monitoring/logger';
+import logger from '@infrastructure/monitoring/logger';
 import {
   DocumentOcrResult,
   FaceComparisonResult,
