@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 
+import { UserRole } from '@prisma/client';
+
 import {
   CreateAdvertiserProfileInput,
   UpdateAdvertiserProfileInput,
@@ -27,7 +29,7 @@ export class AdvertisingController {
    * POST /api/v1/advertising/profile
    */
   createProfile = asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const body = req.body as CreateAdvertiserProfileInput;
 
     const profile = await advertisingService.createProfile(
@@ -52,7 +54,7 @@ export class AdvertisingController {
    * GET /api/v1/advertising/profile
    */
   getMyProfile = asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
 
     const profile = await advertisingService.getProfile(userId);
 
@@ -68,10 +70,10 @@ export class AdvertisingController {
    */
   updateProfile = asyncHandler(
     async (
-      req: Request<{}, {}, UpdateAdvertiserProfileInput>,
+      req: Request & Request<{}, {}, UpdateAdvertiserProfileInput>,
       res: Response
     ) => {
-      const userId = req.user.id;
+      const userId = (req as any).user.id;
 
       const profile = await advertisingService.updateProfile(userId, req.body);
 
@@ -95,7 +97,7 @@ export class AdvertisingController {
    * POST /api/v1/advertising/campaigns
    */
   createCampaign = asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
     const body = req.body as CreateCampaignInput;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -121,8 +123,8 @@ export class AdvertisingController {
    * GET /api/v1/advertising/campaigns
    */
   getMyCampaigns = asyncHandler(
-    async (req: Request<{}, {}, {}, GetCampaignsQuery>, res: Response) => {
-      const userId = req.user.id;
+    async (req: Request & Request<{}, {}, {}, GetCampaignsQuery>, res: Response) => {
+      const userId = (req as any).user.id;
 
       const result = await advertisingService.getMyCampaigns(userId, req.query);
 
@@ -138,8 +140,8 @@ export class AdvertisingController {
    * GET /api/v1/advertising/campaigns/:id
    */
   getCampaign = asyncHandler(
-    async (req: Request<{ id: string }>, res: Response) => {
-      const userId = req.user.id;
+    async (req: Request & Request<{ id: string }>, res: Response) => {
+      const userId = (req as any).user.id;
       const { id } = req.params;
 
       const campaign = await advertisingService.getCampaign(id, userId);
@@ -157,10 +159,10 @@ export class AdvertisingController {
    */
   updateCampaign = asyncHandler(
     async (
-      req: Request<{ id: string }, {}, UpdateCampaignInput>,
+      req: Request & Request<{ id: string }, {}, UpdateCampaignInput>,
       res: Response
     ) => {
-      const userId = req.user.id;
+      const userId = (req as any).user.id;
       const { id } = req.params;
 
       const campaign = await advertisingService.updateCampaign(
@@ -187,8 +189,8 @@ export class AdvertisingController {
    * POST /api/v1/advertising/campaigns/:id/submit
    */
   submitCampaign = asyncHandler(
-    async (req: Request<{ id: string }>, res: Response) => {
-      const userId = req.user.id;
+    async (req: Request & Request<{ id: string }>, res: Response) => {
+      const userId = (req as any).user.id;
       const { id } = req.params;
 
       const campaign = await advertisingService.submitCampaignForApproval(
@@ -214,8 +216,8 @@ export class AdvertisingController {
    * POST /api/v1/advertising/campaigns/:id/pause
    */
   pauseCampaign = asyncHandler(
-    async (req: Request<{ id: string }>, res: Response) => {
-      const userId = req.user.id;
+    async (req: Request & Request<{ id: string }>, res: Response) => {
+      const userId = (req as any).user.id;
       const { id } = req.params;
 
       const campaign = await advertisingService.pauseCampaign(userId, id);
@@ -238,8 +240,8 @@ export class AdvertisingController {
    * POST /api/v1/advertising/campaigns/:id/resume
    */
   resumeCampaign = asyncHandler(
-    async (req: Request<{ id: string }>, res: Response) => {
-      const userId = req.user.id;
+    async (req: Request & Request<{ id: string }>, res: Response) => {
+      const userId = (req as any).user.id;
       const { id } = req.params;
 
       const campaign = await advertisingService.resumeCampaign(userId, id);
@@ -262,8 +264,8 @@ export class AdvertisingController {
    * DELETE /api/v1/advertising/campaigns/:id
    */
   deleteCampaign = asyncHandler(
-    async (req: Request<{ id: string }>, res: Response) => {
-      const userId = req.user.id;
+    async (req: Request & Request<{ id: string }>, res: Response) => {
+      const userId = (req as any).user.id;
       const { id } = req.params;
 
       await advertisingService.deleteCampaign(userId, id);
@@ -285,8 +287,8 @@ export class AdvertisingController {
    * GET /api/v1/advertising/campaigns/:id/stats
    */
   getCampaignStats = asyncHandler(
-    async (req: Request<{ id: string }>, res: Response) => {
-      const userId = req.user.id;
+    async (req: Request & Request<{ id: string }>, res: Response) => {
+      const userId = (req as any).user.id;
       const { id } = req.params;
 
       const stats = await advertisingService.getCampaignStats(userId, id);
@@ -322,7 +324,7 @@ export class AdvertisingController {
   trackClick = asyncHandler(
     async (req: Request<{ id: string }>, res: Response) => {
       const { id } = req.params;
-      const userId = req.user?.id;
+      const userId = (req as any).user?.id;
 
       await advertisingService.trackAdClick(id, userId);
 
@@ -390,8 +392,8 @@ export class AdvertisingController {
    * PATCH /api/v1/admin/advertising/campaigns/:id/approve
    */
   approveCampaign = asyncHandler(
-    async (req: Request<{ id: string }>, res: Response) => {
-      const adminId = req.user.id;
+    async (req: Request & Request<{ id: string }>, res: Response) => {
+      const adminId = (req as any).user.id;
       const { id } = req.params;
 
       const campaign = await advertisingService.approveCampaign(id, adminId);
@@ -415,10 +417,10 @@ export class AdvertisingController {
    */
   rejectCampaign = asyncHandler(
     async (
-      req: Request<{ id: string }, {}, RejectCampaignInput>,
+      req: Request & Request<{ id: string }, {}, RejectCampaignInput>,
       res: Response
     ) => {
-      const adminId = req.user.id;
+      const adminId = (req as any).user.id;
       const { id } = req.params;
       const { reason } = req.body;
 

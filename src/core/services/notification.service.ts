@@ -199,7 +199,7 @@ class NotificationService {
     const { read, type, page = 1, limit = 20 } = filters;
     const skip = (page - 1) * limit;
 
-    const where: Record<string, unknown> = {
+    const where: any = {
       userId,
       // Exclude expired notifications
       OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],

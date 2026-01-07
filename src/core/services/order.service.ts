@@ -691,22 +691,7 @@ export class OrderService {
       prisma.order.findMany({
         where,
         include: {
-          items: {
-            include: {
-              product: {
-                include: {
-                  supplier: {
-                    select: {
-                      id: true,
-                      businessName: true,
-                      address: true,
-                      acceptCashPayment: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
+          items: true,
           client: {
             select: {
               id: true,

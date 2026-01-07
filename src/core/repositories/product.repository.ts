@@ -222,7 +222,7 @@ export class ProductRepository {
     const skip = (page - 1) * limit;
 
     try {
-      const where: Prisma.ProductWhereInput = {
+      const where: any = {
         ...(search && {
           OR: [
             { title: { contains: search, mode: 'insensitive' } },
