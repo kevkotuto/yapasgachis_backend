@@ -2,13 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu } from 'lucide-react';
+import { Menu, BookOpen, Key, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { apiSections } from '@/lib/api-data';
-import * as Icons from 'lucide-react';
+import { getIcon } from '@/lib/icons';
 
 export function MobileNav() {
   const pathname = usePathname();
@@ -39,7 +39,7 @@ export function MobileNav() {
                 pathname === '/docs' && 'bg-accent'
               )}
             >
-              <Icons.BookOpen className="h-4 w-4" />
+              <BookOpen className="h-4 w-4" />
               Introduction
             </Link>
             <Link
@@ -49,7 +49,7 @@ export function MobileNav() {
                 pathname === '/docs/authentication' && 'bg-accent'
               )}
             >
-              <Icons.Key className="h-4 w-4" />
+              <Key className="h-4 w-4" />
               Authentification
             </Link>
             <Link
@@ -59,7 +59,7 @@ export function MobileNav() {
                 pathname === '/docs/roles' && 'bg-accent'
               )}
             >
-              <Icons.Users className="h-4 w-4" />
+              <Users className="h-4 w-4" />
               Roles Utilisateurs
             </Link>
           </div>
@@ -69,7 +69,7 @@ export function MobileNav() {
             </h4>
             <div className="space-y-1">
               {apiSections.map((section) => {
-                const IconComponent = (Icons as Record<string, React.ComponentType<{ className?: string }>>)[section.icon] || Icons.Circle;
+                const IconComponent = getIcon(section.icon);
                 return (
                   <Link
                     key={section.id}

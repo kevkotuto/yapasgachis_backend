@@ -2058,6 +2058,187 @@
       ]
     },
     {
+      "name": "KYC - Fournisseur",
+      "description": "Verification d'identite des fournisseurs",
+      "item": [
+        {
+          "name": "Submit KYC Documents",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/kyc/submit",
+            "header": [{"key": "Content-Type", "value": "multipart/form-data"}],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {"key": "documentType", "value": "ID_CARD", "type": "text"},
+                {"key": "documentNumber", "value": "SN1234567890", "type": "text"},
+                {"key": "businessRegistration", "value": "NINEA123456", "type": "text"},
+                {"key": "frontImage", "type": "file"},
+                {"key": "backImage", "type": "file"},
+                {"key": "selfieImage", "type": "file"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get KYC Status",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/kyc/status"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin - KYC",
+      "description": "Gestion des verifications KYC",
+      "item": [
+        {
+          "name": "Get KYC Statistics",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/kyc/stats"
+          }
+        },
+        {
+          "name": "Get Pending KYC Reviews",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/kyc/pending?page=1&limit=20"
+          }
+        },
+        {
+          "name": "Get All KYC Attempts",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/kyc/attempts?page=1&limit=20&status=PENDING"
+          }
+        },
+        {
+          "name": "Get KYC Attempt Details",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/kyc/attempts/:attemptId"
+          }
+        },
+        {
+          "name": "Review KYC Attempt (Approve/Reject)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/kyc/attempts/:attemptId/review",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"APPROVED\",\n  \"notes\": \"Documents valides et conformes\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Force Verify Supplier",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/kyc/suppliers/:supplierId/force-verify",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Verification manuelle effectuee en personne\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Request Document Resubmission",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/kyc/suppliers/:supplierId/request-resubmission",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Document illisible ou floute\",\n  \"requiredDocuments\": [\"ID_CARD\", \"SELFIE\"]\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Store Staff - Personnel",
+      "description": "Systeme de gestion du personnel des magasins",
+      "item": [
+        {
+          "name": "Get My Stores (as Staff)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/staff/my-stores"
+          }
+        },
+        {
+          "name": "Get My Invitations",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/staff/invitations"
+          }
+        },
+        {
+          "name": "Accept Invitation",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/staff/invitations/:token/accept"
+          }
+        },
+        {
+          "name": "Reject Invitation",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/staff/invitations/:token/reject"
+          }
+        },
+        {
+          "name": "Invite Staff to Store",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/staff/stores/:storeId/invite",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"staff@example.com\",\n  \"role\": \"MANAGER\",\n  \"permissions\": [\"manage_products\", \"view_orders\", \"manage_stock\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "List Store Staff",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/staff/stores/:storeId"
+          }
+        },
+        {
+          "name": "Get My Role on Store",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/staff/stores/:storeId/my-role"
+          }
+        },
+        {
+          "name": "Update Staff Member",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/staff/stores/:storeId/members/:userId",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"CASHIER\",\n  \"permissions\": [\"view_orders\", \"process_orders\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "Remove Staff Member",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/staff/stores/:storeId/members/:userId"
+          }
+        }
+      ]
+    },
+    {
       "name": "Health",
       "description": "Verification sante API",
       "item": [

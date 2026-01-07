@@ -2,11 +2,14 @@ export interface Endpoint {
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   path: string;
   description: string;
+  details?: string;
   auth?: boolean;
   roles?: string[];
   body?: Record<string, unknown>;
   query?: Record<string, string>;
   response?: string;
+  responseExample?: Record<string, unknown>;
+  notes?: string[];
 }
 
 export interface ApiSection {
@@ -24,22 +27,69 @@ export const apiSections: ApiSection[] = [
     description: 'Inscription, connexion et gestion des comptes utilisateurs',
     icon: 'Lock',
     endpoints: [
-      { method: 'POST', path: '/auth/register', description: 'Inscription nouvel utilisateur', body: { phoneNumber: '+221771234567', password: 'Password123!', firstName: 'Mamadou', lastName: 'Diallo', role: 'CLIENT' } },
-      { method: 'POST', path: '/auth/login', description: 'Connexion par telephone', body: { phoneNumber: '+221771234567', password: 'Password123!' } },
-      { method: 'POST', path: '/auth/login/email', description: 'Connexion par email (envoie OTP)', body: { email: 'user@example.com', password: 'Password123!' } },
-      { method: 'POST', path: '/auth/verify-otp', description: 'Verifier OTP telephone', body: { phoneNumber: '+221771234567', code: '123456', purpose: 'registration' } },
-      { method: 'POST', path: '/auth/verify-email-otp', description: 'Verifier OTP email', body: { email: 'user@example.com', code: '123456', purpose: 'login' } },
-      { method: 'POST', path: '/auth/resend-otp', description: 'Renvoyer OTP telephone' },
-      { method: 'POST', path: '/auth/resend-email-otp', description: 'Renvoyer OTP email' },
-      { method: 'POST', path: '/auth/forgot-password', description: 'Demander reinitialisation mot de passe' },
-      { method: 'POST', path: '/auth/reset-password', description: 'Reinitialiser mot de passe avec OTP' },
-      { method: 'POST', path: '/auth/change-password', description: 'Changer mot de passe', auth: true },
-      { method: 'POST', path: '/auth/refresh-token', description: 'Rafraichir le token' },
-      { method: 'POST', path: '/auth/logout', description: 'Deconnexion', auth: true },
-      { method: 'GET', path: '/auth/me', description: 'Obtenir profil utilisateur connecte', auth: true },
-      { method: 'POST', path: '/auth/google', description: 'Connexion avec Google' },
-      { method: 'POST', path: '/auth/google/link', description: 'Lier compte Google', auth: true },
-      { method: 'POST', path: '/auth/google/unlink', description: 'Delier compte Google', auth: true },
+      {
+        method: 'POST',
+        path: '/auth/register',
+        description: 'Inscription nouvel utilisateur',
+        details: 'Cree un nouveau compte utilisateur. Un OTP est envoye par SMS pour verification. Les roles disponibles sont: CLIENT, SUPPLIER_FOOD, SUPPLIER_DEALS, ASSOCIATION, ADVERTISER.',
+        body: { phoneNumber: '+221771234567', password: 'Password123!', firstName: 'Mamadou', lastName: 'Diallo', role: 'CLIENT' },
+        notes: ['Le mot de passe doit contenir au moins 8 caracteres avec majuscule, minuscule et chiffre', 'Le numero de telephone doit etre au format international (+XXX...)'],
+        responseExample: { success: true, message: 'OTP envoye', data: { userId: 'uuid', phoneNumber: '+221771234567' } }
+      },
+      {
+        method: 'POST',
+        path: '/auth/login',
+        description: 'Connexion par telephone',
+        details: 'Authentifie un utilisateur avec son numero de telephone et mot de passe. Retourne un access token (15min) et refresh token (7 jours).',
+        body: { phoneNumber: '+221771234567', password: 'Password123!' },
+        responseExample: { success: true, data: { accessToken: 'jwt...', refreshToken: 'jwt...', user: { id: 'uuid', firstName: 'Mamadou', role: 'CLIENT' } } }
+      },
+      {
+        method: 'POST',
+        path: '/auth/login/email',
+        description: 'Connexion par email (envoie OTP)',
+        details: 'Premiere etape de connexion par email. Verifie le mot de passe puis envoie un OTP par email pour double authentification.',
+        body: { email: 'user@example.com', password: 'Password123!' },
+        notes: ['L\'OTP est valide pendant 10 minutes', 'Utilisez /auth/verify-email-otp pour completer la connexion']
+      },
+      {
+        method: 'POST',
+        path: '/auth/verify-otp',
+        description: 'Verifier OTP telephone',
+        details: 'Verifie le code OTP envoye par SMS. Le parametre "purpose" indique le contexte: registration, login, password_reset.',
+        body: { phoneNumber: '+221771234567', code: '123456', purpose: 'registration' }
+      },
+      {
+        method: 'POST',
+        path: '/auth/verify-email-otp',
+        description: 'Verifier OTP email',
+        details: 'Complete l\'authentification par email en verifiant l\'OTP. Retourne les tokens d\'acces apres verification.',
+        body: { email: 'user@example.com', code: '123456', purpose: 'login' }
+      },
+      { method: 'POST', path: '/auth/resend-otp', description: 'Renvoyer OTP telephone', details: 'Renvoie un nouveau code OTP par SMS. Limite a 3 tentatives par heure.' },
+      { method: 'POST', path: '/auth/resend-email-otp', description: 'Renvoyer OTP email', details: 'Renvoie un nouveau code OTP par email. Limite a 3 tentatives par heure.' },
+      { method: 'POST', path: '/auth/forgot-password', description: 'Demander reinitialisation mot de passe', details: 'Envoie un OTP pour reinitialiser le mot de passe. Peut etre envoye par SMS ou email selon le parametre fourni.' },
+      { method: 'POST', path: '/auth/reset-password', description: 'Reinitialiser mot de passe avec OTP', details: 'Definit un nouveau mot de passe apres verification de l\'OTP recu.' },
+      { method: 'POST', path: '/auth/change-password', description: 'Changer mot de passe', auth: true, details: 'Permet a l\'utilisateur connecte de changer son mot de passe. Necessite l\'ancien mot de passe.' },
+      {
+        method: 'POST',
+        path: '/auth/refresh-token',
+        description: 'Rafraichir le token',
+        details: 'Genere un nouveau access token a partir du refresh token. Utilisez cette route quand l\'access token expire.',
+        notes: ['Le refresh token doit etre passe dans le header Authorization ou dans le body', 'Un nouveau refresh token est egalement genere']
+      },
+      { method: 'POST', path: '/auth/logout', description: 'Deconnexion', auth: true, details: 'Invalide la session active et les tokens associes.' },
+      {
+        method: 'GET',
+        path: '/auth/me',
+        description: 'Obtenir profil utilisateur connecte',
+        auth: true,
+        details: 'Retourne les informations completes de l\'utilisateur connecte incluant son role, profil et preferences.',
+        responseExample: { success: true, data: { id: 'uuid', firstName: 'Mamadou', lastName: 'Diallo', phoneNumber: '+221771234567', role: 'CLIENT', isVerified: true } }
+      },
+      { method: 'POST', path: '/auth/google', description: 'Connexion avec Google', details: 'Authentification OAuth2 avec Google. Envoyez l\'idToken obtenu du SDK Google.' },
+      { method: 'POST', path: '/auth/google/link', description: 'Lier compte Google', auth: true, details: 'Associe un compte Google a un compte existant pour permettre la connexion via Google.' },
+      { method: 'POST', path: '/auth/google/unlink', description: 'Delier compte Google', auth: true, details: 'Dissocie le compte Google du compte utilisateur.' },
     ]
   },
   {
@@ -48,17 +98,96 @@ export const apiSections: ApiSection[] = [
     description: 'Gestion des produits anti-gaspillage',
     icon: 'Package',
     endpoints: [
-      { method: 'GET', path: '/products/search', description: 'Rechercher des produits', query: { query: 'legumes', category: 'FOOD', minPrice: '100', maxPrice: '5000' } },
-      { method: 'GET', path: '/products/expiring-soon', description: 'Produits bientot expires' },
-      { method: 'GET', path: '/products/trending', description: 'Produits tendances' },
-      { method: 'GET', path: '/products/:id', description: 'Obtenir un produit par ID' },
-      { method: 'GET', path: '/products/my-products', description: 'Mes produits (fournisseur)', auth: true, roles: ['SUPPLIER_FOOD', 'SUPPLIER_DEALS'] },
-      { method: 'POST', path: '/products', description: 'Creer un produit', auth: true, roles: ['SUPPLIER_FOOD', 'SUPPLIER_DEALS'], body: { name: 'Panier legumes', originalPrice: 5000, discountedPrice: 2500, quantity: 10, category: 'VEGETABLES' } },
-      { method: 'PUT', path: '/products/:id', description: 'Modifier un produit', auth: true, roles: ['SUPPLIER_FOOD', 'SUPPLIER_DEALS'] },
-      { method: 'DELETE', path: '/products/:id', description: 'Supprimer un produit', auth: true, roles: ['SUPPLIER_FOOD', 'SUPPLIER_DEALS'] },
-      { method: 'PATCH', path: '/products/:id/stock', description: 'Mettre a jour le stock', auth: true, roles: ['SUPPLIER_FOOD', 'SUPPLIER_DEALS'] },
-      { method: 'POST', path: '/products/:id/images', description: 'Uploader images produit', auth: true, roles: ['SUPPLIER_FOOD', 'SUPPLIER_DEALS'] },
-      { method: 'DELETE', path: '/products/:id/images', description: 'Supprimer image produit', auth: true, roles: ['SUPPLIER_FOOD', 'SUPPLIER_DEALS'] },
+      {
+        method: 'GET',
+        path: '/products/search',
+        description: 'Rechercher des produits',
+        details: 'Recherche de produits avec filtres multiples. Supporte la pagination et le tri par prix, date ou popularite. Les resultats sont ordonnes par pertinence.',
+        query: { query: 'legumes', category: 'FOOD', minPrice: '100', maxPrice: '5000', page: '1', limit: '20', sortBy: 'createdAt', sortOrder: 'desc' },
+        notes: ['Categories disponibles: VEGETABLES, FRUITS, BAKERY, DAIRY, MEAT, BEVERAGES, PREPARED, OTHER', 'Les coordonnees (lat/lng) permettent de trier par distance']
+      },
+      {
+        method: 'GET',
+        path: '/products/expiring-soon',
+        description: 'Produits bientot expires',
+        details: 'Liste les produits dont la date de peremption approche (dans les 48h). Ideal pour les promotions de derniere minute.',
+        notes: ['Les produits sont tries par date d\'expiration croissante']
+      },
+      {
+        method: 'GET',
+        path: '/products/trending',
+        description: 'Produits tendances',
+        details: 'Retourne les produits les plus populaires bases sur les ventes recentes, vues et favoris.'
+      },
+      {
+        method: 'GET',
+        path: '/products/:id',
+        description: 'Obtenir un produit par ID',
+        details: 'Retourne les details complets d\'un produit incluant le fournisseur, magasin, images et avis.',
+        responseExample: { success: true, data: { id: 'uuid', name: 'Panier legumes', originalPrice: 5000, discountedPrice: 2500, discount: 50, quantity: 10, supplier: { name: 'Bio Market' } } }
+      },
+      {
+        method: 'GET',
+        path: '/products/my-products',
+        description: 'Mes produits (fournisseur)',
+        auth: true,
+        roles: ['SUPPLIER_FOOD', 'SUPPLIER_DEALS'],
+        details: 'Liste tous les produits du fournisseur connecte avec leurs statistiques de vente.'
+      },
+      {
+        method: 'POST',
+        path: '/products',
+        description: 'Creer un produit',
+        auth: true,
+        roles: ['SUPPLIER_FOOD', 'SUPPLIER_DEALS'],
+        details: 'Cree un nouveau produit. Le nombre de produits est limite selon le plan d\'abonnement du fournisseur.',
+        body: { name: 'Panier legumes', originalPrice: 5000, discountedPrice: 2500, quantity: 10, category: 'VEGETABLES', expiresAt: '2025-01-15T23:59:59Z', storeId: 'uuid' },
+        notes: ['Le prix reduit doit etre inferieur au prix original', 'La date d\'expiration est obligatoire', 'Un magasin doit etre associe au produit']
+      },
+      {
+        method: 'PUT',
+        path: '/products/:id',
+        description: 'Modifier un produit',
+        auth: true,
+        roles: ['SUPPLIER_FOOD', 'SUPPLIER_DEALS'],
+        details: 'Met a jour les informations d\'un produit existant. Seul le proprietaire peut modifier.'
+      },
+      {
+        method: 'DELETE',
+        path: '/products/:id',
+        description: 'Supprimer un produit',
+        auth: true,
+        roles: ['SUPPLIER_FOOD', 'SUPPLIER_DEALS'],
+        details: 'Supprime definitivement un produit. Impossible si des commandes sont en cours.',
+        notes: ['La suppression est irreversible', 'Les produits avec commandes actives ne peuvent pas etre supprimes']
+      },
+      {
+        method: 'PATCH',
+        path: '/products/:id/stock',
+        description: 'Mettre a jour le stock',
+        auth: true,
+        roles: ['SUPPLIER_FOOD', 'SUPPLIER_DEALS'],
+        details: 'Modifie rapidement la quantite disponible d\'un produit.',
+        body: { quantity: 5 }
+      },
+      {
+        method: 'POST',
+        path: '/products/:id/images',
+        description: 'Uploader images produit',
+        auth: true,
+        roles: ['SUPPLIER_FOOD', 'SUPPLIER_DEALS'],
+        details: 'Ajoute des images au produit. Maximum 5 images par produit. Formats acceptes: JPG, PNG, WebP.',
+        notes: ['Taille max: 5MB par image', 'Les images sont optimisees automatiquement']
+      },
+      {
+        method: 'DELETE',
+        path: '/products/:id/images',
+        description: 'Supprimer image produit',
+        auth: true,
+        roles: ['SUPPLIER_FOOD', 'SUPPLIER_DEALS'],
+        details: 'Supprime une image specifique du produit.',
+        body: { imageUrl: 'https://...' }
+      },
     ]
   },
   {
@@ -67,16 +196,90 @@ export const apiSections: ApiSection[] = [
     description: 'Creation et gestion des commandes',
     icon: 'ShoppingCart',
     endpoints: [
-      { method: 'GET', path: '/orders/payments/providers', description: 'Obtenir les moyens de paiement' },
-      { method: 'POST', path: '/orders', description: 'Creer une commande', auth: true, roles: ['CLIENT'], body: { items: [{ productId: 'uuid', quantity: 2 }], paymentProvider: 'WAVE', deliveryType: 'PICKUP' } },
-      { method: 'GET', path: '/orders/my-orders', description: 'Mes commandes (client)', auth: true, roles: ['CLIENT'] },
-      { method: 'GET', path: '/orders/statistics', description: 'Statistiques commandes client', auth: true, roles: ['CLIENT'] },
-      { method: 'GET', path: '/orders/supplier-orders', description: 'Commandes recues (fournisseur)', auth: true, roles: ['SUPPLIER_FOOD', 'SUPPLIER_DEALS'] },
-      { method: 'GET', path: '/orders/supplier-statistics', description: 'Statistiques fournisseur', auth: true, roles: ['SUPPLIER_FOOD', 'SUPPLIER_DEALS'] },
-      { method: 'GET', path: '/orders/:id', description: 'Obtenir une commande', auth: true },
-      { method: 'POST', path: '/orders/:id/cancel', description: 'Annuler une commande', auth: true, roles: ['CLIENT'] },
-      { method: 'PATCH', path: '/orders/:id/status', description: 'Mettre a jour statut', auth: true, roles: ['SUPPLIER_FOOD', 'SUPPLIER_DEALS'] },
-      { method: 'GET', path: '/orders/payments/:transactionId/status', description: 'Verifier statut paiement', auth: true },
+      {
+        method: 'GET',
+        path: '/orders/payments/providers',
+        description: 'Obtenir les moyens de paiement',
+        details: 'Liste les methodes de paiement disponibles: Wave, Orange Money, MTN Mobile Money, carte bancaire.',
+        responseExample: { success: true, data: [{ id: 'WAVE', name: 'Wave', enabled: true, fees: '1%' }, { id: 'ORANGE_MONEY', name: 'Orange Money', enabled: true }] }
+      },
+      {
+        method: 'POST',
+        path: '/orders',
+        description: 'Creer une commande',
+        auth: true,
+        roles: ['CLIENT'],
+        details: 'Cree une nouvelle commande. Le paiement est initie automatiquement. Le systeme utilise un escrow pour securiser la transaction.',
+        body: { items: [{ productId: 'uuid', quantity: 2 }], paymentProvider: 'WAVE', deliveryType: 'PICKUP' },
+        notes: ['deliveryType: PICKUP (retrait sur place) ou DELIVERY (livraison)', 'Les frais Wave (1%) et les frais de transfert (1%) sont calcules automatiquement', 'Le paiement est place en escrow jusqu\'a confirmation de reception']
+      },
+      {
+        method: 'GET',
+        path: '/orders/my-orders',
+        description: 'Mes commandes (client)',
+        auth: true,
+        roles: ['CLIENT'],
+        details: 'Historique des commandes du client avec statut et details de paiement.',
+        query: { status: 'PENDING', page: '1', limit: '10' }
+      },
+      {
+        method: 'GET',
+        path: '/orders/statistics',
+        description: 'Statistiques commandes client',
+        auth: true,
+        roles: ['CLIENT'],
+        details: 'Resume des commandes: total depense, nombre de commandes, economies realisees grace aux promotions.'
+      },
+      {
+        method: 'GET',
+        path: '/orders/supplier-orders',
+        description: 'Commandes recues (fournisseur)',
+        auth: true,
+        roles: ['SUPPLIER_FOOD', 'SUPPLIER_DEALS'],
+        details: 'Liste des commandes recues par le fournisseur avec filtres par statut et date.'
+      },
+      {
+        method: 'GET',
+        path: '/orders/supplier-statistics',
+        description: 'Statistiques fournisseur',
+        auth: true,
+        roles: ['SUPPLIER_FOOD', 'SUPPLIER_DEALS'],
+        details: 'Tableau de bord: ventes, revenus, commandes par periode, produits populaires.',
+        responseExample: { success: true, data: { totalOrders: 150, totalRevenue: 750000, avgOrderValue: 5000, topProducts: [] } }
+      },
+      {
+        method: 'GET',
+        path: '/orders/:id',
+        description: 'Obtenir une commande',
+        auth: true,
+        details: 'Details complets d\'une commande: produits, client/fournisseur, statut paiement, historique.'
+      },
+      {
+        method: 'POST',
+        path: '/orders/:id/cancel',
+        description: 'Annuler une commande',
+        auth: true,
+        roles: ['CLIENT'],
+        details: 'Annule une commande en attente. Le remboursement est automatique si le paiement a ete effectue.',
+        notes: ['Impossible d\'annuler une commande deja preparee', 'Le remboursement est credite sous 24-48h']
+      },
+      {
+        method: 'PATCH',
+        path: '/orders/:id/status',
+        description: 'Mettre a jour statut',
+        auth: true,
+        roles: ['SUPPLIER_FOOD', 'SUPPLIER_DEALS'],
+        details: 'Change le statut de la commande: PENDING -> CONFIRMED -> PREPARING -> READY -> COMPLETED.',
+        body: { status: 'READY' },
+        notes: ['Le client est notifie a chaque changement de statut', 'Le passage a COMPLETED declenche le paiement au fournisseur']
+      },
+      {
+        method: 'GET',
+        path: '/orders/payments/:transactionId/status',
+        description: 'Verifier statut paiement',
+        auth: true,
+        details: 'Verifie l\'etat d\'une transaction de paiement en temps reel.'
+      },
     ]
   },
   {
@@ -396,6 +599,48 @@ export const apiSections: ApiSection[] = [
       { method: 'GET', path: '/admin/settings/wave', description: 'Parametres Wave', auth: true, roles: ['ADMIN', 'SUPER_ADMIN'] },
       { method: 'GET', path: '/admin/settings/features', description: 'Feature flags', auth: true, roles: ['ADMIN', 'SUPER_ADMIN'] },
       { method: 'POST', path: '/admin/settings/invalidate-cache', description: 'Invalider cache', auth: true, roles: ['SUPER_ADMIN'] },
+    ]
+  },
+  {
+    id: 'kyc',
+    title: 'KYC Fournisseur',
+    description: 'Verification d\'identite des fournisseurs',
+    icon: 'FileCheck',
+    endpoints: [
+      { method: 'POST', path: '/kyc/submit', description: 'Soumettre documents KYC', auth: true, roles: ['SUPPLIER_FOOD', 'SUPPLIER_DEALS'], body: { documentType: 'ID_CARD', documentNumber: 'SN123456', businessRegistration: 'NINEA123' } },
+      { method: 'GET', path: '/kyc/status', description: 'Obtenir statut KYC', auth: true, roles: ['SUPPLIER_FOOD', 'SUPPLIER_DEALS'] },
+    ]
+  },
+  {
+    id: 'admin-kyc',
+    title: 'Admin KYC',
+    description: 'Gestion des verifications KYC',
+    icon: 'ShieldCheck',
+    endpoints: [
+      { method: 'GET', path: '/admin/kyc/stats', description: 'Statistiques KYC', auth: true, roles: ['ADMIN', 'SUPER_ADMIN'] },
+      { method: 'GET', path: '/admin/kyc/pending', description: 'KYC en attente de review', auth: true, roles: ['ADMIN', 'SUPER_ADMIN'] },
+      { method: 'GET', path: '/admin/kyc/attempts', description: 'Toutes les tentatives KYC', auth: true, roles: ['ADMIN', 'SUPER_ADMIN'] },
+      { method: 'GET', path: '/admin/kyc/attempts/:attemptId', description: 'Details tentative KYC', auth: true, roles: ['ADMIN', 'SUPER_ADMIN'] },
+      { method: 'POST', path: '/admin/kyc/attempts/:attemptId/review', description: 'Approuver/rejeter KYC', auth: true, roles: ['ADMIN', 'SUPER_ADMIN'], body: { decision: 'APPROVED', notes: 'Documents valides' } },
+      { method: 'POST', path: '/admin/kyc/suppliers/:supplierId/force-verify', description: 'Verification forcee', auth: true, roles: ['ADMIN', 'SUPER_ADMIN'] },
+      { method: 'POST', path: '/admin/kyc/suppliers/:supplierId/request-resubmission', description: 'Demander resoumission', auth: true, roles: ['ADMIN', 'SUPER_ADMIN'], body: { reason: 'Document illisible', requiredDocuments: ['ID_CARD'] } },
+    ]
+  },
+  {
+    id: 'store-staff',
+    title: 'Gestion du Personnel',
+    description: 'Systeme de gestion du personnel des magasins',
+    icon: 'UserCog',
+    endpoints: [
+      { method: 'GET', path: '/staff/my-stores', description: 'Magasins ou je suis staff', auth: true },
+      { method: 'GET', path: '/staff/invitations', description: 'Mes invitations en attente', auth: true },
+      { method: 'POST', path: '/staff/invitations/:token/accept', description: 'Accepter une invitation', auth: true },
+      { method: 'POST', path: '/staff/invitations/:token/reject', description: 'Refuser une invitation', auth: true },
+      { method: 'POST', path: '/staff/stores/:storeId/invite', description: 'Inviter un staff', auth: true, roles: ['SUPPLIER_FOOD', 'SUPPLIER_DEALS'], body: { email: 'staff@example.com', role: 'MANAGER', permissions: ['manage_products', 'view_orders'] } },
+      { method: 'GET', path: '/staff/stores/:storeId', description: 'Liste du personnel', auth: true, roles: ['SUPPLIER_FOOD', 'SUPPLIER_DEALS'] },
+      { method: 'GET', path: '/staff/stores/:storeId/my-role', description: 'Mon role sur ce magasin', auth: true },
+      { method: 'PATCH', path: '/staff/stores/:storeId/members/:userId', description: 'Modifier un membre', auth: true, roles: ['SUPPLIER_FOOD', 'SUPPLIER_DEALS'] },
+      { method: 'DELETE', path: '/staff/stores/:storeId/members/:userId', description: 'Retirer un membre', auth: true, roles: ['SUPPLIER_FOOD', 'SUPPLIER_DEALS'] },
     ]
   },
 ];

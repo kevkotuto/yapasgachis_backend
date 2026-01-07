@@ -155,7 +155,13 @@ export const APP_CONSTANTS = {
   },
 
   REGEX: {
-    PHONE: /^(\+225|225)?[0-9]{8,10}$/,
+    // Pan-African phone regex: accepts international format with common African country codes
+    // Includes: +221 (Senegal), +225 (Côte d'Ivoire), +223 (Mali), +226 (Burkina Faso),
+    // +227 (Niger), +228 (Togo), +229 (Benin), +233 (Ghana), +234 (Nigeria),
+    // +237 (Cameroon), +241 (Gabon), +242 (Congo), +243 (DRC), +254 (Kenya),
+    // +255 (Tanzania), +256 (Uganda), +212 (Morocco), +213 (Algeria), +216 (Tunisia),
+    // +20 (Egypt), +27 (South Africa), etc.
+    PHONE: /^\+?[0-9]{8,15}$/,
     EMAIL: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
     PASSWORD:
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
