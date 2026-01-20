@@ -9,6 +9,7 @@ const queueOptions: QueueOptions = {
   connection: {
     host: config.queue.redis.host,
     port: config.queue.redis.port,
+    password: config.redis.password,
   },
   defaultJobOptions: {
     attempts: 3,

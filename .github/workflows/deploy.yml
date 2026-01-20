@@ -2,7 +2,7 @@ name: Deploy Pipeline
 
 on:
   push:
-    branches: [production]
+    branches: [main, master, production]
   workflow_dispatch:
     inputs:
       environment:
@@ -34,7 +34,7 @@ jobs:
         run: npm ci
 
       - name: Generate Prisma Client
-        run: npx prisma generate
+        run: npx prisma generate --schema=./src/infrastructure/database/prisma/schema.prisma
 
       - name: Run linter
         run: npm run lint || true
@@ -46,45 +46,19 @@ jobs:
     name: Deploy to Production
     needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/production' || github.event_name == 'workflow_dispatch'
     environment:
       name: production
       url: https://api.yapasgachis.com
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Deploy to production server
-        uses: appleboy/ssh-action@v1.0.0
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.PRODUCTION_HOST }}
-          username: ${{ secrets.PRODUCTION_USER }}
-          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
-            cd /var/www/yapasgachis
-
-            # Pull latest changes
-            git fetch origin production
-            git reset --hard origin/production
-
-            # Install dependencies
-            npm ci --production=false
-
-            # Generate Prisma client
-            npx prisma generate
-
-            # Build TypeScript
-            npx tsc -p tsconfig.build.json --noEmitOnError false || true
-
-            # Run database migrations
-            npx prisma db push --accept-data-loss
-
-            # Restart PM2 process
-            pm2 restart yapasgachis-api --update-env
-
-            # Save PM2 process list
-            pm2 save
+            /opt/scripts/deploy/deploy-yapasgachis.sh
 
       - name: Health check
         run: |

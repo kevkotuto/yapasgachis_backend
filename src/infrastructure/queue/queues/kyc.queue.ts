@@ -15,6 +15,7 @@ import { KycVerificationJobData, KycNotificationJobData } from '@/types/kyc.type
 const connection = {
   host: config.queue.redis.host,
   port: config.queue.redis.port,
+  password: config.redis.password,
 };
 
 // KYC Verification Queue
