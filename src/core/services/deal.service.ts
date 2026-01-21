@@ -4,6 +4,8 @@ import {
   DealStatus,
   DealCategory,
   BookingStatus,
+  NotificationType,
+  NotificationPriority,
 } from '@prisma/client';
 
 import dealBookingRepository, {
@@ -14,7 +16,9 @@ import dealRepository, {
 } from '@/core/repositories/deal.repository';
 import supplierStoreRepository from '@/core/repositories/supplier-store.repository';
 import supplierRepository from '@/core/repositories/supplier.repository';
+import notificationService from '@/core/services/notification.service';
 import subscriptionService from '@/core/services/subscription.service';
+import { prisma } from '@/infrastructure/database/prisma';
 import logger from '@/infrastructure/monitoring/logger';
 import { AppError } from '@/middleware/error-handler.middleware';
 import { generateRandomCode } from '@/utils/helpers';
@@ -862,7 +866,24 @@ export class DealService {
         supplierId: deal.supplierId,
       });
 
-      // TODO: Send notification to supplier
+      // Send notification to supplier
+      const supplier = await prisma.supplierProfile.findUnique({
+        where: { id: deal.supplierId },
+        select: { userId: true },
+      });
+
+      if (supplier) {
+        await notificationService.create({
+          userId: supplier.userId,
+          type: NotificationType.DEAL,
+          title: 'Deal approuvé',
+          message: `Votre deal "${deal.title}" a été approuvé et est maintenant visible sur la plateforme.`,
+          priority: NotificationPriority.NORMAL,
+          sendPush: true,
+          sendEmail: false,
+          data: { dealId, type: 'deal_approved' },
+        });
+      }
 
       return updated;
     } catch (error) {
@@ -911,7 +932,24 @@ export class DealService {
         reason,
       });
 
-      // TODO: Send notification to supplier
+      // Send notification to supplier
+      const supplier = await prisma.supplierProfile.findUnique({
+        where: { id: deal.supplierId },
+        select: { userId: true },
+      });
+
+      if (supplier) {
+        await notificationService.create({
+          userId: supplier.userId,
+          type: NotificationType.DEAL,
+          title: 'Deal refusé',
+          message: `Votre deal "${deal.title}" a été refusé. Raison: ${reason}`,
+          priority: NotificationPriority.HIGH,
+          sendPush: true,
+          sendEmail: true,
+          data: { dealId, type: 'deal_rejected', reason },
+        });
+      }
 
       return updated;
     } catch (error) {

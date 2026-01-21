@@ -3,9 +3,12 @@ import {
   StoreStaffRole,
   StoreStaffInviteStatus,
   User,
+  NotificationType,
+  NotificationPriority,
 } from '@prisma/client';
 import crypto from 'crypto';
 
+import notificationService from '@/core/services/notification.service';
 import { prisma } from '@/infrastructure/database/prisma';
 import logger from '@/infrastructure/monitoring/logger';
 import { AppError } from '@/middleware/error-handler.middleware';
@@ -288,7 +291,22 @@ export class StoreStaffService {
       role,
     });
 
-    // TODO: Envoyer une notification à l'utilisateur invité
+    // Send notification to invited user
+    const store = await prisma.supplierStore.findUnique({
+      where: { id: storeId },
+      select: { name: true },
+    });
+
+    await notificationService.create({
+      userId: userToInvite.id,
+      type: NotificationType.SYSTEM,
+      title: 'Invitation reçue',
+      message: `Vous avez été invité à rejoindre l'équipe du magasin "${store?.name || 'Inconnu'}" en tant que ${role}.`,
+      priority: NotificationPriority.HIGH,
+      sendPush: true,
+      sendEmail: true,
+      data: { storeId, inviteToken, role, type: 'staff_invitation' },
+    });
 
     return staff;
   }

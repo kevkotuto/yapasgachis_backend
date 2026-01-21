@@ -2,7 +2,7 @@ import {
   NotificationType,
   NotificationPriority,
   DeviceType,
-} from '@/utils/enums';
+} from '@prisma/client';
 
 // ==================== NOTIFICATION ====================
 
@@ -255,18 +255,36 @@ export const NotificationCategoryMap: Record<
   // Product alerts
   [NotificationType.NEW_PRODUCT_NEARBY]: 'productAlerts',
   [NotificationType.PRODUCT_EXPIRING_SOON]: 'productAlerts',
+  [NotificationType.PRODUCT_APPROVED]: 'productAlerts',
+  [NotificationType.PRODUCT_REJECTED]: 'productAlerts',
+  [NotificationType.PRODUCT]: 'productAlerts',
 
-  // Promotions
+  // Promotions / Deals
   [NotificationType.DEAL_BOOKING_CONFIRMED]: 'promotions',
   [NotificationType.DEAL_BOOKING_REMINDER]: 'promotions',
+  [NotificationType.DEAL_APPROVED]: 'promotions',
+  [NotificationType.DEAL_REJECTED]: 'promotions',
+  [NotificationType.DEAL]: 'promotions',
   [NotificationType.PROMOTION_ALERT]: 'promotions',
 
   // Donations
   [NotificationType.DONATION_CONFIRMED]: 'orderUpdates',
 
-  // System
+  // System & Campaigns
   [NotificationType.SUBSCRIPTION_EXPIRING]: 'systemAnnouncements',
   [NotificationType.CAMPAIGN_APPROVED]: 'systemAnnouncements',
+  [NotificationType.CAMPAIGN_REJECTED]: 'systemAnnouncements',
   [NotificationType.SYSTEM_ANNOUNCEMENT]: 'systemAnnouncements',
+  [NotificationType.SYSTEM]: 'systemAnnouncements',
   [NotificationType.WELCOME]: 'systemAnnouncements',
+
+  // Supplier & KYC
+  [NotificationType.SUPPLIER_VERIFIED]: 'systemAnnouncements',
+  [NotificationType.SUPPLIER_REJECTED]: 'systemAnnouncements',
+  [NotificationType.KYC_VERIFIED]: 'systemAnnouncements',
+  [NotificationType.KYC_REJECTED]: 'systemAnnouncements',
+  [NotificationType.KYC_PENDING]: 'systemAnnouncements',
+
+  // Staff
+  [NotificationType.STAFF_INVITATION]: 'systemAnnouncements',
 };

@@ -1,7 +1,8 @@
-import { AdFormat, CampaignStatus, UserRole } from '@prisma/client';
+import { AdFormat, CampaignStatus, UserRole, NotificationType, NotificationPriority } from '@prisma/client';
 
 import advertiserRepository from '@/core/repositories/advertiser.repository';
 import analyticsService from '@/core/services/analytics.service';
+import notificationService from '@/core/services/notification.service';
 import { prisma } from '@/infrastructure/database/prisma';
 import logger from '@/infrastructure/monitoring/logger';
 import { AppError } from '@/utils/helpers';
@@ -532,7 +533,24 @@ export class AdvertisingService {
       adminId,
     });
 
-    // TODO: Send notification to advertiser
+    // Send notification to advertiser
+    const advertiser = await prisma.advertiserProfile.findUnique({
+      where: { id: campaign.advertiserId },
+      select: { userId: true },
+    });
+
+    if (advertiser) {
+      await notificationService.create({
+        userId: advertiser.userId,
+        type: NotificationType.SYSTEM,
+        title: 'Campagne approuvée',
+        message: `Votre campagne publicitaire "${campaign.name}" a été approuvée et est maintenant active.`,
+        priority: NotificationPriority.NORMAL,
+        sendPush: true,
+        sendEmail: true,
+        data: { campaignId, type: 'campaign_approved' },
+      });
+    }
 
     return updatedCampaign;
   }
@@ -568,7 +586,24 @@ export class AdvertisingService {
       reason,
     });
 
-    // TODO: Send notification to advertiser
+    // Send notification to advertiser
+    const advertiser = await prisma.advertiserProfile.findUnique({
+      where: { id: campaign.advertiserId },
+      select: { userId: true },
+    });
+
+    if (advertiser) {
+      await notificationService.create({
+        userId: advertiser.userId,
+        type: NotificationType.SYSTEM,
+        title: 'Campagne refusée',
+        message: `Votre campagne publicitaire "${campaign.name}" a été refusée. Raison: ${reason}`,
+        priority: NotificationPriority.HIGH,
+        sendPush: true,
+        sendEmail: true,
+        data: { campaignId, type: 'campaign_rejected', reason },
+      });
+    }
 
     return updatedCampaign;
   }

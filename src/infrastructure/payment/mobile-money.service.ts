@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+
 import axios from 'axios';
 
 import config from '@/config';
@@ -411,24 +413,312 @@ export class MobileMoneyService {
     }
   }
 
+  /**
+   * Verify Wave callback
+   * Wave sends webhook with signature in Wave-Signature header
+   */
   private async verifyWaveCallback(data: any): Promise<PaymentResponse> {
-    // TODO: Implement Wave callback verification
-    throw new AppError(501, 'Wave callback not implemented');
+    try {
+      const { payload, signature } = data;
+
+      // Verify signature if webhook secret is configured
+      if (config.payment.wave.webhookSecret && signature) {
+        const expectedSignature = crypto
+          .createHmac('sha256', config.payment.wave.webhookSecret)
+          .update(typeof payload === 'string' ? payload : JSON.stringify(payload))
+          .digest('hex');
+
+        if (!crypto.timingSafeEqual(
+          Buffer.from(signature),
+          Buffer.from(expectedSignature)
+        )) {
+          throw new AppError(401, 'Invalid Wave webhook signature', 'INVALID_SIGNATURE');
+        }
+      }
+
+      const webhookData = typeof payload === 'string' ? JSON.parse(payload) : payload;
+
+      // Handle different Wave webhook event types
+      const eventType = webhookData.type;
+      const eventData = webhookData.data;
+
+      let status: PaymentStatus;
+      switch (eventType) {
+        case 'checkout.session.completed':
+          status = eventData.payment_status === 'succeeded'
+            ? PaymentStatus.SUCCESS
+            : PaymentStatus.FAILED;
+          break;
+        case 'payout.completed':
+          status = PaymentStatus.SUCCESS;
+          break;
+        case 'payout.failed':
+          status = PaymentStatus.FAILED;
+          break;
+        default:
+          status = PaymentStatus.PENDING;
+      }
+
+      const response: PaymentResponse = {
+        transactionId: eventData.id || eventData.transaction_id,
+        status,
+        amount: parseFloat(eventData.amount),
+        currency: eventData.currency || 'XOF',
+        provider: MobileMoneyProvider.WAVE,
+        message: status === PaymentStatus.SUCCESS
+          ? 'Paiement Wave confirmé'
+          : `Statut Wave: ${eventType}`,
+        providerReference: eventData.client_reference,
+      };
+
+      // Update cache
+      await this.cachePaymentStatus(response.transactionId, response);
+
+      logger.info('Wave callback verified', {
+        eventType,
+        transactionId: response.transactionId,
+        status: response.status,
+      });
+
+      return response;
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      logger.error('Wave callback verification failed', { error: (error as Error).message });
+      throw new AppError(400, 'Erreur de vérification du callback Wave', 'WAVE_CALLBACK_ERROR');
+    }
   }
 
+  /**
+   * Verify Orange Money callback
+   * Orange Money sends notification via webhook with transaction details
+   */
   private async verifyOrangeCallback(data: any): Promise<PaymentResponse> {
-    // TODO: Implement Orange Money callback verification
-    throw new AppError(501, 'Orange Money callback not implemented');
+    try {
+      const {
+        notif_token,
+        status: omStatus,
+        txnid,
+        amount,
+        order_id,
+        pay_token,
+      } = data;
+
+      // In production, verify the notification token with Orange API
+      if (config.app.env === 'production' && config.payment.orangeMoney.apiKey) {
+        // Verify transaction status with Orange Money API
+        const verifyResponse = await axios.get(
+          `${config.payment.orangeMoney.apiUrl}/v1/webpayment/${pay_token}`,
+          {
+            headers: {
+              Authorization: `Bearer ${config.payment.orangeMoney.apiKey}`,
+            },
+          }
+        );
+
+        const verifiedStatus = verifyResponse.data.status;
+        if (verifiedStatus !== omStatus) {
+          throw new AppError(400, 'Statut de transaction non vérifié', 'STATUS_MISMATCH');
+        }
+      }
+
+      // Map Orange Money status to our status
+      let status: PaymentStatus;
+      switch (omStatus?.toUpperCase()) {
+        case 'SUCCESS':
+        case 'SUCCESSFUL':
+        case 'COMPLETED':
+          status = PaymentStatus.SUCCESS;
+          break;
+        case 'FAILED':
+        case 'CANCELLED':
+        case 'EXPIRED':
+          status = PaymentStatus.FAILED;
+          break;
+        case 'PENDING':
+        case 'INITIATED':
+          status = PaymentStatus.PENDING;
+          break;
+        default:
+          status = PaymentStatus.PENDING;
+      }
+
+      const response: PaymentResponse = {
+        transactionId: txnid || `OM_${Date.now()}`,
+        status,
+        amount: parseFloat(amount) || 0,
+        currency: 'XOF',
+        provider: MobileMoneyProvider.ORANGE,
+        message: status === PaymentStatus.SUCCESS
+          ? 'Paiement Orange Money confirmé'
+          : `Statut Orange Money: ${omStatus}`,
+        providerReference: order_id || pay_token,
+      };
+
+      // Update cache
+      await this.cachePaymentStatus(response.transactionId, response);
+
+      logger.info('Orange Money callback verified', {
+        transactionId: response.transactionId,
+        status: response.status,
+        originalStatus: omStatus,
+      });
+
+      return response;
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      logger.error('Orange Money callback verification failed', { error: (error as Error).message });
+      throw new AppError(400, 'Erreur de vérification du callback Orange Money', 'ORANGE_CALLBACK_ERROR');
+    }
   }
 
+  /**
+   * Verify MTN Mobile Money callback
+   * MTN MoMo API sends webhook with X-Reference-Id and X-Target-Environment headers
+   */
   private async verifyMTNCallback(data: any): Promise<PaymentResponse> {
-    // TODO: Implement MTN callback verification
-    throw new AppError(501, 'MTN callback not implemented');
+    try {
+      const {
+        externalId,
+        amount,
+        currency,
+        status: mtnStatus,
+        financialTransactionId,
+        referenceId,
+        reason,
+      } = data;
+
+      // In production, verify with MTN API
+      if (config.app.env === 'production' && config.payment.mtnMoney.apiKey) {
+        const verifyResponse = await axios.get(
+          `${config.payment.mtnMoney.apiUrl}/collection/v1_0/requesttopay/${referenceId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${config.payment.mtnMoney.apiKey}`,
+              'X-Target-Environment': config.app.env === 'production' ? 'mtncameroon' : 'sandbox',
+              'Ocp-Apim-Subscription-Key': config.payment.mtnMoney.userId,
+            },
+          }
+        );
+
+        const verifiedStatus = verifyResponse.data.status;
+        if (verifiedStatus !== mtnStatus) {
+          logger.warn('MTN status mismatch', { expected: mtnStatus, received: verifiedStatus });
+        }
+      }
+
+      // Map MTN status to our status
+      let status: PaymentStatus;
+      switch (mtnStatus?.toUpperCase()) {
+        case 'SUCCESSFUL':
+          status = PaymentStatus.SUCCESS;
+          break;
+        case 'FAILED':
+          status = PaymentStatus.FAILED;
+          break;
+        case 'PENDING':
+          status = PaymentStatus.PENDING;
+          break;
+        case 'REJECTED':
+          status = PaymentStatus.CANCELLED;
+          break;
+        default:
+          status = PaymentStatus.PENDING;
+      }
+
+      const response: PaymentResponse = {
+        transactionId: financialTransactionId || referenceId || `MTN_${Date.now()}`,
+        status,
+        amount: parseFloat(amount) || 0,
+        currency: currency || 'XOF',
+        provider: MobileMoneyProvider.MTN,
+        message: status === PaymentStatus.SUCCESS
+          ? 'Paiement MTN Mobile Money confirmé'
+          : reason || `Statut MTN: ${mtnStatus}`,
+        providerReference: externalId || referenceId,
+      };
+
+      // Update cache
+      await this.cachePaymentStatus(response.transactionId, response);
+
+      logger.info('MTN Mobile Money callback verified', {
+        transactionId: response.transactionId,
+        status: response.status,
+        originalStatus: mtnStatus,
+      });
+
+      return response;
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      logger.error('MTN callback verification failed', { error: (error as Error).message });
+      throw new AppError(400, 'Erreur de vérification du callback MTN', 'MTN_CALLBACK_ERROR');
+    }
   }
 
+  /**
+   * Verify Moov Money callback
+   * Moov Money sends payment notification via webhook
+   */
   private async verifyMoovCallback(data: any): Promise<PaymentResponse> {
-    // TODO: Implement Moov Money callback verification
-    throw new AppError(501, 'Moov Money callback not implemented');
+    try {
+      const {
+        transaction_id,
+        status: moovStatus,
+        amount,
+        currency,
+        reference,
+        merchant_reference,
+        message,
+      } = data;
+
+      // Map Moov status to our status
+      let status: PaymentStatus;
+      switch (moovStatus?.toUpperCase()) {
+        case 'SUCCESS':
+        case 'SUCCESSFUL':
+        case 'COMPLETED':
+        case 'APPROVED':
+          status = PaymentStatus.SUCCESS;
+          break;
+        case 'FAILED':
+        case 'DECLINED':
+        case 'CANCELLED':
+          status = PaymentStatus.FAILED;
+          break;
+        case 'PENDING':
+        case 'PROCESSING':
+          status = PaymentStatus.PENDING;
+          break;
+        default:
+          status = PaymentStatus.PENDING;
+      }
+
+      const response: PaymentResponse = {
+        transactionId: transaction_id || reference || `MOOV_${Date.now()}`,
+        status,
+        amount: parseFloat(amount) || 0,
+        currency: currency || 'XOF',
+        provider: MobileMoneyProvider.MOOV,
+        message: status === PaymentStatus.SUCCESS
+          ? 'Paiement Moov Money confirmé'
+          : message || `Statut Moov: ${moovStatus}`,
+        providerReference: merchant_reference || reference,
+      };
+
+      // Update cache
+      await this.cachePaymentStatus(response.transactionId, response);
+
+      logger.info('Moov Money callback verified', {
+        transactionId: response.transactionId,
+        status: response.status,
+        originalStatus: moovStatus,
+      });
+
+      return response;
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      logger.error('Moov callback verification failed', { error: (error as Error).message });
+      throw new AppError(400, 'Erreur de vérification du callback Moov', 'MOOV_CALLBACK_ERROR');
+    }
   }
 
   /**

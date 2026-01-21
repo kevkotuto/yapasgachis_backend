@@ -1,5 +1,6 @@
-import { UserRole, UserStatus, ProductStatus, Prisma } from '@prisma/client';
+import { UserRole, UserStatus, ProductStatus, Prisma, NotificationType, NotificationPriority } from '@prisma/client';
 
+import notificationService from '@/core/services/notification.service';
 import { prisma } from '@/infrastructure/database/prisma';
 import logger from '@/infrastructure/monitoring/logger';
 import { AppError } from '@/utils/helpers';
@@ -404,7 +405,17 @@ export class AdminService {
       adminId,
     });
 
-    // TODO: Send notification to supplier
+    // Send notification to supplier
+    await notificationService.create({
+      userId: supplier.userId,
+      type: NotificationType.SYSTEM,
+      title: 'Compte vérifié',
+      message: 'Félicitations ! Votre compte fournisseur a été vérifié. Vous pouvez maintenant commencer à vendre vos produits.',
+      priority: NotificationPriority.HIGH,
+      sendPush: true,
+      sendEmail: true,
+      data: { supplierId, type: 'supplier_verified' },
+    });
 
     return updatedSupplier;
   }
@@ -437,7 +448,17 @@ export class AdminService {
       adminId,
     });
 
-    // TODO: Send notification to supplier
+    // Send notification to supplier
+    await notificationService.create({
+      userId: supplier.userId,
+      type: NotificationType.SYSTEM,
+      title: 'Vérification refusée',
+      message: `Votre demande de vérification a été refusée. Raison: ${reason}. Veuillez corriger les informations et soumettre à nouveau.`,
+      priority: NotificationPriority.HIGH,
+      sendPush: true,
+      sendEmail: true,
+      data: { supplierId, type: 'supplier_rejected', reason },
+    });
 
     return updatedSupplier;
   }
@@ -641,7 +662,17 @@ export class AdminService {
       adminId,
     });
 
-    // TODO: Send notification to supplier
+    // Send notification to supplier
+    await notificationService.create({
+      userId: product.supplier.userId,
+      type: NotificationType.PRODUCT,
+      title: 'Produit approuvé',
+      message: `Votre produit "${product.title}" a été approuvé et est maintenant visible sur la plateforme.`,
+      priority: NotificationPriority.NORMAL,
+      sendPush: true,
+      sendEmail: false,
+      data: { productId, type: 'product_approved' },
+    });
 
     return updatedProduct;
   }
@@ -671,7 +702,17 @@ export class AdminService {
       adminId,
     });
 
-    // TODO: Send notification to supplier with reason
+    // Send notification to supplier with reason
+    await notificationService.create({
+      userId: product.supplier.userId,
+      type: NotificationType.PRODUCT,
+      title: 'Produit refusé',
+      message: `Votre produit "${product.title}" a été refusé. Raison: ${reason}`,
+      priority: NotificationPriority.HIGH,
+      sendPush: true,
+      sendEmail: true,
+      data: { productId, type: 'product_rejected', reason },
+    });
 
     return updatedProduct;
   }

@@ -16,6 +16,7 @@ import UserRepository from '@/core/repositories/user.repository';
 import eventService, { AppEvent } from '@/core/services/event.service';
 import { prisma } from '@/infrastructure/database/prisma';
 import logger from '@/infrastructure/monitoring/logger';
+import pdfService from '@/infrastructure/pdf/pdf.service';
 import { AppError } from '@/middleware/error-handler.middleware';
 
 /**
@@ -702,9 +703,45 @@ export class DonationService {
         );
       }
 
-      // TODO: Generate actual PDF receipt
-      // For now, return a placeholder
-      const receiptUrl = `/receipts/donation-${donationId}.pdf`;
+      // Get full donation details with relations
+      const donationWithRelations = await prisma.donation.findUnique({
+        where: { id: donationId },
+        include: {
+          donor: true,
+          association: {
+            include: {
+              user: true,
+            },
+          },
+          product: true,
+        },
+      });
+
+      if (!donationWithRelations) {
+        throw new AppError(404, 'Don non trouvé', 'DONATION_NOT_FOUND');
+      }
+
+      // Generate receipt number
+      const receiptNumber = `REC-${Date.now().toString(36).toUpperCase()}-${donationId.slice(-4).toUpperCase()}`;
+
+      // Generate PDF receipt
+      const receiptUrl = await pdfService.createDonationReceipt({
+        donationId,
+        donorName: `${donationWithRelations.donor.firstName || ''} ${donationWithRelations.donor.lastName || ''}`.trim() || 'Donateur',
+        donorEmail: donationWithRelations.donor.email || undefined,
+        donorPhone: donationWithRelations.donor.phoneNumber || undefined,
+        donationType: donation.type as 'FOOD' | 'FINANCIAL',
+        amount: donation.amount || undefined,
+        currency: donation.currency || 'XOF',
+        quantity: donation.quantity || undefined,
+        unit: donation.unit || undefined,
+        productName: donationWithRelations.product?.title,
+        associationName: donationWithRelations.association.name,
+        associationAddress: donationWithRelations.association.address || undefined,
+        donationDate: donation.createdAt,
+        completedDate: donation.updatedAt,
+        receiptNumber,
+      });
 
       await this.donationRepo.generateReceipt(donationId, receiptUrl);
 
@@ -756,9 +793,52 @@ export class DonationService {
         );
       }
 
-      // TODO: Generate actual PDF certificate
-      // For now, return a placeholder
-      const certificateUrl = `/certificates/donation-${donationId}.pdf`;
+      // Get full donation details with relations
+      const donationWithRelations = await prisma.donation.findUnique({
+        where: { id: donationId },
+        include: {
+          donor: true,
+          association: {
+            include: {
+              user: true,
+            },
+          },
+          product: true,
+        },
+      });
+
+      if (!donationWithRelations) {
+        throw new AppError(404, 'Don non trouvé', 'DONATION_NOT_FOUND');
+      }
+
+      // Generate certificate number
+      const certificateNumber = `CERT-${Date.now().toString(36).toUpperCase()}-${donationId.slice(-4).toUpperCase()}`;
+
+      // Calculate impact description
+      let impactDescription: string | undefined;
+      if (donation.type === DonationType.FOOD) {
+        impactDescription = `Ce don a permis de sauver ${donation.quantity || 0} ${donation.unit || 'unités'} de nourriture du gaspillage.`;
+      } else {
+        const formattedAmount = new Intl.NumberFormat('fr-FR').format(donation.amount || 0);
+        impactDescription = `Ce don de ${formattedAmount} FCFA contribue directement à la lutte contre le gaspillage alimentaire.`;
+      }
+
+      // Generate PDF certificate
+      const certificateUrl = await pdfService.createDonationCertificate({
+        donationId,
+        donorName: `${donationWithRelations.donor.firstName || ''} ${donationWithRelations.donor.lastName || ''}`.trim() || 'Donateur',
+        donationType: donation.type as 'FOOD' | 'FINANCIAL',
+        amount: donation.amount || undefined,
+        currency: donation.currency || 'XOF',
+        quantity: donation.quantity || undefined,
+        unit: donation.unit || undefined,
+        productName: donationWithRelations.product?.title,
+        associationName: donationWithRelations.association.name,
+        associationLogo: donationWithRelations.association.logo || undefined,
+        donationDate: donation.createdAt,
+        certificateNumber,
+        impactDescription,
+      });
 
       await this.donationRepo.generateCertificate(donationId, certificateUrl);
 
