@@ -80,8 +80,7 @@ export class AwsRekognitionService {
         ],
       });
 
-      const analyzeIdResult =
-        await this.textractClient.send(analyzeIdCommand);
+      const analyzeIdResult = await this.textractClient.send(analyzeIdCommand);
 
       // Parse identity documents
       const extractedFields = this.parseIdentityDocuments(
@@ -97,7 +96,8 @@ export class AwsRekognitionService {
         .map((f) => f!.confidence);
       const avgConfidence =
         confidenceValues.length > 0
-          ? confidenceValues.reduce((a, b) => a + b, 0) / confidenceValues.length
+          ? confidenceValues.reduce((a, b) => a + b, 0) /
+            confidenceValues.length
           : 0;
 
       logger.info('Document OCR extraction completed', {
@@ -155,9 +155,8 @@ export class AwsRekognitionService {
         QualityFilter: 'AUTO',
       });
 
-      const compareResult = await this.rekognitionClient.send(
-        compareFacesCommand
-      );
+      const compareResult =
+        await this.rekognitionClient.send(compareFacesCommand);
 
       // Get face details for quality assessment
       const sourceFaceDetails = await this.detectFaces(idCardBuffer);
@@ -349,9 +348,7 @@ export class AwsRekognitionService {
       const checksPassed = Object.values(checks).filter(Boolean).length;
       const confidence = (checksPassed / Object.keys(checks).length) * 100;
       const isAuthentic =
-        confidence >= 75 &&
-        checks.formatValid &&
-        checks.expiryValid;
+        confidence >= 75 && checks.formatValid && checks.expiryValid;
 
       logger.info('Document authenticity analysis completed', {
         confidence,
@@ -474,8 +471,7 @@ export class AwsRekognitionService {
         const quality = face.Quality || {};
 
         return {
-          overall:
-            ((quality.Brightness || 50) + (quality.Sharpness || 50)) / 2,
+          overall: ((quality.Brightness || 50) + (quality.Sharpness || 50)) / 2,
           brightness: quality.Brightness || 50,
           sharpness: quality.Sharpness || 50,
           glare: 100 - (quality.Brightness || 50), // Approximation
@@ -515,8 +511,7 @@ export class AwsRekognitionService {
     }
 
     const hasDriverLicenseFields =
-      fields.endorsements !== undefined ||
-      fields.state !== undefined;
+      fields.endorsements !== undefined || fields.state !== undefined;
     if (hasDriverLicenseFields) {
       return 'DRIVING_LICENSE';
     }

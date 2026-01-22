@@ -84,6 +84,15 @@ interface Config {
       username: string;
     };
   };
+  whatsapp: {
+    enabled: boolean;
+    preferOverSms: boolean;
+    evolutionApi: {
+      baseUrl: string;
+      apiKey: string;
+      instanceName: string;
+    };
+  };
   firebase: {
     projectId: string;
     clientEmail: string;
@@ -285,6 +294,15 @@ const config: Config = {
     africasTalking: {
       apiKey: process.env.AFRICASTALKING_API_KEY || '',
       username: process.env.AFRICASTALKING_USERNAME || '',
+    },
+  },
+  whatsapp: {
+    enabled: process.env.WHATSAPP_ENABLED === 'true',
+    preferOverSms: process.env.WHATSAPP_PREFER_OVER_SMS !== 'false', // Default to true
+    evolutionApi: {
+      baseUrl: process.env.EVOLUTION_API_URL || 'http://localhost:8080',
+      apiKey: process.env.EVOLUTION_API_KEY || '',
+      instanceName: process.env.EVOLUTION_INSTANCE_NAME || 'yapasgachis',
     },
   },
   firebase: {

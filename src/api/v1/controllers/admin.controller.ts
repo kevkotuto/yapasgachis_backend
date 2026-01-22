@@ -739,7 +739,11 @@ export class AdminController {
       const adminId = req.user.id;
       const { reason } = req.body;
 
-      const supplier = await adminService.rejectSupplierKyc(id, reason, adminId);
+      const supplier = await adminService.rejectSupplierKyc(
+        id,
+        reason,
+        adminId
+      );
 
       logger.info('Supplier KYC rejected via admin API', {
         supplierId: id,

@@ -201,8 +201,7 @@ export class KycRepository {
     });
 
     const processingDurationMs = attempt?.processingStartedAt
-      ? processingCompletedAt.getTime() -
-        attempt.processingStartedAt.getTime()
+      ? processingCompletedAt.getTime() - attempt.processingStartedAt.getTime()
       : undefined;
 
     return prisma.kycVerificationAttempt.update({

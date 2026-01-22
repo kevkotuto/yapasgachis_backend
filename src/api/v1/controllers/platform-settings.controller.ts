@@ -34,7 +34,11 @@ export const updateSettings = async (req: Request, res: Response) => {
   const adminId = req.user!.id;
   const { reason, ...updates } = req.body;
 
-  const settings = await platformSettingsService.updateSettings(updates, adminId, reason);
+  const settings = await platformSettingsService.updateSettings(
+    updates,
+    adminId,
+    reason
+  );
 
   // Masquer les champs techniques
   const { id, updatedById, createdAt, updatedAt, ...publicSettings } = settings;

@@ -160,7 +160,8 @@ export class MockVerificationService {
     if (!checks.formatValid) warnings.push('Document format issues detected');
     if (!checks.securityFeaturesDetected)
       warnings.push('Some security features not detected');
-    if (!checks.noTamperingDetected) warnings.push('Possible tampering detected');
+    if (!checks.noTamperingDetected)
+      warnings.push('Possible tampering detected');
     if (!checks.expiryValid) warnings.push('Document has expired');
 
     const passedChecks = Object.values(checks).filter(Boolean).length;

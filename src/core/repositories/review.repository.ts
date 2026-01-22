@@ -470,6 +470,62 @@ export class ReviewRepository {
       throw error;
     }
   }
+
+  /**
+   * Get deal reviews (all reviews for a deal)
+   */
+  async getDealReviews(
+    dealId: string,
+    page = 1,
+    limit = 10
+  ): Promise<{ reviews: Review[]; total: number; averageRating: number }> {
+    const skip = (page - 1) * limit;
+
+    try {
+      const [reviews, total, avgResult] = await Promise.all([
+        prisma.review.findMany({
+          where: { dealId },
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                avatar: true,
+              },
+            },
+            deal: {
+              select: {
+                id: true,
+                title: true,
+                images: true,
+              },
+            },
+          },
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+        }),
+        prisma.review.count({ where: { dealId } }),
+        prisma.review.aggregate({
+          where: { dealId },
+          _avg: { rating: true },
+        }),
+      ]);
+
+      return {
+        reviews,
+        total,
+        averageRating: avgResult._avg.rating || 0,
+      };
+    } catch (error) {
+      logger.error('Error getting deal reviews', {
+        dealId,
+        error: (error as Error).message,
+      });
+      throw error;
+    }
+  }
 }
 
 export default new ReviewRepository();

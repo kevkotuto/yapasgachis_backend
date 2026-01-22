@@ -196,7 +196,9 @@ export class OrderService {
 
       // Frais de transfert Wave - déduit du montant fournisseur
       const waveTransferFee = isWavePayment
-        ? Math.round((baseAmount - commission) * waveSettings.waveTransferFeeRate)
+        ? Math.round(
+            (baseAmount - commission) * waveSettings.waveTransferFeeRate
+          )
         : 0;
 
       // Total payé par le client (inclut les frais de paiement Wave)

@@ -31,6 +31,13 @@ router.get(
   reviewController.getSupplierReviews
 );
 
+// Get reviews for a deal
+router.get(
+  '/deal/:dealId',
+  validate(getSupplierReviewsSchema),
+  reviewController.getDealReviews
+);
+
 // Mark review as helpful (no auth required)
 router.post(
   '/:id/helpful',

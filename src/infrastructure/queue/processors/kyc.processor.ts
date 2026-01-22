@@ -10,7 +10,10 @@ import { Worker, Job } from 'bullmq';
 import config from '@config/index';
 import { kycService } from '@core/services/kyc.service';
 import logger from '@infrastructure/monitoring/logger';
-import { KycVerificationJobData, KycNotificationJobData } from '@/types/kyc.types';
+import {
+  KycVerificationJobData,
+  KycNotificationJobData,
+} from '@/types/kyc.types';
 
 // Redis connection for BullMQ
 const connection = {

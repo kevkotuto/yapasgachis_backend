@@ -71,7 +71,8 @@ export class EscrowService {
   }> {
     try {
       // Montant fournisseur = montant total - commission - frais de transfert Wave
-      const supplierAmount = params.amount - params.commission - params.waveTransferFee;
+      const supplierAmount =
+        params.amount - params.commission - params.waveTransferFee;
 
       // Créer le checkout Wave
       const checkout = await waveService.createCheckout({

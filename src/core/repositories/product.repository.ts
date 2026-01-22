@@ -306,31 +306,38 @@ export class ProductRepository {
         });
 
         // Calculate distance using store coordinates if available, otherwise supplier user coordinates
-        const productsWithDistance = allProducts
-          .map((product) => {
-            // Priorité: coordonnées du store > coordonnées de l'utilisateur du supplier
-            let productLat: number | null = null;
-            let productLng: number | null = null;
+        const productsWithDistance = allProducts.map((product) => {
+          // Priorité: coordonnées du store > coordonnées de l'utilisateur du supplier
+          let productLat: number | null = null;
+          let productLng: number | null = null;
 
-            // D'abord essayer les coordonnées du store
-            if (product.store?.latitude && product.store?.longitude) {
-              productLat = product.store.latitude;
-              productLng = product.store.longitude;
-            }
-            // Sinon utiliser les coordonnées de l'utilisateur du supplier
-            else if (product.supplier?.user?.latitude && product.supplier?.user?.longitude) {
-              productLat = product.supplier.user.latitude;
-              productLng = product.supplier.user.longitude;
-            }
+          // D'abord essayer les coordonnées du store
+          if (product.store?.latitude && product.store?.longitude) {
+            productLat = product.store.latitude;
+            productLng = product.store.longitude;
+          }
+          // Sinon utiliser les coordonnées de l'utilisateur du supplier
+          else if (
+            product.supplier?.user?.latitude &&
+            product.supplier?.user?.longitude
+          ) {
+            productLat = product.supplier.user.latitude;
+            productLng = product.supplier.user.longitude;
+          }
 
-            // Si pas de coordonnées, distance = Infinity (sera affiché en dernier)
-            const distance =
-              productLat && productLng
-                ? this.calculateDistance(latitude, longitude, productLat, productLng)
-                : Infinity;
+          // Si pas de coordonnées, distance = Infinity (sera affiché en dernier)
+          const distance =
+            productLat && productLng
+              ? this.calculateDistance(
+                  latitude,
+                  longitude,
+                  productLat,
+                  productLng
+                )
+              : Infinity;
 
-            return { ...product, distance };
-          });
+          return { ...product, distance };
+        });
 
         // Mode nearbyFirst: affiche les proches d'abord, puis les autres
         // Mode normal (radius): filtre uniquement les produits dans le rayon
@@ -338,14 +345,20 @@ export class ProductRepository {
 
         if (nearbyFirst) {
           // Séparer produits proches et éloignés
-          const nearby = productsWithDistance.filter((p) => p.distance <= nearbyRadius);
-          const faraway = productsWithDistance.filter((p) => p.distance > nearbyRadius);
+          const nearby = productsWithDistance.filter(
+            (p) => p.distance <= nearbyRadius
+          );
+          const faraway = productsWithDistance.filter(
+            (p) => p.distance > nearbyRadius
+          );
 
           // Trier chaque groupe
           const sortProducts = (arr: typeof productsWithDistance) => {
             return arr.sort((a, b) => {
               if (sortBy === 'distance') {
-                return sortOrder === 'asc' ? a.distance - b.distance : b.distance - a.distance;
+                return sortOrder === 'asc'
+                  ? a.distance - b.distance
+                  : b.distance - a.distance;
               }
               if (sortBy === 'price') {
                 return sortOrder === 'asc'
@@ -353,9 +366,15 @@ export class ProductRepository {
                   : b.discountedPrice - a.discountedPrice;
               }
               if (sortBy === 'discount') {
-                const aDiscount = ((a.originalPrice - a.discountedPrice) / a.originalPrice) * 100;
-                const bDiscount = ((b.originalPrice - b.discountedPrice) / b.originalPrice) * 100;
-                return sortOrder === 'asc' ? aDiscount - bDiscount : bDiscount - aDiscount;
+                const aDiscount =
+                  ((a.originalPrice - a.discountedPrice) / a.originalPrice) *
+                  100;
+                const bDiscount =
+                  ((b.originalPrice - b.discountedPrice) / b.originalPrice) *
+                  100;
+                return sortOrder === 'asc'
+                  ? aDiscount - bDiscount
+                  : bDiscount - aDiscount;
               }
               // Default: par distance pour les proches
               return a.distance - b.distance;
@@ -371,7 +390,9 @@ export class ProductRepository {
             .filter((product) => product.distance <= radius)
             .sort((a, b) => {
               if (sortBy === 'distance') {
-                return sortOrder === 'asc' ? a.distance - b.distance : b.distance - a.distance;
+                return sortOrder === 'asc'
+                  ? a.distance - b.distance
+                  : b.distance - a.distance;
               }
               if (sortBy === 'price') {
                 return sortOrder === 'asc'
@@ -379,9 +400,15 @@ export class ProductRepository {
                   : b.discountedPrice - a.discountedPrice;
               }
               if (sortBy === 'discount') {
-                const aDiscount = ((a.originalPrice - a.discountedPrice) / a.originalPrice) * 100;
-                const bDiscount = ((b.originalPrice - b.discountedPrice) / b.originalPrice) * 100;
-                return sortOrder === 'asc' ? aDiscount - bDiscount : bDiscount - aDiscount;
+                const aDiscount =
+                  ((a.originalPrice - a.discountedPrice) / a.originalPrice) *
+                  100;
+                const bDiscount =
+                  ((b.originalPrice - b.discountedPrice) / b.originalPrice) *
+                  100;
+                return sortOrder === 'asc'
+                  ? aDiscount - bDiscount
+                  : bDiscount - aDiscount;
               }
               return a.distance - b.distance;
             });

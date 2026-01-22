@@ -35,7 +35,11 @@ export const requireStorePermission = (permission: StorePermission) => {
       }
 
       // Vérifier la permission
-      const hasPermission = await storeStaffService.hasPermission(userId, storeId, permission);
+      const hasPermission = await storeStaffService.hasPermission(
+        userId,
+        storeId,
+        permission
+      );
 
       if (!hasPermission) {
         throw new AppError(
@@ -75,9 +79,15 @@ export const requireAnyStorePermission = (permissions: StorePermission[]) => {
 
       // Vérifier au moins une permission
       for (const permission of permissions) {
-        const hasPermission = await storeStaffService.hasPermission(userId, storeId, permission);
+        const hasPermission = await storeStaffService.hasPermission(
+          userId,
+          storeId,
+          permission
+        );
         if (hasPermission) {
-          await storeStaffService.updateLastActive(userId, storeId).catch(() => {});
+          await storeStaffService
+            .updateLastActive(userId, storeId)
+            .catch(() => {});
           return next();
         }
       }
@@ -96,7 +106,11 @@ export const requireAnyStorePermission = (permissions: StorePermission[]) => {
 /**
  * Middleware pour vérifier qu'un utilisateur est propriétaire du supplier ou staff du magasin
  */
-export const requireStoreAccess = async (req: Request, res: Response, next: NextFunction) => {
+export const requireStoreAccess = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -121,7 +135,11 @@ export const requireStoreAccess = async (req: Request, res: Response, next: Next
       return next();
     }
 
-    throw new AppError(403, "Vous n'avez pas accès à ce magasin", 'ACCESS_DENIED');
+    throw new AppError(
+      403,
+      "Vous n'avez pas accès à ce magasin",
+      'ACCESS_DENIED'
+    );
   } catch (error) {
     next(error);
   }
@@ -130,7 +148,11 @@ export const requireStoreAccess = async (req: Request, res: Response, next: Next
 /**
  * Middleware qui attache les informations de rôle à la requête
  */
-export const attachStoreRole = async (req: Request, res: Response, next: NextFunction) => {
+export const attachStoreRole = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const userId = req.user?.id;
     const storeId = req.params.storeId || req.body.storeId;

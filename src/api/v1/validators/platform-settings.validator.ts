@@ -54,8 +54,16 @@ export const updateSettingsSchema = z.object({
       notificationsEnabled: z.boolean().optional(),
 
       // Rate Limiting
-      rateLimitWindowMs: z.number().min(1000).optional().describe('Fenêtre rate limit (ms)'),
-      rateLimitMaxRequests: z.number().min(1).optional().describe('Max requêtes par fenêtre'),
+      rateLimitWindowMs: z
+        .number()
+        .min(1000)
+        .optional()
+        .describe('Fenêtre rate limit (ms)'),
+      rateLimitMaxRequests: z
+        .number()
+        .min(1)
+        .optional()
+        .describe('Max requêtes par fenêtre'),
       authRateLimitMaxRequests: z
         .number()
         .min(1)
@@ -63,21 +71,61 @@ export const updateSettingsSchema = z.object({
         .describe('Max requêtes auth par fenêtre'),
 
       // Security
-      bcryptRounds: z.number().min(10).max(15).optional().describe('Rounds bcrypt (10-15)'),
-      otpExpiration: z.number().min(60000).optional().describe('Expiration OTP (ms)'),
-      otpLength: z.number().min(4).max(8).optional().describe('Longueur OTP (4-8)'),
+      bcryptRounds: z
+        .number()
+        .min(10)
+        .max(15)
+        .optional()
+        .describe('Rounds bcrypt (10-15)'),
+      otpExpiration: z
+        .number()
+        .min(60000)
+        .optional()
+        .describe('Expiration OTP (ms)'),
+      otpLength: z
+        .number()
+        .min(4)
+        .max(8)
+        .optional()
+        .describe('Longueur OTP (4-8)'),
 
       // Cache TTL
-      cacheTtlShort: z.number().min(60).optional().describe('TTL cache court (secondes)'),
-      cacheTtlMedium: z.number().min(300).optional().describe('TTL cache moyen (secondes)'),
-      cacheTtlLong: z.number().min(3600).optional().describe('TTL cache long (secondes)'),
+      cacheTtlShort: z
+        .number()
+        .min(60)
+        .optional()
+        .describe('TTL cache court (secondes)'),
+      cacheTtlMedium: z
+        .number()
+        .min(300)
+        .optional()
+        .describe('TTL cache moyen (secondes)'),
+      cacheTtlLong: z
+        .number()
+        .min(3600)
+        .optional()
+        .describe('TTL cache long (secondes)'),
 
       // Pagination
-      defaultPageSize: z.number().min(1).max(100).optional().describe('Taille page par défaut'),
-      maxPageSize: z.number().min(10).max(500).optional().describe('Taille page max'),
+      defaultPageSize: z
+        .number()
+        .min(1)
+        .max(100)
+        .optional()
+        .describe('Taille page par défaut'),
+      maxPageSize: z
+        .number()
+        .min(10)
+        .max(500)
+        .optional()
+        .describe('Taille page max'),
 
       // Upload
-      maxFileSize: z.number().min(1048576).optional().describe('Taille max fichier (bytes)'),
+      maxFileSize: z
+        .number()
+        .min(1048576)
+        .optional()
+        .describe('Taille max fichier (bytes)'),
 
       // Reason for change
       reason: z.string().max(500).optional().describe('Raison du changement'),
@@ -101,4 +149,6 @@ export const getAuditHistorySchema = z.object({
 
 // Types inférés
 export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>['body'];
-export type GetAuditHistoryInput = z.infer<typeof getAuditHistorySchema>['query'];
+export type GetAuditHistoryInput = z.infer<
+  typeof getAuditHistorySchema
+>['query'];

@@ -156,7 +156,9 @@ export class SupplierStoreRepository {
 
         // Filter stores with valid coordinates and calculate distance
         const storesWithDistance = allStores
-          .filter((store) => store.latitude !== null && store.longitude !== null)
+          .filter(
+            (store) => store.latitude !== null && store.longitude !== null
+          )
           .map((store) => {
             const distance = this.calculateDistance(
               latitude,

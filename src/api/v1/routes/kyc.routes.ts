@@ -12,7 +12,10 @@ import { validate } from '@middleware/validation.middleware';
 import { authenticate } from '@middleware/auth.middleware';
 import { requireRole } from '@middleware/role-guard.middleware';
 import { uploadKycDocuments } from '@middleware/upload.middleware';
-import { submitKycSchema, getKycStatusSchema } from '@api/v1/validators/kyc.validator';
+import {
+  submitKycSchema,
+  getKycStatusSchema,
+} from '@api/v1/validators/kyc.validator';
 
 const router = Router();
 
@@ -37,10 +40,6 @@ router.post(
  * @desc    Get KYC verification status
  * @access  Supplier only
  */
-router.get(
-  '/status',
-  validate(getKycStatusSchema),
-  kycController.getKycStatus
-);
+router.get('/status', validate(getKycStatusSchema), kycController.getKycStatus);
 
 export default router;

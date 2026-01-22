@@ -15,6 +15,7 @@ export enum OTPPurpose {
 export enum OTPChannel {
   SMS = 'sms',
   EMAIL = 'email',
+  WHATSAPP = 'whatsapp',
 }
 
 interface OTPData {
@@ -37,6 +38,20 @@ export class OTPService {
     purpose: OTPPurpose
   ): Promise<string> {
     return this.generateOTPForIdentifier(phoneNumber, purpose, OTPChannel.SMS);
+  }
+
+  /**
+   * Generate and store OTP for phone (WhatsApp)
+   */
+  static async generateWhatsAppOTP(
+    phoneNumber: string,
+    purpose: OTPPurpose
+  ): Promise<string> {
+    return this.generateOTPForIdentifier(
+      phoneNumber,
+      purpose,
+      OTPChannel.WHATSAPP
+    );
   }
 
   /**
@@ -89,7 +104,8 @@ export class OTPService {
     await redis.setex(cooldownKey, this.RESEND_COOLDOWN, '1');
 
     logger.info('OTP generated', {
-      identifier: channel === OTPChannel.EMAIL ? identifier : identifier.slice(-4),
+      identifier:
+        channel === OTPChannel.EMAIL ? identifier : identifier.slice(-4),
       channel,
       purpose,
       expiresIn: `${ttl}s`,
@@ -118,6 +134,17 @@ export class OTPService {
     purpose: OTPPurpose
   ): Promise<boolean> {
     return this.verifyOTPForIdentifier(email, code, purpose);
+  }
+
+  /**
+   * Verify OTP for WhatsApp
+   */
+  static async verifyWhatsAppOTP(
+    phoneNumber: string,
+    code: string,
+    purpose: OTPPurpose
+  ): Promise<boolean> {
+    return this.verifyOTPForIdentifier(phoneNumber, code, purpose);
   }
 
   /**

@@ -77,6 +77,22 @@ export class ReviewController {
   });
 
   /**
+   * Get reviews for a deal
+   * GET /api/v1/reviews/deal/:dealId
+   */
+  getDealReviews = asyncHandler(async (req: Request, res: Response) => {
+    const { dealId } = req.params;
+    const query = req.query as unknown as GetSupplierReviewsQuery;
+    const { page, limit } = query;
+    const result = await reviewService.getDealReviews(dealId, page, limit);
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  });
+
+  /**
    * Get my reviews
    * GET /api/v1/reviews/my
    */

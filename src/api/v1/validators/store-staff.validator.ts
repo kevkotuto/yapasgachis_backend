@@ -6,30 +6,31 @@ export const inviteStaffSchema = z.object({
   params: z.object({
     storeId: z.string().uuid('ID du magasin invalide'),
   }),
-  body: z.object({
-    email: z.string().email('Email invalide').optional(),
-    phoneNumber: z
-      .string()
-      .regex(/^\+?[0-9]{8,15}$/, 'Numéro de téléphone invalide')
-      .optional(),
-    role: z.nativeEnum(StoreStaffRole, {
-      errorMap: () => ({ message: 'Rôle invalide' }),
+  body: z
+    .object({
+      email: z.string().email('Email invalide').optional(),
+      phoneNumber: z
+        .string()
+        .regex(/^\+?[0-9]{8,15}$/, 'Numéro de téléphone invalide')
+        .optional(),
+      role: z.nativeEnum(StoreStaffRole, {
+        errorMap: () => ({ message: 'Rôle invalide' }),
+      }),
+      customPermissions: z
+        .object({
+          canManageProducts: z.boolean().optional(),
+          canManageOrders: z.boolean().optional(),
+          canViewStats: z.boolean().optional(),
+          canManageStaff: z.boolean().optional(),
+          canManageDeals: z.boolean().optional(),
+          canManageSettings: z.boolean().optional(),
+        })
+        .optional(),
+      notes: z.string().max(500).optional(),
+    })
+    .refine((data) => data.email || data.phoneNumber, {
+      message: 'Email ou numéro de téléphone requis',
     }),
-    customPermissions: z
-      .object({
-        canManageProducts: z.boolean().optional(),
-        canManageOrders: z.boolean().optional(),
-        canViewStats: z.boolean().optional(),
-        canManageStaff: z.boolean().optional(),
-        canManageDeals: z.boolean().optional(),
-        canManageSettings: z.boolean().optional(),
-      })
-      .optional(),
-    notes: z.string().max(500).optional(),
-  }).refine(
-    (data) => data.email || data.phoneNumber,
-    { message: 'Email ou numéro de téléphone requis' }
-  ),
 });
 
 export type InviteStaffInput = z.infer<typeof inviteStaffSchema>;

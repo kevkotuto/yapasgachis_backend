@@ -90,7 +90,10 @@ export interface UpdateStaffDto {
 }
 
 export interface StaffWithUser extends StoreStaff {
-  user: Pick<User, 'id' | 'firstName' | 'lastName' | 'email' | 'phoneNumber' | 'avatar'>;
+  user: Pick<
+    User,
+    'id' | 'firstName' | 'lastName' | 'email' | 'phoneNumber' | 'avatar'
+  >;
 }
 
 export class StoreStaffService {
@@ -153,7 +156,10 @@ export class StoreStaffService {
   async getStaffRole(
     userId: string,
     storeId: string
-  ): Promise<{ role: StoreStaffRole; permissions: typeof DEFAULT_PERMISSIONS.OWNER } | null> {
+  ): Promise<{
+    role: StoreStaffRole;
+    permissions: typeof DEFAULT_PERMISSIONS.OWNER;
+  } | null> {
     // Vérifier si propriétaire
     const isOwner = await this.isStoreOwner(userId, storeId);
     if (isOwner) {
@@ -190,18 +196,34 @@ export class StoreStaffService {
   /**
    * Inviter un utilisateur à rejoindre le staff d'un magasin
    */
-  async inviteStaff(inviterId: string, data: InviteStaffDto): Promise<StoreStaff> {
-    const { storeId, email, phoneNumber, role, customPermissions, notes } = data;
+  async inviteStaff(
+    inviterId: string,
+    data: InviteStaffDto
+  ): Promise<StoreStaff> {
+    const { storeId, email, phoneNumber, role, customPermissions, notes } =
+      data;
 
     // Vérifier que l'inviteur a le droit d'inviter
-    const canInvite = await this.hasPermission(inviterId, storeId, 'canManageStaff');
+    const canInvite = await this.hasPermission(
+      inviterId,
+      storeId,
+      'canManageStaff'
+    );
     if (!canInvite) {
-      throw new AppError(403, "Vous n'avez pas le droit d'inviter du personnel", 'FORBIDDEN');
+      throw new AppError(
+        403,
+        "Vous n'avez pas le droit d'inviter du personnel",
+        'FORBIDDEN'
+      );
     }
 
     // Trouver l'utilisateur à inviter
     if (!email && !phoneNumber) {
-      throw new AppError(400, 'Email ou numéro de téléphone requis', 'MISSING_CONTACT');
+      throw new AppError(
+        400,
+        'Email ou numéro de téléphone requis',
+        'MISSING_CONTACT'
+      );
     }
 
     const userToInvite = await prisma.user.findFirst({
@@ -230,17 +252,29 @@ export class StoreStaffService {
 
     if (existingStaff) {
       if (existingStaff.inviteStatus === 'ACCEPTED') {
-        throw new AppError(400, 'Cet utilisateur est déjà membre du personnel', 'ALREADY_STAFF');
+        throw new AppError(
+          400,
+          'Cet utilisateur est déjà membre du personnel',
+          'ALREADY_STAFF'
+        );
       }
       if (existingStaff.inviteStatus === 'PENDING') {
-        throw new AppError(400, 'Une invitation est déjà en attente', 'INVITE_PENDING');
+        throw new AppError(
+          400,
+          'Une invitation est déjà en attente',
+          'INVITE_PENDING'
+        );
       }
     }
 
     // Vérifier si c'est le propriétaire (ne peut pas s'ajouter lui-même)
     const isOwner = await this.isStoreOwner(userToInvite.id, storeId);
     if (isOwner) {
-      throw new AppError(400, 'Le propriétaire ne peut pas être ajouté comme staff', 'OWNER_CANNOT_BE_STAFF');
+      throw new AppError(
+        400,
+        'Le propriétaire ne peut pas être ajouté comme staff',
+        'OWNER_CANNOT_BE_STAFF'
+      );
     }
 
     // Générer un token d'invitation
@@ -296,7 +330,10 @@ export class StoreStaffService {
   /**
    * Accepter une invitation
    */
-  async acceptInvitation(userId: string, inviteToken: string): Promise<StoreStaff> {
+  async acceptInvitation(
+    userId: string,
+    inviteToken: string
+  ): Promise<StoreStaff> {
     const staff = await prisma.storeStaff.findUnique({
       where: { inviteToken },
     });
@@ -306,11 +343,19 @@ export class StoreStaffService {
     }
 
     if (staff.userId !== userId) {
-      throw new AppError(403, 'Cette invitation ne vous est pas destinée', 'FORBIDDEN');
+      throw new AppError(
+        403,
+        'Cette invitation ne vous est pas destinée',
+        'FORBIDDEN'
+      );
     }
 
     if (staff.inviteStatus !== 'PENDING') {
-      throw new AppError(400, 'Cette invitation a déjà été traitée', 'INVITE_ALREADY_PROCESSED');
+      throw new AppError(
+        400,
+        'Cette invitation a déjà été traitée',
+        'INVITE_ALREADY_PROCESSED'
+      );
     }
 
     if (staff.inviteExpiresAt && staff.inviteExpiresAt < new Date()) {
@@ -353,7 +398,11 @@ export class StoreStaffService {
     }
 
     if (staff.userId !== userId) {
-      throw new AppError(403, 'Cette invitation ne vous est pas destinée', 'FORBIDDEN');
+      throw new AppError(
+        403,
+        'Cette invitation ne vous est pas destinée',
+        'FORBIDDEN'
+      );
     }
 
     await prisma.storeStaff.update({
@@ -374,17 +423,33 @@ export class StoreStaffService {
   /**
    * Révoquer une invitation ou retirer un membre du staff
    */
-  async removeStaff(requesterId: string, storeId: string, staffUserId: string): Promise<void> {
+  async removeStaff(
+    requesterId: string,
+    storeId: string,
+    staffUserId: string
+  ): Promise<void> {
     // Vérifier que le demandeur a le droit
-    const canManage = await this.hasPermission(requesterId, storeId, 'canManageStaff');
+    const canManage = await this.hasPermission(
+      requesterId,
+      storeId,
+      'canManageStaff'
+    );
     if (!canManage) {
-      throw new AppError(403, "Vous n'avez pas le droit de gérer le personnel", 'FORBIDDEN');
+      throw new AppError(
+        403,
+        "Vous n'avez pas le droit de gérer le personnel",
+        'FORBIDDEN'
+      );
     }
 
     // Vérifier que ce n'est pas le propriétaire qu'on essaie de supprimer
     const isOwner = await this.isStoreOwner(staffUserId, storeId);
     if (isOwner) {
-      throw new AppError(400, 'Impossible de retirer le propriétaire', 'CANNOT_REMOVE_OWNER');
+      throw new AppError(
+        400,
+        'Impossible de retirer le propriétaire',
+        'CANNOT_REMOVE_OWNER'
+      );
     }
 
     const staff = await prisma.storeStaff.findUnique({
@@ -394,7 +459,11 @@ export class StoreStaffService {
     });
 
     if (!staff) {
-      throw new AppError(404, 'Membre du personnel non trouvé', 'STAFF_NOT_FOUND');
+      throw new AppError(
+        404,
+        'Membre du personnel non trouvé',
+        'STAFF_NOT_FOUND'
+      );
     }
 
     // Supprimer le staff
@@ -419,9 +488,17 @@ export class StoreStaffService {
     data: UpdateStaffDto
   ): Promise<StoreStaff> {
     // Vérifier que le demandeur a le droit
-    const canManage = await this.hasPermission(requesterId, storeId, 'canManageStaff');
+    const canManage = await this.hasPermission(
+      requesterId,
+      storeId,
+      'canManageStaff'
+    );
     if (!canManage) {
-      throw new AppError(403, "Vous n'avez pas le droit de gérer le personnel", 'FORBIDDEN');
+      throw new AppError(
+        403,
+        "Vous n'avez pas le droit de gérer le personnel",
+        'FORBIDDEN'
+      );
     }
 
     const staff = await prisma.storeStaff.findUnique({
@@ -431,19 +508,29 @@ export class StoreStaffService {
     });
 
     if (!staff) {
-      throw new AppError(404, 'Membre du personnel non trouvé', 'STAFF_NOT_FOUND');
+      throw new AppError(
+        404,
+        'Membre du personnel non trouvé',
+        'STAFF_NOT_FOUND'
+      );
     }
 
     // Si on change le rôle, appliquer les permissions par défaut du nouveau rôle
     const updateData: any = { ...data };
     if (data.role && data.role !== staff.role) {
       const newPermissions = DEFAULT_PERMISSIONS[data.role];
-      updateData.canManageProducts = data.canManageProducts ?? newPermissions.canManageProducts;
-      updateData.canManageOrders = data.canManageOrders ?? newPermissions.canManageOrders;
-      updateData.canViewStats = data.canViewStats ?? newPermissions.canViewStats;
-      updateData.canManageStaff = data.canManageStaff ?? newPermissions.canManageStaff;
-      updateData.canManageDeals = data.canManageDeals ?? newPermissions.canManageDeals;
-      updateData.canManageSettings = data.canManageSettings ?? newPermissions.canManageSettings;
+      updateData.canManageProducts =
+        data.canManageProducts ?? newPermissions.canManageProducts;
+      updateData.canManageOrders =
+        data.canManageOrders ?? newPermissions.canManageOrders;
+      updateData.canViewStats =
+        data.canViewStats ?? newPermissions.canViewStats;
+      updateData.canManageStaff =
+        data.canManageStaff ?? newPermissions.canManageStaff;
+      updateData.canManageDeals =
+        data.canManageDeals ?? newPermissions.canManageDeals;
+      updateData.canManageSettings =
+        data.canManageSettings ?? newPermissions.canManageSettings;
     }
 
     const updatedStaff = await prisma.storeStaff.update({
@@ -474,11 +561,19 @@ export class StoreStaffService {
     }
   ): Promise<StaffWithUser[]> {
     // Vérifier que le demandeur a accès
-    const hasAccess = await this.hasPermission(requesterId, storeId, 'canViewStats');
+    const hasAccess = await this.hasPermission(
+      requesterId,
+      storeId,
+      'canViewStats'
+    );
     const isOwner = await this.isStoreOwner(requesterId, storeId);
 
     if (!hasAccess && !isOwner) {
-      throw new AppError(403, "Vous n'avez pas accès à cette information", 'FORBIDDEN');
+      throw new AppError(
+        403,
+        "Vous n'avez pas accès à cette information",
+        'FORBIDDEN'
+      );
     }
 
     const staff = await prisma.storeStaff.findMany({

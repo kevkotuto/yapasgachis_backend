@@ -5,7 +5,12 @@
  * Business logic orchestrator for KYC verification operations
  */
 
-import { IdCardType, KycCheckType, KycVerificationStatus, Prisma } from '@prisma/client';
+import {
+  IdCardType,
+  KycCheckType,
+  KycVerificationStatus,
+  Prisma,
+} from '@prisma/client';
 
 import config from '@config/index';
 import { kycRepository } from '@core/repositories/kyc.repository';
@@ -42,7 +47,10 @@ export class KycService {
     dto: KycSubmitDocumentsDto,
     idCardBackUrl?: string
   ): Promise<KycSubmitResult> {
-    logger.info('Submitting KYC documents', { supplierId, idCardType: dto.idCardType });
+    logger.info('Submitting KYC documents', {
+      supplierId,
+      idCardType: dto.idCardType,
+    });
 
     // Check if supplier exists
     const supplier = await prisma.supplierProfile.findUnique({
@@ -51,12 +59,20 @@ export class KycService {
     });
 
     if (!supplier) {
-      throw new AppError(404, 'Fournisseur non trouvé', KycErrorCode.SUPPLIER_NOT_FOUND);
+      throw new AppError(
+        404,
+        'Fournisseur non trouvé',
+        KycErrorCode.SUPPLIER_NOT_FOUND
+      );
     }
 
     // Check if already verified
     if (supplier.kycStatus === 'VERIFIED') {
-      throw new AppError(400, 'KYC déjà vérifié', KycErrorCode.KYC_ALREADY_VERIFIED);
+      throw new AppError(
+        400,
+        'KYC déjà vérifié',
+        KycErrorCode.KYC_ALREADY_VERIFIED
+      );
     }
 
     // Check attempt count
@@ -185,10 +201,18 @@ export class KycService {
         documentScore: verificationResult.ocr.confidence,
         faceMatchScore: verificationResult.faceComparison.similarity,
         livenessScore: verificationResult.liveness.confidence,
-        ocrResults: JSON.parse(JSON.stringify(verificationResult.ocr)) as Prisma.InputJsonValue,
-        documentAnalysis: JSON.parse(JSON.stringify(verificationResult.authenticity)) as Prisma.InputJsonValue,
-        faceAnalysis: JSON.parse(JSON.stringify(verificationResult.faceComparison)) as Prisma.InputJsonValue,
-        livenessAnalysis: JSON.parse(JSON.stringify(verificationResult.liveness)) as Prisma.InputJsonValue,
+        ocrResults: JSON.parse(
+          JSON.stringify(verificationResult.ocr)
+        ) as Prisma.InputJsonValue,
+        documentAnalysis: JSON.parse(
+          JSON.stringify(verificationResult.authenticity)
+        ) as Prisma.InputJsonValue,
+        faceAnalysis: JSON.parse(
+          JSON.stringify(verificationResult.faceComparison)
+        ) as Prisma.InputJsonValue,
+        livenessAnalysis: JSON.parse(
+          JSON.stringify(verificationResult.liveness)
+        ) as Prisma.InputJsonValue,
       });
 
       // Save extracted data if OCR was successful
@@ -201,9 +225,13 @@ export class KycService {
 
       // Update supplier KYC status based on result
       if (finalStatus === 'AI_APPROVED') {
-        await kycRepository.updateSupplierKycStatus(attempt.supplierId, 'VERIFIED', {
-          kycVerifiedAt: new Date(),
-        });
+        await kycRepository.updateSupplierKycStatus(
+          attempt.supplierId,
+          'VERIFIED',
+          {
+            kycVerifiedAt: new Date(),
+          }
+        );
 
         await this.createNotification(
           attempt.supplierId,
@@ -214,9 +242,13 @@ export class KycService {
         );
       } else if (finalStatus === 'AI_REJECTED') {
         const rejectionReason = this.getFirstFailureReason(verificationResult);
-        await kycRepository.updateSupplierKycStatus(attempt.supplierId, 'REJECTED', {
-          kycRejectionReason: rejectionReason,
-        });
+        await kycRepository.updateSupplierKycStatus(
+          attempt.supplierId,
+          'REJECTED',
+          {
+            kycRejectionReason: rejectionReason,
+          }
+        );
 
         await this.createNotification(
           attempt.supplierId,
@@ -226,7 +258,10 @@ export class KycService {
           `Votre vérification a échoué: ${rejectionReason}. Veuillez soumettre de nouveaux documents.`
         );
       } else if (finalStatus === 'MANUAL_REVIEW') {
-        await kycRepository.updateSupplierKycStatus(attempt.supplierId, 'SUBMITTED');
+        await kycRepository.updateSupplierKycStatus(
+          attempt.supplierId,
+          'SUBMITTED'
+        );
 
         await this.createNotification(
           attempt.supplierId,
@@ -259,7 +294,8 @@ export class KycService {
       // Mark as failed
       await kycRepository.updateAttemptStatus(attemptId, 'FAILED', {
         errorCode: KycErrorCode.PROCESSING_TIMEOUT,
-        errorMessage: error instanceof Error ? error.message : 'Erreur inconnue',
+        errorMessage:
+          error instanceof Error ? error.message : 'Erreur inconnue',
         processingCompletedAt: new Date(),
       });
 
@@ -310,7 +346,8 @@ export class KycService {
     const canResubmit =
       supplier.kycStatus !== 'VERIFIED' &&
       attemptsCount < config.kycVerification.maxAttemptsPerSupplier &&
-      (!latestAttempt || !['PENDING', 'PROCESSING'].includes(latestAttempt.status));
+      (!latestAttempt ||
+        !['PENDING', 'PROCESSING'].includes(latestAttempt.status));
 
     return {
       supplierId,
@@ -335,9 +372,15 @@ export class KycService {
   /**
    * Admin: Get pending review attempts
    */
-  async getPendingReviewAttempts(
-    options: KycAttemptsListOptions
-  ): Promise<{ data: KycPendingReviewItem[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> {
+  async getPendingReviewAttempts(options: KycAttemptsListOptions): Promise<{
+    data: KycPendingReviewItem[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }> {
     const result = await kycRepository.getPendingReviewAttempts(options);
 
     return {
@@ -410,7 +453,8 @@ export class KycService {
             lastName: extractedData.lastName || undefined,
             dateOfBirth: extractedData.dateOfBirth || undefined,
             expiryDate: extractedData.expiryDate || undefined,
-            extractionConfidence: extractedData.extractionConfidence || undefined,
+            extractionConfidence:
+              extractedData.extractionConfidence || undefined,
             isExpired: extractedData.isExpired || undefined,
             isValid: extractedData.isValid || undefined,
           }
@@ -457,9 +501,13 @@ export class KycService {
 
     // Update supplier status
     if (dto.approve) {
-      await kycRepository.updateSupplierKycStatus(attempt.supplierId, 'VERIFIED', {
-        kycVerifiedAt: new Date(),
-      });
+      await kycRepository.updateSupplierKycStatus(
+        attempt.supplierId,
+        'VERIFIED',
+        {
+          kycVerifiedAt: new Date(),
+        }
+      );
 
       await this.createNotification(
         attempt.supplierId,
@@ -469,9 +517,13 @@ export class KycService {
         'Félicitations ! Votre identité a été vérifiée avec succès par notre équipe.'
       );
     } else {
-      await kycRepository.updateSupplierKycStatus(attempt.supplierId, 'REJECTED', {
-        kycRejectionReason: dto.notes || 'Rejeté par l\'administrateur',
-      });
+      await kycRepository.updateSupplierKycStatus(
+        attempt.supplierId,
+        'REJECTED',
+        {
+          kycRejectionReason: dto.notes || "Rejeté par l'administrateur",
+        }
+      );
 
       await this.createNotification(
         attempt.supplierId,
@@ -552,10 +604,7 @@ export class KycService {
   /**
    * Admin: Request resubmission
    */
-  async requestResubmission(
-    supplierId: string,
-    reason: string
-  ): Promise<void> {
+  async requestResubmission(supplierId: string, reason: string): Promise<void> {
     await kycRepository.updateSupplierKycStatus(supplierId, 'PENDING', {
       kycRejectionReason: reason,
     });
@@ -707,14 +756,18 @@ export class KycService {
         passed: result.faceComparison.isMatch,
         score: result.faceComparison.similarity,
         confidence: result.faceComparison.confidence,
-        failureReason: result.faceComparison.isMatch ? undefined : 'Face mismatch',
+        failureReason: result.faceComparison.isMatch
+          ? undefined
+          : 'Face mismatch',
       },
       {
         checkType: 'LIVENESS_DETECTION' as KycCheckType,
         passed: result.liveness.isLive,
         score: result.liveness.confidence,
         confidence: result.liveness.confidence,
-        failureReason: result.liveness.isLive ? undefined : result.liveness.spoofType,
+        failureReason: result.liveness.isLive
+          ? undefined
+          : result.liveness.spoofType,
       },
       {
         checkType: 'DOCUMENT_AUTHENTICITY' as KycCheckType,
@@ -727,7 +780,8 @@ export class KycService {
 
   private getFirstFailureReason(result: any): string {
     if (!result.ocr.success) return 'Document illisible ou invalide';
-    if (!result.faceComparison.isMatch) return 'Le visage ne correspond pas au document';
+    if (!result.faceComparison.isMatch)
+      return 'Le visage ne correspond pas au document';
     if (!result.liveness.isLive) return 'Échec de la détection de vivacité';
     if (!result.authenticity.isAuthentic)
       return result.authenticity.warnings?.[0] || 'Document non authentique';

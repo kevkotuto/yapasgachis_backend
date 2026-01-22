@@ -103,7 +103,12 @@ export const updateStaff = async (req: Request, res: Response) => {
   const { storeId, userId } = req.params;
   const requesterId = req.user!.id;
 
-  const staff = await storeStaffService.updateStaff(requesterId, storeId, userId, req.body);
+  const staff = await storeStaffService.updateStaff(
+    requesterId,
+    storeId,
+    userId,
+    req.body
+  );
 
   res.json({
     success: true,

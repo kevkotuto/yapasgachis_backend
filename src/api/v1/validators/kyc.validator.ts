@@ -49,7 +49,7 @@ export const submitKycSchema = z.object({
           if (!val) return true;
           return new Date(val) > new Date();
         },
-        { message: 'La date d\'expiration doit être dans le futur' }
+        { message: "La date d'expiration doit être dans le futur" }
       ),
   }),
 });
@@ -58,9 +58,11 @@ export const submitKycSchema = z.object({
  * Get KYC status schema (no body required)
  */
 export const getKycStatusSchema = z.object({
-  params: z.object({
-    supplierId: z.string().uuid('ID fournisseur invalide').optional(),
-  }).optional(),
+  params: z
+    .object({
+      supplierId: z.string().uuid('ID fournisseur invalide').optional(),
+    })
+    .optional(),
 });
 
 /**
@@ -135,7 +137,9 @@ export const getAttemptsSchema = z.object({
       .string()
       .optional()
       .transform((val) =>
-        val ? val.split(',') as z.infer<typeof KycVerificationStatusEnum>[] : undefined
+        val
+          ? (val.split(',') as z.infer<typeof KycVerificationStatusEnum>[])
+          : undefined
       ),
     supplierId: z.string().uuid().optional(),
     provider: z.string().optional(),
@@ -206,4 +210,6 @@ export type GetPendingReviewsInput = z.infer<typeof getPendingReviewsSchema>;
 export type GetAttemptsInput = z.infer<typeof getAttemptsSchema>;
 export type GetAttemptDetailsInput = z.infer<typeof getAttemptDetailsSchema>;
 export type ForceVerifyInput = z.infer<typeof forceVerifySchema>;
-export type RequestResubmissionInput = z.infer<typeof requestResubmissionSchema>;
+export type RequestResubmissionInput = z.infer<
+  typeof requestResubmissionSchema
+>;

@@ -75,7 +75,8 @@ export class PlatformSettingsService {
   async getSettings(): Promise<PlatformSettings> {
     try {
       // Essayer de récupérer depuis le cache
-      const cached = await cacheService.get<PlatformSettings>(SETTINGS_CACHE_KEY);
+      const cached =
+        await cacheService.get<PlatformSettings>(SETTINGS_CACHE_KEY);
       if (cached) {
         return cached;
       }
@@ -192,7 +193,14 @@ export class PlatformSettingsService {
     total: number;
     pages: number;
   }> {
-    const { settingKey, adminId, startDate, endDate, page = 1, limit = 20 } = params;
+    const {
+      settingKey,
+      adminId,
+      startDate,
+      endDate,
+      page = 1,
+      limit = 20,
+    } = params;
     const skip = (page - 1) * limit;
 
     const where: any = {

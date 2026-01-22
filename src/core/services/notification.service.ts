@@ -200,17 +200,12 @@ class NotificationService {
     const skip = (page - 1) * limit;
 
     // Build where clause properly with AND to avoid Prisma conflicts
-    const whereConditions: any[] = [
-      { userId },
-    ];
+    const whereConditions: any[] = [{ userId }];
 
     // Add expiry filter (active notifications only)
     const now = new Date();
     whereConditions.push({
-      OR: [
-        { expiresAt: null },
-        { expiresAt: { gt: now } }
-      ]
+      OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
     });
 
     // Add optional filters
@@ -223,7 +218,7 @@ class NotificationService {
     }
 
     const where = {
-      AND: whereConditions
+      AND: whereConditions,
     };
 
     try {

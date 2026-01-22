@@ -823,7 +823,9 @@ export class AdminService {
     }
 
     if (phoneNumber) {
-      const existingPhone = await prisma.user.findUnique({ where: { phoneNumber } });
+      const existingPhone = await prisma.user.findUnique({
+        where: { phoneNumber },
+      });
       if (existingPhone) {
         throw new AppError(400, 'Un utilisateur avec ce numéro existe déjà');
       }
@@ -979,11 +981,7 @@ export class AdminService {
   /**
    * Reject supplier KYC documents
    */
-  async rejectSupplierKyc(
-    supplierId: string,
-    reason: string,
-    adminId: string
-  ) {
+  async rejectSupplierKyc(supplierId: string, reason: string, adminId: string) {
     const supplier = await prisma.supplierProfile.findUnique({
       where: { id: supplierId },
     });
@@ -1022,10 +1020,7 @@ export class AdminService {
   /**
    * Get suppliers pending KYC verification
    */
-  async getSuppliersWithPendingKyc(options: {
-    page?: number;
-    limit?: number;
-  }) {
+  async getSuppliersWithPendingKyc(options: { page?: number; limit?: number }) {
     const { page = 1, limit = 20 } = options;
     const skip = (page - 1) * limit;
 

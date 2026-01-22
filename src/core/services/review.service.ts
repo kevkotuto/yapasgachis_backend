@@ -292,6 +292,22 @@ export class ReviewService {
   }
 
   /**
+   * Get deal reviews
+   */
+  async getDealReviews(dealId: string, page = 1, limit = 10) {
+    const result = await reviewRepository.getDealReviews(dealId, page, limit);
+
+    return {
+      ...result,
+      pagination: {
+        page,
+        limit,
+        totalPages: Math.ceil(result.total / limit),
+      },
+    };
+  }
+
+  /**
    * Update product average rating (internal)
    */
   private async updateProductRating(productId: string) {

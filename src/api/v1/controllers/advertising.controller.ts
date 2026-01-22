@@ -123,7 +123,10 @@ export class AdvertisingController {
    * GET /api/v1/advertising/campaigns
    */
   getMyCampaigns = asyncHandler(
-    async (req: Request & Request<{}, {}, {}, GetCampaignsQuery>, res: Response) => {
+    async (
+      req: Request & Request<{}, {}, {}, GetCampaignsQuery>,
+      res: Response
+    ) => {
       const userId = (req as any).user.id;
 
       const result = await advertisingService.getMyCampaigns(userId, req.query);

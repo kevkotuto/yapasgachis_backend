@@ -76,29 +76,29 @@ export const formatPhoneNumber = (
   // Check if it starts with a known African country code (without +)
   // Common African codes: 20, 27, 212, 213, 216, 221-229, 233, 234, 237, 241-243, 254-256
   const africanPrefixes = [
-    '20',   // Egypt
-    '27',   // South Africa
-    '212',  // Morocco
-    '213',  // Algeria
-    '216',  // Tunisia
-    '221',  // Senegal
-    '222',  // Mauritania
-    '223',  // Mali
-    '224',  // Guinea
-    '225',  // Côte d'Ivoire
-    '226',  // Burkina Faso
-    '227',  // Niger
-    '228',  // Togo
-    '229',  // Benin
-    '233',  // Ghana
-    '234',  // Nigeria
-    '237',  // Cameroon
-    '241',  // Gabon
-    '242',  // Congo
-    '243',  // DRC
-    '254',  // Kenya
-    '255',  // Tanzania
-    '256',  // Uganda
+    '20', // Egypt
+    '27', // South Africa
+    '212', // Morocco
+    '213', // Algeria
+    '216', // Tunisia
+    '221', // Senegal
+    '222', // Mauritania
+    '223', // Mali
+    '224', // Guinea
+    '225', // Côte d'Ivoire
+    '226', // Burkina Faso
+    '227', // Niger
+    '228', // Togo
+    '229', // Benin
+    '233', // Ghana
+    '234', // Nigeria
+    '237', // Cameroon
+    '241', // Gabon
+    '242', // Congo
+    '243', // DRC
+    '254', // Kenya
+    '255', // Tanzania
+    '256', // Uganda
   ];
 
   // Check if number starts with any known African prefix

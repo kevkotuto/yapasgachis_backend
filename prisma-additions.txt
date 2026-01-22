@@ -1,0 +1,462 @@
+// ==================== PHASE 14: DEAL OPTIONS/VARIANTS ====================
+
+model DealOption {
+  id          String   @id @default(uuid())
+  dealId      String
+  deal        Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  // Option Info
+  title       String   // "Studio 2 personnes", "Chambre Deluxe", "Taille M"
+  description String?
+  price       Float    // Prix spécifique pour cette option
+
+  // Spécificités (pour hôtels, locations, etc.)
+  capacity    String?  // "2 pers max"
+  size        String?  // "28 m2"
+  floor       String?  // "Étage supérieur"
+  features    Json?    // ["WiFi gratuit", "Climatisation", "Balcon"]
+
+  // Media
+  imageUrl    String?
+
+  // Disponibilité
+  stock       Int      @default(0)  // Stock disponible pour cette option
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+
+  // Relations
+  bookings    DealBooking[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dealId])
+  @@map("deal_options")
+}
+
+// ==================== PHASE 15: REWARDS & POINTS SYSTEM ====================
+
+enum RewardTier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+enum PointTransactionType {
+  EARNED
+  REDEEMED
+  EXPIRED
+  BONUS
+}
+
+enum PointSource {
+  PURCHASE
+  REFERRAL
+  DONATION
+  REVIEW
+  SIGNUP_BONUS
+  DAILY_LOGIN
+  ACHIEVEMENT
+}
+
+model UserRewards {
+  id              String      @id @default(uuid())
+  userId          String      @unique
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Points
+  totalPoints     Int         @default(0)     // Total cumulé (lifetime)
+  availablePoints Int         @default(0)     // Points non expirés
+
+  // Tier
+  currentTier     RewardTier  @default(BRONZE)
+  tierUpdatedAt   DateTime    @default(now())
+
+  // Stats
+  lifetimeEarned  Int         @default(0)
+  lifetimeRedeemed Int        @default(0)
+
+  // Relations
+  transactions    PointTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user_rewards")
+}
+
+model PointTransaction {
+  id          String               @id @default(uuid())
+  userId      String
+  userRewards UserRewards          @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  // Transaction
+  amount      Int                  // Positif pour EARNED, négatif pour REDEEMED
+  type        PointTransactionType
+  source      PointSource
+  description String
+
+  // Référence
+  reference   String?              // orderId, reviewId, referralId, etc.
+
+  // Balance après transaction
+  balanceAfter Int
+
+  // Expiration
+  expiresAt   DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([reference])
+  @@map("point_transactions")
+}
+
+// ==================== PHASE 16: REFERRAL SYSTEM ====================
+
+enum ReferralStatus {
+  PENDING
+  COMPLETED
+  REWARDED
+  EXPIRED
+}
+
+model ReferralCode {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Code
+  code      String   @unique  // "JOHN2024", "YAPAS-ABC123"
+
+  // Usage
+  timesUsed Int      @default(0)
+  maxUses   Int?     // Null = illimité
+  isActive  Boolean  @default(true)
+
+  // Expiration
+  expiresAt DateTime?
+
+  // Relations
+  referrals Referral[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([code])
+  @@map("referral_codes")
+}
+
+model Referral {
+  id              String         @id @default(uuid())
+
+  // Parrain
+  referrerId      String
+  referrer        User           @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referralCodeId  String
+  referralCode    ReferralCode   @relation(fields: [referralCodeId], references: [id], onDelete: Cascade)
+
+  // Filleul
+  referredUserId  String
+  referredUser    User           @relation("Referred", fields: [referredUserId], references: [id], onDelete: Cascade)
+
+  // Status
+  status          ReferralStatus @default(PENDING)
+
+  // Récompenses
+  rewardType      String?        // "POINTS", "DISCOUNT", "CASH"
+  rewardAmount    Float?
+  rewardCurrency  String?        @default("XOF")
+
+  // Dates
+  completedAt     DateTime?      // Quand le filleul a fait son 1er achat
+  rewardedAt      DateTime?      // Quand la récompense a été donnée
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([referralCodeId, referredUserId])
+  @@index([referrerId])
+  @@index([referredUserId])
+  @@map("referrals")
+}
+
+// ==================== PHASE 17: STORE HOURS ====================
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+model StoreHours {
+  id           String         @id @default(uuid())
+  storeId      String         @unique
+  store        SupplierStore  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  // Horaires
+  hours        Json           // Array de {day, isClosed, slots: [{open, close}]}
+  timezone     String         @default("Africa/Abidjan")
+  specialNotes String?        // "Fermé les jours fériés"
+
+  // Fermetures exceptionnelles
+  specialClosures SpecialClosure[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("store_hours")
+}
+
+model SpecialClosure {
+  id       String      @id @default(uuid())
+  storeId  String
+  store    SupplierStore @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  // Horaires liés (optionnel)
+  storeHoursId String?
+  storeHours   StoreHours? @relation(fields: [storeHoursId], references: [id], onDelete: Cascade)
+
+  // Fermeture
+  date     DateTime    // Date de fermeture
+  reason   String      // "Jour férié", "Congés"
+  allDay   Boolean     @default(true)
+  from     String?     // "10:00"
+  to       String?     // "14:00"
+
+  createdAt DateTime @default(now())
+
+  @@index([storeId])
+  @@index([date])
+  @@map("special_closures")
+}
+
+// ==================== PHASE 18: POINTS OF SALE (POS) ====================
+
+enum POSType {
+  MAIN
+  BRANCH
+  KIOSK
+  WAREHOUSE
+  PICKUP_POINT
+}
+
+model PointOfSale {
+  id          String          @id @default(uuid())
+  supplierId  String
+  supplier    SupplierProfile @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  // Info
+  name        String          // "YapaGachis - Marcory"
+  type        POSType         @default(BRANCH)
+
+  // Location
+  address     String
+  city        String
+  commune     String
+  neighborhood String?
+  latitude    Float
+  longitude   Float
+
+  // Contact
+  phoneNumber String?
+  email       String?
+
+  // Operations
+  isActive       Boolean @default(true)
+  acceptsOrders  Boolean @default(true)
+  acceptsPickup  Boolean @default(true)
+  acceptsDelivery Boolean @default(true)
+
+  // Details
+  description String?
+  images      Json?          // Array de URLs
+  amenities   Json?          // ["Parking", "WiFi", "Climatisé"]
+
+  // Relations
+  teamMembers TeamMember[]
+  hours       StoreHours?    // One-to-one via storeId unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([supplierId])
+  @@index([city, commune])
+  @@index([latitude, longitude])
+  @@map("points_of_sale")
+}
+
+// ==================== PHASE 19: TEAM MEMBERS (Extension) ====================
+
+enum TeamRole {
+  MANAGER
+  CASHIER
+  STOCK_MANAGER
+  DELIVERY
+  SUPPORT
+  ADMIN
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+model TeamMember {
+  id           String            @id @default(uuid())
+  supplierId   String
+  supplier     SupplierProfile   @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  // User (si accepté)
+  userId       String?
+  user         User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // POS rattaché
+  posId        String?
+  pos          PointOfSale?      @relation(fields: [posId], references: [id], onDelete: SetNull)
+
+  // Info
+  email        String?
+  phoneNumber  String?
+  firstName    String
+  lastName     String?
+
+  // Role & Permissions
+  role         TeamRole
+  permissions  Json              // Array de permissions
+
+  // Status
+  isActive     Boolean           @default(true)
+  invitationStatus InvitationStatus @default(PENDING)
+  invitationToken  String?       @unique
+
+  // Dates
+  invitedAt    DateTime          @default(now())
+  acceptedAt   DateTime?
+  lastActiveAt DateTime?
+
+  // Activity logs
+  activityLogs TeamActivityLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([supplierId])
+  @@index([userId])
+  @@index([email])
+  @@index([invitationToken])
+  @@map("team_members")
+}
+
+model TeamActivityLog {
+  id           String      @id @default(uuid())
+  teamMemberId String
+  teamMember   TeamMember  @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+
+  // Action
+  action       String      // "created_product", "updated_order", "managed_stock"
+  entityType   String      // "product", "order", "stock"
+  entityId     String
+  details      Json?       // Détails supplémentaires
+
+  // Metadata
+  ipAddress    String?
+  userAgent    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([teamMemberId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("team_activity_logs")
+}
+
+// ==================== PHASE 20: MEDIA GALLERY ====================
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  DOCUMENT
+}
+
+enum MediaCategory {
+  PRODUCT
+  DEAL
+  STORE
+  PROFILE
+  REVIEW
+  KYC
+}
+
+model Media {
+  id          String        @id @default(uuid())
+
+  // Entity
+  entityType  MediaCategory
+  entityId    String
+
+  // Media Info
+  type        MediaType     @default(IMAGE)
+  url         String
+  thumbnailUrl String?
+  fileName    String
+  fileSize    Int           // bytes
+  mimeType    String
+
+  // Dimensions
+  width       Int?
+  height      Int?
+  duration    Int?          // Pour vidéos (secondes)
+
+  // Organization
+  isPrimary   Boolean       @default(false)
+  sortOrder   Int           @default(0)
+  caption     String?
+  altText     String?
+
+  // Uploader
+  uploadedBy  String
+  uploader    User          @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([entityType, entityId])
+  @@index([uploadedBy])
+  @@map("media")
+}
+
+// ==================== UPDATE EXISTING MODELS ====================
+
+// Ajouter relations manquantes dans modèles existants:
+
+// Dans model Deal:
+// dealOptions  DealOption[]
+
+// Dans model DealBooking:
+// optionId     String?
+// dealOption   DealOption? @relation(fields: [optionId], references: [id], onDelete: SetNull)
+
+// Dans model User:
+// rewards         UserRewards?
+// referralCodes   ReferralCode[]
+// referralsGiven  Referral[]      @relation("Referrer")
+// referralsReceived Referral[]    @relation("Referred")
+// teamMemberships TeamMember[]
+// uploadedMedia   Media[]
+
+// Dans model SupplierProfile:
+// pointsOfSale    PointOfSale[]
+// teamMembers     TeamMember[]
+
+// Dans model SupplierStore:
+// hours           StoreHours?
+// specialClosures SpecialClosure[]

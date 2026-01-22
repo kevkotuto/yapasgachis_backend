@@ -130,6 +130,79 @@ services:
     networks:
       - yapasgachis-network
 
+  # Evolution API (WhatsApp Integration)
+  evolution-api:
+    image: atendai/evolution-api:latest
+    container_name: yapasgachis-evolution-api
+    restart: unless-stopped
+    environment:
+      # Server Configuration
+      SERVER_TYPE: http
+      SERVER_PORT: 8080
+      SERVER_URL: http://localhost:8080
+
+      # Authentication
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:-yapasgachis-evolution-key}
+      AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: 'true'
+
+      # Database - use the same PostgreSQL
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://postgres:password@postgres:5432/evolution?schema=public
+      DATABASE_CONNECTION_CLIENT_NAME: evolution_client
+      DATABASE_SAVE_DATA_INSTANCE: 'true'
+      DATABASE_SAVE_DATA_NEW_MESSAGE: 'true'
+      DATABASE_SAVE_DATA_MESSAGES_UPDATE: 'true'
+      DATABASE_SAVE_DATA_CONTACTS: 'true'
+      DATABASE_SAVE_DATA_CHATS: 'true'
+      DATABASE_SAVE_DATA_LABELS: 'true'
+      DATABASE_SAVE_DATA_HISTORIC: 'true'
+
+      # Redis Cache
+      CACHE_REDIS_ENABLED: 'true'
+      CACHE_REDIS_URI: redis://:redispassword@redis:6379/1
+      CACHE_REDIS_TTL: 604800
+      CACHE_REDIS_PREFIX_KEY: evolution
+      CACHE_REDIS_SAVE_INSTANCES: 'true'
+      CACHE_LOCAL_ENABLED: 'false'
+
+      # QR Code Settings
+      QRCODE_LIMIT: 30
+      QRCODE_COLOR: '#000000'
+
+      # Session Config
+      CONFIG_SESSION_PHONE_CLIENT: YapaGachis
+      CONFIG_SESSION_PHONE_NAME: Chrome
+
+      # Webhook (for receiving WhatsApp events)
+      WEBHOOK_GLOBAL_ENABLED: 'false'
+      WEBHOOK_GLOBAL_URL: ''
+
+      # WebSocket
+      WEBSOCKET_ENABLED: 'true'
+      WEBSOCKET_GLOBAL_EVENTS: 'false'
+
+      # Logging
+      LOG_LEVEL: 'ERROR,WARN,DEBUG,INFO,LOG,VERBOSE,DARK,WEBHOOKS'
+      LOG_COLOR: 'true'
+      LOG_BAILEYS: error
+
+      # Instance deletion timeout (in seconds)
+      DEL_INSTANCE: 'false'
+
+      # Language
+      LANGUAGE: fr
+    ports:
+      - '8080:8080'
+    volumes:
+      - evolution_instances:/evolution/instances
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - yapasgachis-network
+
 networks:
   yapasgachis-network:
     driver: bridge
@@ -140,4 +213,6 @@ volumes:
   redis_data:
     driver: local
   pgadmin_data:
+    driver: local
+  evolution_instances:
     driver: local

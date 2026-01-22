@@ -49,11 +49,7 @@ router.get(
  * @desc    Get all KYC attempts with filters
  * @access  Admin only
  */
-router.get(
-  '/attempts',
-  validate(getAttemptsSchema),
-  kycController.getAttempts
-);
+router.get('/attempts', validate(getAttemptsSchema), kycController.getAttempts);
 
 /**
  * @route   GET /api/v1/admin/kyc/attempts/:attemptId

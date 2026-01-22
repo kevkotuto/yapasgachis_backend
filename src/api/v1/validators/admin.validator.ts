@@ -144,35 +144,45 @@ export const paginationSchema = z.object({
 // ==================== ADMIN USER CREATION VALIDATORS ====================
 
 export const createUserSchema = z.object({
-  body: z.object({
-    firstName: z.string().min(2).max(50),
-    lastName: z.string().max(50).optional(),
-    email: z.string().email().optional(),
-    phoneNumber: z.string().regex(/^\+?[0-9]{8,15}$/).optional(),
-    password: z.string().min(8).optional(),
-    role: z.nativeEnum(UserRole),
-    status: z.nativeEnum(UserStatus).optional().default(UserStatus.ACTIVE),
-    emailVerified: z.boolean().optional().default(true),
-    phoneVerified: z.boolean().optional().default(true),
-  }).refine(
-    (data) => data.email || data.phoneNumber,
-    { message: 'Email ou numéro de téléphone requis' }
-  ),
+  body: z
+    .object({
+      firstName: z.string().min(2).max(50),
+      lastName: z.string().max(50).optional(),
+      email: z.string().email().optional(),
+      phoneNumber: z
+        .string()
+        .regex(/^\+?[0-9]{8,15}$/)
+        .optional(),
+      password: z.string().min(8).optional(),
+      role: z.nativeEnum(UserRole),
+      status: z.nativeEnum(UserStatus).optional().default(UserStatus.ACTIVE),
+      emailVerified: z.boolean().optional().default(true),
+      phoneVerified: z.boolean().optional().default(true),
+    })
+    .refine((data) => data.email || data.phoneNumber, {
+      message: 'Email ou numéro de téléphone requis',
+    }),
 });
 
 export const forceVerifyUserSchema = z.object({
   params: z.object({
     id: z.string().uuid(),
   }),
-  body: z.object({
-    verifyEmail: z.boolean().optional(),
-    verifyPhone: z.boolean().optional(),
-    verifyKyc: z.boolean().optional(),
-    activateUser: z.boolean().optional(),
-  }).refine(
-    (data) => data.verifyEmail || data.verifyPhone || data.verifyKyc || data.activateUser,
-    { message: 'Au moins une option de vérification requise' }
-  ),
+  body: z
+    .object({
+      verifyEmail: z.boolean().optional(),
+      verifyPhone: z.boolean().optional(),
+      verifyKyc: z.boolean().optional(),
+      activateUser: z.boolean().optional(),
+    })
+    .refine(
+      (data) =>
+        data.verifyEmail ||
+        data.verifyPhone ||
+        data.verifyKyc ||
+        data.activateUser,
+      { message: 'Au moins une option de vérification requise' }
+    ),
 });
 
 // ==================== KYC MANAGEMENT VALIDATORS ====================
@@ -195,7 +205,9 @@ export const getPendingKycSchema = z.object({
 
 // Types
 export type CreateUserInput = z.infer<typeof createUserSchema>['body'];
-export type ForceVerifyUserInput = z.infer<typeof forceVerifyUserSchema>['body'];
+export type ForceVerifyUserInput = z.infer<
+  typeof forceVerifyUserSchema
+>['body'];
 export type RejectKycInput = z.infer<typeof rejectKycSchema>['body'];
 export type GetUsersQuery = z.infer<typeof getUsersSchema>['query'];
 export type UpdateUserStatusInput = z.infer<

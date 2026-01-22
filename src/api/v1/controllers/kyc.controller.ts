@@ -84,11 +84,12 @@ export const submitKyc = asyncHandler(async (req: Request, res: Response) => {
   const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
   if (!files?.idCardFront?.[0] || !files?.selfie?.[0]) {
-    throw new AppError(400, 'Pièce d\'identité et selfie requis');
+    throw new AppError(400, "Pièce d'identité et selfie requis");
   }
 
   // Get Cloudinary URLs from uploaded files
-  const idCardFrontUrl = (files.idCardFront[0] as any).path || files.idCardFront[0].filename;
+  const idCardFrontUrl =
+    (files.idCardFront[0] as any).path || files.idCardFront[0].filename;
   const idCardBackUrl = files.idCardBack?.[0]
     ? (files.idCardBack[0] as any).path || files.idCardBack[0].filename
     : undefined;
@@ -133,29 +134,31 @@ export const submitKyc = asyncHandler(async (req: Request, res: Response) => {
  *       401:
  *         description: Unauthorized
  */
-export const getKycStatus = asyncHandler(async (req: Request, res: Response) => {
-  const userId = req.user?.id;
+export const getKycStatus = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.user?.id;
 
-  if (!userId) {
-    throw new AppError(401, 'Non autorisé');
+    if (!userId) {
+      throw new AppError(401, 'Non autorisé');
+    }
+
+    // Get supplier profile
+    const supplier = await prisma.supplierProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!supplier) {
+      throw new AppError(404, 'Profil fournisseur non trouvé');
+    }
+
+    const status = await kycService.getVerificationStatus(supplier.id);
+
+    res.status(200).json({
+      success: true,
+      data: status,
+    });
   }
-
-  // Get supplier profile
-  const supplier = await prisma.supplierProfile.findUnique({
-    where: { userId },
-  });
-
-  if (!supplier) {
-    throw new AppError(404, 'Profil fournisseur non trouvé');
-  }
-
-  const status = await kycService.getVerificationStatus(supplier.id);
-
-  res.status(200).json({
-    success: true,
-    data: status,
-  });
-});
+);
 
 // ==================== Admin Endpoints ====================
 
@@ -259,7 +262,7 @@ export const getAttempts = asyncHandler(async (req: Request, res: Response) => {
   const result = await kycService.getPendingReviewAttempts({
     page: parseInt(page as string, 10),
     limit: parseInt(limit as string, 10),
-    status: status ? (status as string).split(',') as any : undefined,
+    status: status ? ((status as string).split(',') as any) : undefined,
     supplierId: supplierId as string,
     provider: provider as string,
     fromDate: fromDate ? new Date(fromDate as string) : undefined,

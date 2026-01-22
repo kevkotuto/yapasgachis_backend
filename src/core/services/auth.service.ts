@@ -4,9 +4,11 @@ import GoogleAuthService from './google-auth.service';
 import JWTService from './jwt.service';
 import OTPService, { OTPPurpose } from './otp.service';
 
+import config from '@/config';
 import UserRepository from '@/core/repositories/user.repository';
 import emailService from '@/infrastructure/messaging/email/email.service';
 import SMSService from '@/infrastructure/messaging/sms/sms.service';
+import { WhatsAppService } from '@/infrastructure/messaging/whatsapp';
 import logger from '@/infrastructure/monitoring/logger';
 import { AppError } from '@/middleware/error-handler.middleware';
 import { APP_CONSTANTS } from '@/utils/constants';
@@ -69,6 +71,108 @@ export class AuthService {
   }
 
   /**
+   * Send OTP via the best available channel (WhatsApp preferred, SMS fallback)
+   */
+  private async sendOTPViaPreferredChannel(
+    phoneNumber: string,
+    otpCode: string,
+    expiresInMinutes: number = 10
+  ): Promise<{ channel: 'whatsapp' | 'sms' | 'email'; success: boolean }> {
+    // Try WhatsApp first if enabled and preferred
+    if (config.whatsapp.enabled && config.whatsapp.preferOverSms) {
+      try {
+        const whatsappAvailable = await WhatsAppService.isAvailable();
+        if (whatsappAvailable) {
+          const success = await WhatsAppService.sendOTP(
+            phoneNumber,
+            otpCode,
+            expiresInMinutes
+          );
+          if (success) {
+            logger.info('OTP sent via WhatsApp', {
+              phone: phoneNumber.slice(-4),
+            });
+            return { channel: 'whatsapp', success: true };
+          }
+        }
+      } catch (error) {
+        logger.warn('WhatsApp OTP failed, falling back to SMS', {
+          phone: phoneNumber.slice(-4),
+          error: (error as Error).message,
+        });
+      }
+    }
+
+    // Fallback to SMS
+    try {
+      const success = await SMSService.sendOTP(
+        phoneNumber,
+        otpCode,
+        expiresInMinutes
+      );
+      if (success) {
+        logger.info('OTP sent via SMS', { phone: phoneNumber.slice(-4) });
+        return { channel: 'sms', success: true };
+      }
+    } catch (error) {
+      logger.error('SMS OTP failed', {
+        phone: phoneNumber.slice(-4),
+        error: (error as Error).message,
+      });
+    }
+
+    return { channel: 'sms', success: false };
+  }
+
+  /**
+   * Send welcome message via preferred channel
+   */
+  private async sendWelcomeViaPreferredChannel(
+    phoneNumber: string,
+    firstName: string
+  ): Promise<void> {
+    if (config.whatsapp.enabled && config.whatsapp.preferOverSms) {
+      try {
+        const whatsappAvailable = await WhatsAppService.isAvailable();
+        if (whatsappAvailable) {
+          await WhatsAppService.sendWelcome(phoneNumber, firstName);
+          return;
+        }
+      } catch (error) {
+        logger.warn('WhatsApp welcome failed, falling back to SMS', {
+          error: (error as Error).message,
+        });
+      }
+    }
+
+    await SMSService.sendWelcomeSMS(phoneNumber, firstName);
+  }
+
+  /**
+   * Send password reset via preferred channel
+   */
+  private async sendPasswordResetViaPreferredChannel(
+    phoneNumber: string,
+    code: string
+  ): Promise<void> {
+    if (config.whatsapp.enabled && config.whatsapp.preferOverSms) {
+      try {
+        const whatsappAvailable = await WhatsAppService.isAvailable();
+        if (whatsappAvailable) {
+          await WhatsAppService.sendPasswordReset(phoneNumber, code);
+          return;
+        }
+      } catch (error) {
+        logger.warn('WhatsApp password reset failed, falling back to SMS', {
+          error: (error as Error).message,
+        });
+      }
+    }
+
+    await SMSService.sendPasswordResetSMS(phoneNumber, code);
+  }
+
+  /**
    * Register new user
    */
   async register(
@@ -117,14 +221,20 @@ export class AuthService {
       language: data.language || 'fr',
     });
 
-    // Generate and send OTP
-    const otpCode = await OTPService.generateOTP(
-      phoneNumber,
-      OTPPurpose.REGISTRATION
-    );
+    // Generate OTP (use WhatsApp channel if enabled)
+    const otpCode =
+      config.whatsapp.enabled && config.whatsapp.preferOverSms
+        ? await OTPService.generateWhatsAppOTP(
+            phoneNumber,
+            OTPPurpose.REGISTRATION
+          )
+        : await OTPService.generateOTP(phoneNumber, OTPPurpose.REGISTRATION);
 
-    // Send OTP via SMS
-    await SMSService.sendOTP(phoneNumber, otpCode);
+    // Send OTP via preferred channel (WhatsApp > SMS)
+    const { channel } = await this.sendOTPViaPreferredChannel(
+      phoneNumber,
+      otpCode
+    );
 
     // Also send OTP via email if provided
     if (data.email) {
@@ -141,15 +251,23 @@ export class AuthService {
       phoneNumber,
       email: data.email || null,
       role: user.role,
+      otpChannel: channel,
     });
 
     // Return user without sensitive data
     const { passwordHash: _, ...userWithoutPassword } = user;
 
-    // Determine message based on whether email was provided
-    const message = data.email
-      ? 'Inscription réussie. Veuillez vérifier votre téléphone ou email pour le code OTP.'
-      : 'Inscription réussie. Veuillez vérifier votre téléphone pour le code OTP.';
+    // Determine message based on channel used
+    let message: string;
+    if (channel === 'whatsapp') {
+      message = data.email
+        ? 'Inscription réussie. Veuillez vérifier votre WhatsApp ou email pour le code OTP.'
+        : 'Inscription réussie. Veuillez vérifier votre WhatsApp pour le code OTP.';
+    } else {
+      message = data.email
+        ? 'Inscription réussie. Veuillez vérifier votre téléphone ou email pour le code OTP.'
+        : 'Inscription réussie. Veuillez vérifier votre téléphone pour le code OTP.';
+    }
 
     return {
       user: userWithoutPassword,
@@ -412,8 +530,8 @@ export class AuthService {
     // Verify phone number
     await this.userRepository.verifyPhoneNumber(user.id);
 
-    // Send welcome SMS
-    await SMSService.sendWelcomeSMS(phoneNumber, user.firstName);
+    // Send welcome message via preferred channel
+    await this.sendWelcomeViaPreferredChannel(phoneNumber, user.firstName);
 
     logger.info('Phone verified', { userId: user.id, phoneNumber });
 
@@ -447,7 +565,10 @@ export class AuthService {
     }
 
     // Map OTPPurpose to email purpose
-    const emailPurposeMap: Record<OTPPurpose, 'login' | 'registration' | 'verification'> = {
+    const emailPurposeMap: Record<
+      OTPPurpose,
+      'login' | 'registration' | 'verification'
+    > = {
       [OTPPurpose.REGISTRATION]: 'registration',
       [OTPPurpose.LOGIN]: 'login',
       [OTPPurpose.PASSWORD_RESET]: 'verification',
@@ -455,9 +576,16 @@ export class AuthService {
       [OTPPurpose.EMAIL_VERIFICATION]: 'verification',
     };
 
-    // Generate and send new OTP
-    const otpCode = await OTPService.generateOTP(formattedPhone, purpose);
-    await SMSService.sendOTP(formattedPhone, otpCode);
+    // Generate and send new OTP via preferred channel
+    const otpCode =
+      config.whatsapp.enabled && config.whatsapp.preferOverSms
+        ? await OTPService.generateWhatsAppOTP(formattedPhone, purpose)
+        : await OTPService.generateOTP(formattedPhone, purpose);
+
+    const { channel } = await this.sendOTPViaPreferredChannel(
+      formattedPhone,
+      otpCode
+    );
 
     // Also send via email if user has email
     if (user.email) {
@@ -469,11 +597,23 @@ export class AuthService {
       });
     }
 
-    logger.info('OTP resent', { phoneNumber: formattedPhone, email: user.email, purpose });
+    logger.info('OTP resent', {
+      phoneNumber: formattedPhone,
+      email: user.email,
+      purpose,
+      channel,
+    });
 
-    const message = user.email
-      ? 'Un nouveau code OTP vous a été envoyé par SMS et email'
-      : 'Un nouveau code OTP vous a été envoyé';
+    let message: string;
+    if (channel === 'whatsapp') {
+      message = user.email
+        ? 'Un nouveau code OTP vous a été envoyé par WhatsApp et email'
+        : 'Un nouveau code OTP vous a été envoyé par WhatsApp';
+    } else {
+      message = user.email
+        ? 'Un nouveau code OTP vous a été envoyé par SMS et email'
+        : 'Un nouveau code OTP vous a été envoyé';
+    }
 
     return { message };
   }
@@ -494,12 +634,19 @@ export class AuthService {
       );
     }
 
-    // Generate and send OTP
-    const otpCode = await OTPService.generateOTP(
-      formattedPhone,
-      OTPPurpose.PASSWORD_RESET
-    );
-    await SMSService.sendPasswordResetSMS(formattedPhone, otpCode);
+    // Generate and send OTP via preferred channel
+    const otpCode =
+      config.whatsapp.enabled && config.whatsapp.preferOverSms
+        ? await OTPService.generateWhatsAppOTP(
+            formattedPhone,
+            OTPPurpose.PASSWORD_RESET
+          )
+        : await OTPService.generateOTP(
+            formattedPhone,
+            OTPPurpose.PASSWORD_RESET
+          );
+
+    await this.sendPasswordResetViaPreferredChannel(formattedPhone, otpCode);
 
     // Also send via email if user has email
     if (user.email) {
@@ -516,9 +663,18 @@ export class AuthService {
       email: user.email,
     });
 
-    const message = user.email
-      ? 'Un code de réinitialisation vous a été envoyé par SMS et email'
-      : 'Un code de réinitialisation vous a été envoyé par SMS';
+    const whatsappUsed =
+      config.whatsapp.enabled && config.whatsapp.preferOverSms;
+    let message: string;
+    if (whatsappUsed) {
+      message = user.email
+        ? 'Un code de réinitialisation vous a été envoyé par WhatsApp et email'
+        : 'Un code de réinitialisation vous a été envoyé par WhatsApp';
+    } else {
+      message = user.email
+        ? 'Un code de réinitialisation vous a été envoyé par SMS et email'
+        : 'Un code de réinitialisation vous a été envoyé par SMS';
+    }
 
     return { message };
   }
