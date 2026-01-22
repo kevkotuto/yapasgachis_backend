@@ -347,6 +347,32 @@ export class CloudinaryService {
   }
 
   /**
+   * Upload PDF file
+   */
+  async uploadPDF(
+    buffer: Buffer,
+    filename: string,
+    folder: string = 'yapasgachis/documents'
+  ): Promise<{
+    url: string;
+    secureUrl: string;
+    publicId: string;
+    bytes: number;
+  }> {
+    return this.uploadFromBuffer(buffer, {
+      folder,
+      filename,
+      resourceType: 'raw',
+      maxFileSize: 20 * 1024 * 1024, // 20MB for PDFs
+    }).then((result) => ({
+      url: result.url,
+      secureUrl: result.secureUrl,
+      publicId: result.publicId,
+      bytes: result.bytes,
+    }));
+  }
+
+  /**
    * Health check
    */
   async healthCheck(): Promise<boolean> {

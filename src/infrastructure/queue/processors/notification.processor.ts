@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Prisma, NotificationType, NotificationPriority } from '@prisma/client';
 import { Worker, Job } from 'bullmq';
 
 import config from '@/config';
@@ -13,7 +13,6 @@ import type {
   BulkNotificationJobData,
   ScheduledNotificationJobData,
 } from '@/types/notification.types';
-import { NotificationType, NotificationPriority } from '@/utils/enums';
 
 /**
  * Process send-push job: Send push notification to a user

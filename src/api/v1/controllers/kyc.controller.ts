@@ -7,12 +7,12 @@
 
 import { Request, Response } from 'express';
 
-import { kycService } from '@core/services/kyc.service';
-import { prisma } from '@infrastructure/database';
-import logger from '@infrastructure/monitoring/logger';
-import { getKycQueueStats } from '@infrastructure/queue/queues/kyc.queue';
-import { AppError } from '@middleware/error-handler.middleware';
-import { asyncHandler } from '@utils/helpers';
+import { kycService } from '@/core/services/kyc.service';
+import { prisma } from '@/infrastructure/database';
+import logger from '@/infrastructure/monitoring/logger';
+import { getKycQueueStats } from '@/infrastructure/queue/queues/kyc.queue';
+import { AppError } from '@/middleware/error-handler.middleware';
+import { asyncHandler } from '@/utils/helpers';
 import { IdCardType } from '@prisma/client';
 
 // ==================== Supplier Endpoints ====================

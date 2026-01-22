@@ -5,12 +5,15 @@
  * BullMQ worker for processing KYC verification jobs
  */
 
+import { NotificationType, NotificationPriority } from '@prisma/client';
 import { Worker, Job } from 'bullmq';
 
-import config from '@config/index';
-import { kycService } from '@core/services/kyc.service';
-import logger from '@infrastructure/monitoring/logger';
-import { KycVerificationJobData, KycNotificationJobData } from '@/types/kyc.types';
+import config from '@/config/index';
+import { kycService } from '@/core/services/kyc.service';
+import notificationService from '@/core/services/notification.service';
+import { prisma } from '@/infrastructure/database/prisma';
+import logger from '@/infrastructure/monitoring/logger';
+import { KycVerificationJobData, KycNotificationJobData, KycNotificationType } from '@/types/kyc.types';
 
 // Redis connection for BullMQ
 const connection = {
@@ -122,26 +125,44 @@ export function createKycNotificationWorker(): Worker {
       });
 
       try {
-        // TODO: Integrate with actual notification service
-        // For now, just log the notification
-        logger.info('KYC notification sent', {
-          supplierId,
-          notificationType,
-          title,
-          message,
+        // Get supplier's userId
+        const supplier = await prisma.supplierProfile.findUnique({
+          where: { id: supplierId },
+          select: { userId: true },
         });
 
-        // In production, you would:
-        // 1. Send push notification via FCM/Expo
-        // 2. Send email notification
-        // 3. Send SMS if configured
-        // Example:
-        // await notificationService.sendToUser(supplierId, {
-        //   type: notificationType,
-        //   title,
-        //   message,
-        //   data: job.data.data,
-        // });
+        if (supplier) {
+          // Send notification via notification service
+          const isHighPriority = notificationType === KycNotificationType.KYC_APPROVED || notificationType === KycNotificationType.KYC_REJECTED;
+          await notificationService.create({
+            userId: supplier.userId,
+            type: NotificationType.SYSTEM,
+            title,
+            message,
+            priority: isHighPriority
+              ? NotificationPriority.HIGH
+              : NotificationPriority.NORMAL,
+            sendPush: true,
+            sendEmail: isHighPriority,
+            data: {
+              supplierId,
+              type: 'kyc_notification',
+              notificationType,
+              ...job.data.data,
+            },
+          });
+
+          logger.info('KYC notification sent', {
+            supplierId,
+            userId: supplier.userId,
+            notificationType,
+            title,
+          });
+        } else {
+          logger.warn('Supplier not found for KYC notification', {
+            supplierId,
+          });
+        }
 
         return {
           success: true,

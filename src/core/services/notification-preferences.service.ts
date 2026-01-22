@@ -1,3 +1,5 @@
+import { NotificationType } from '@prisma/client';
+
 import { prisma } from '@/infrastructure/database/prisma';
 import logger from '@/infrastructure/monitoring/logger';
 import { AppError } from '@/middleware/error-handler.middleware';
@@ -6,7 +8,6 @@ import type {
   UpdatePreferencesParams,
 } from '@/types/notification.types';
 import { NotificationCategoryMap } from '@/types/notification.types';
-import { NotificationType } from '@/utils/enums';
 
 /**
  * NotificationPreferencesService - Manages user notification preferences
