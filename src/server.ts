@@ -3,6 +3,7 @@ import http from 'http';
 import app from './app';
 
 import config from '@/config';
+import { initializeNotificationListeners } from '@/core/services/notification-listeners';
 import { PrismaService } from '@/infrastructure/database/prisma';
 import { RedisService } from '@/infrastructure/database/redis/client';
 import logger from '@/infrastructure/monitoring/logger';
@@ -88,6 +89,12 @@ const startServer = async (): Promise<void> => {
     if (config.features?.websocket !== false) {
       socketService.initialize(server);
       logger.info('WebSocket server initialized');
+    }
+
+    // Initialize notification event listeners (after WebSocket initialization)
+    if (config.features?.notifications !== false) {
+      initializeNotificationListeners();
+      logger.info('Notification event listeners initialized');
     }
 
     // Start listening

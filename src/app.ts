@@ -29,7 +29,6 @@ import supplierRoutes from '@/api/v1/routes/supplier.routes';
 import storeStaffRoutes from '@/api/v1/routes/store-staff.routes';
 import whatsappRoutes from '@/api/v1/routes/whatsapp.routes';
 import config from '@/config';
-import { initializeNotificationListeners } from '@/core/services/notification-listeners';
 import { setupSwagger } from '@/infrastructure/docs/swagger';
 import logger from '@/infrastructure/monitoring/logger';
 import { initSentry } from '@/infrastructure/monitoring/sentry';
@@ -116,12 +115,6 @@ app.get(`/api/${config.app.apiVersion}`, (_req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
-
-// Initialize notification event listeners
-if (config.features?.notifications !== false) {
-  initializeNotificationListeners();
-  logger.info('Notification event listeners initialized');
-}
 
 app.use(`/api/${config.app.apiVersion}/auth`, authRoutes);
 app.use(`/api/${config.app.apiVersion}/suppliers`, supplierRoutes);

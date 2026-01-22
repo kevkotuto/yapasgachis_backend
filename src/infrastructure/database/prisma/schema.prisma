@@ -836,6 +836,8 @@ model Review {
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   productId String?
   product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  dealId    String?
+  deal      Deal?   @relation(fields: [dealId], references: [id], onDelete: Cascade)
 
   orderId String?
   rating  Int // 1-5
@@ -849,6 +851,7 @@ model Review {
   updatedAt DateTime @updatedAt
 
   @@index([productId, rating])
+  @@index([dealId, rating])
   @@index([userId])
   @@map("reviews")
 }
@@ -1275,6 +1278,7 @@ model Deal {
 
   // Relations
   bookings          DealBooking[]
+  reviews           Review[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
