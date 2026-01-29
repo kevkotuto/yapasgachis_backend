@@ -12,12 +12,14 @@ import {
   UploadImagesInput,
   DeleteImageInput,
   GetSupplierProductsInput,
+  ToggleProductStatusInput,
 } from '../validators/product.validator';
 
 import productService from '@/core/services/product.service';
 import logger from '@/infrastructure/monitoring/logger';
 import { AppError } from '@/middleware/error-handler.middleware';
 import { asyncHandler } from '@/utils/helpers';
+import { normalizeImages, normalizeImagesList } from '@/utils/normalize.utils';
 
 /**
  * Product Controller
@@ -45,7 +47,7 @@ export class ProductController {
     res.status(201).json({
       success: true,
       message: 'Produit créé avec succès',
-      data: { product },
+      data: normalizeImages(product),
     });
   });
 
@@ -61,7 +63,7 @@ export class ProductController {
 
       res.json({
         success: true,
-        data: { product },
+        data: normalizeImages(product),
       });
     }
   );
@@ -92,7 +94,7 @@ export class ProductController {
       res.json({
         success: true,
         message: 'Produit mis à jour avec succès',
-        data: { product },
+        data: normalizeImages(product),
       });
     }
   );
@@ -130,7 +132,10 @@ export class ProductController {
 
       res.json({
         success: true,
-        data: result,
+        data: {
+          ...result,
+          products: normalizeImagesList(result.products),
+        },
       });
     }
   );
@@ -147,7 +152,10 @@ export class ProductController {
 
       res.json({
         success: true,
-        data: { products, count: products.length },
+        data: {
+          products: normalizeImagesList(products),
+          count: products.length,
+        },
       });
     }
   );
@@ -164,7 +172,10 @@ export class ProductController {
 
       res.json({
         success: true,
-        data: { products, count: products.length },
+        data: {
+          products: normalizeImagesList(products),
+          count: products.length,
+        },
       });
     }
   );
@@ -187,7 +198,10 @@ export class ProductController {
 
       res.json({
         success: true,
-        data: result,
+        data: {
+          ...result,
+          products: normalizeImagesList(result.products),
+        },
       });
     }
   );
@@ -220,7 +234,7 @@ export class ProductController {
       res.json({
         success: true,
         message: 'Stock mis à jour avec succès',
-        data: { product },
+        data: normalizeImages(product),
       });
     }
   );
@@ -292,6 +306,29 @@ export class ProductController {
       });
     }
   );
+
+  /**
+   * Toggle product status
+   * PATCH /api/v1/products/:id/toggle-status
+   */
+  toggleStatus = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user.id;
+    const { id } = req.params;
+
+    const product = await productService.toggleProductStatus(userId, id);
+
+    logger.info('Product status toggled via API', {
+      userId,
+      productId: id,
+      newStatus: product.status,
+    });
+
+    res.json({
+      success: true,
+      message: 'Statut du produit modifié avec succès',
+      data: normalizeImages(product),
+    });
+  });
 }
 
 export default new ProductController();

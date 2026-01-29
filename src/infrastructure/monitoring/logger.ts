@@ -138,12 +138,27 @@ export const logHttpRequest = (req: {
   url: string;
   ip: string;
   userId?: string;
+  statusCode?: number;
+  duration?: number;
+  body?: Record<string, unknown>;
+  query?: Record<string, unknown>;
+  error?: string;
+  validationErrors?: unknown;
 }): void => {
-  logger.info('HTTP Request', {
+  const logLevel = req.statusCode && req.statusCode >= 400 ? 'warn' : 'info';
+  const message = `${req.method} ${req.url} - ${req.statusCode || 'pending'}`;
+
+  logger[logLevel](message, {
     method: req.method,
     url: req.url,
     ip: req.ip,
     userId: req.userId,
+    statusCode: req.statusCode,
+    duration: req.duration ? `${req.duration}ms` : undefined,
+    body: req.body,
+    query: req.query,
+    error: req.error,
+    validationErrors: req.validationErrors,
   });
 };
 

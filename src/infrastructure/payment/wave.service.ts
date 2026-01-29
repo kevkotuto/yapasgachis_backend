@@ -79,14 +79,23 @@ export interface WaveRefundResponse {
 }
 
 export interface WaveWebhookPayload {
-  type: 'checkout.session.completed' | 'payout.completed' | 'payout.failed';
+  id: string; // Event ID
+  type:
+    | 'checkout.session.completed'
+    | 'checkout.session.payment_failed'
+    | 'payout.completed'
+    | 'payout.failed';
   data: {
     id: string;
     amount: string;
     currency: string;
+    checkout_status?: string;
+    payment_status?: string;
     client_reference?: string;
     transaction_id?: string;
     status?: string;
+    error_url?: string;
+    success_url?: string;
     [key: string]: any;
   };
 }

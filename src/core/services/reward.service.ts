@@ -1,3 +1,5 @@
+import { PointTransactionType, RewardTier } from '@prisma/client';
+
 import rewardRepository from '@/core/repositories/reward.repository';
 import logger from '@/infrastructure/monitoring/logger';
 import { AppError } from '@/utils/helpers';
@@ -30,7 +32,7 @@ export class RewardService {
         totalPoints: 0,
         availablePoints: 0,
         lifetimePoints: 0,
-        currentTier: 'BRONZE',
+        currentTier: RewardTier.BRONZE,
       });
     }
 
@@ -145,7 +147,7 @@ export class RewardService {
     userId: string,
     page = 1,
     limit = 20,
-    type?: string
+    type?: PointTransactionType
   ) {
     const result = await rewardRepository.getTransactions(
       userId,
@@ -255,7 +257,7 @@ export class RewardService {
       userId,
       1,
       1,
-      'EARNED'
+      PointTransactionType.EARNED
     );
 
     if (transactions.transactions.length > 0) {

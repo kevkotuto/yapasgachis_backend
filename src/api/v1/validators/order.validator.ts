@@ -22,14 +22,23 @@ export const createOrderSchema = z.object({
     deliveryAddress: z
       .string()
       .min(5, "L'adresse doit contenir au moins 5 caractères")
-      .max(500),
-    deliveryCity: z.string().min(2).max(100),
+      .max(500)
+      .optional(),
+    deliveryCity: z.string().min(2).max(100).optional(),
     deliveryPhone: z
       .string()
-      .regex(/^\+?[1-9]\d{1,14}$/, 'Numéro de téléphone invalide'),
+      .regex(/^\+?[1-9]\d{1,14}$/, 'Numéro de téléphone invalide')
+      .optional(),
     deliveryMethod: z.enum(['PICKUP', 'DELIVERY'], {
       required_error: 'La méthode de livraison est requise',
     }),
+    scheduledPickupTime: z
+      .string()
+      .regex(
+        /^\d{2}:\d{2}-\d{2}:\d{2}$/,
+        'Format invalide. Utilisez "HH:MM-HH:MM"'
+      )
+      .optional(),
     notes: z.string().max(1000).optional(),
     paymentProvider: z.nativeEnum(MobileMoneyProvider, {
       required_error: 'Le fournisseur de paiement est requis',
@@ -136,3 +145,17 @@ export const searchOrdersSchema = z.object({
 });
 
 export type SearchOrdersInput = z.infer<typeof searchOrdersSchema>['query'];
+
+// Calculate delivery fee
+export const calculateDeliveryFeeSchema = z.object({
+  body: z.object({
+    storeId: z.string().uuid('ID de magasin invalide').optional(),
+    supplierId: z.string().uuid('ID de fournisseur invalide').optional(),
+    deliveryLatitude: z.number().min(-90).max(90),
+    deliveryLongitude: z.number().min(-180).max(180),
+  }),
+});
+
+export type CalculateDeliveryFeeInput = z.infer<
+  typeof calculateDeliveryFeeSchema
+>['body'];

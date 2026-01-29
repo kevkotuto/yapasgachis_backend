@@ -11,6 +11,8 @@ import {
 } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
+import { seedPaymentProviders } from './seed-payment-providers';
+
 const prisma = new PrismaClient();
 
 async function main() {
@@ -212,6 +214,7 @@ async function main() {
       supplierType: SupplierType.RESTAURANT,
       description:
         'Restaurant ivoirien traditionnel. Specialites: Attieke, Garba, Kedjenou.',
+      logo: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400',
       address: '123 Rue des Jardins, Cocody Angre',
       latitude: 5.37,
       longitude: -3.98,
@@ -282,7 +285,11 @@ async function main() {
       description:
         'Un panier surprise avec les restes du dejeuner. Peut contenir: riz, attieke, poulet, poisson, legumes sautees.',
       category: ProductCategory.FOOD_PREPARED,
-      images: ['https://example.com/panier-dejeuner.jpg'],
+      images: [
+        'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800',
+        'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800',
+        'https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?w=800',
+      ],
       originalPrice: 3500,
       discountedPrice: 1500,
       quantity: 10,
@@ -303,7 +310,12 @@ async function main() {
       description:
         'Attieke frais avec poisson braise, tomates, oignons et piment. Portion genereuse!',
       category: ProductCategory.FOOD_PREPARED,
-      images: ['https://example.com/attieke-poisson.jpg'],
+      images: [
+        'https://images.unsplash.com/photo-1580959375944-26d6fc0fa6d0?w=800',
+        'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=800',
+        'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=800',
+        'https://images.unsplash.com/photo-1615141982883-c7ad0e69fd62?w=800',
+      ],
       originalPrice: 2500,
       discountedPrice: 1200,
       quantity: 15,
@@ -324,7 +336,10 @@ async function main() {
       description:
         'Garba avec thon frais, attiéké, oignons, tomates, piment et huile.',
       category: ProductCategory.FOOD_PREPARED,
-      images: ['https://example.com/garba.jpg'],
+      images: [
+        'https://images.unsplash.com/photo-1485962398705-ef6a13c41e8f?w=800',
+        'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800',
+      ],
       originalPrice: 1500,
       discountedPrice: 800,
       quantity: 20,
@@ -379,6 +394,7 @@ async function main() {
       supplierType: SupplierType.HOTEL,
       description:
         'Hotel 4 etoiles avec piscine, spa et restaurant. Vue sur la lagune.',
+      logo: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400',
       address: '45 Boulevard de la Republique, Plateau',
       latitude: 5.32,
       longitude: -4.02,
@@ -417,7 +433,11 @@ async function main() {
       description:
         'Profitez de notre magnifique piscine avec vue sur la lagune. Inclut: serviette, casier, acces vestiaires.',
       category: DealCategory.POOL_ACCESS,
-      images: ['https://example.com/piscine.jpg'],
+      images: [
+        'https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=800',
+        'https://images.unsplash.com/photo-1540541338287-41700207dee6?w=800',
+        'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800',
+      ],
       originalPrice: 15000,
       dealPrice: 5000,
       discountPercent: 66.67,
@@ -452,7 +472,10 @@ async function main() {
       description:
         "Massage relaxant d'une heure dans notre spa de luxe. Choix entre massage suedois, thai ou aux pierres chaudes.",
       category: DealCategory.SPA_WELLNESS,
-      images: ['https://example.com/spa.jpg'],
+      images: [
+        'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=800',
+        'https://images.unsplash.com/photo-1519823551278-64ac92734fb1?w=800',
+      ],
       originalPrice: 35000,
       dealPrice: 18000,
       discountPercent: 48.57,
@@ -586,6 +609,9 @@ async function main() {
 
   console.log('  ✅ Created 2 promo codes');
 
+  // ==================== 10. PAYMENT PROVIDERS ====================
+  await seedPaymentProviders();
+
   // ==================== SUMMARY ====================
   console.log('\n========================================');
   console.log('🎉 Database seeding completed!\n');
@@ -598,6 +624,7 @@ async function main() {
   console.log('  - 2 Demo Deals');
   console.log('  - 1 Demo Association');
   console.log('  - 2 Promo Codes');
+  console.log('  - 4 Payment Providers (Wave active)');
   console.log('\n📝 Demo Credentials:');
   console.log('  Admin:    admin@yapasgachis.com / Admin@YapaGachis2024!');
   console.log('  Client:   client@demo.yapasgachis.com / Client@Demo2024!');

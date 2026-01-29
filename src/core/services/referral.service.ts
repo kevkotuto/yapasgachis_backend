@@ -275,7 +275,7 @@ export class ReferralService {
     );
 
     return {
-      referrals: result.referrals.map((r) => ({
+      referrals: result.referrals.map((r: any) => ({
         id: r.id,
         referralCode: r.referralCode.code,
         referredUser: r.referredUser,
@@ -364,7 +364,7 @@ export class ReferralService {
    * Validate referral code
    */
   async validateReferralCode(code: string) {
-    const referralCode = await referralRepository.findByCode(code);
+    const referralCode: any = await referralRepository.findByCode(code);
 
     if (!referralCode) {
       return { valid: false, reason: 'Code invalide' };

@@ -2,10 +2,13 @@ import { User, UserRole, UserStatus } from '@prisma/client';
 
 import GoogleAuthService from './google-auth.service';
 import JWTService from './jwt.service';
+import notificationService from './notification.service';
 import OTPService, { OTPPurpose } from './otp.service';
+import referralService from './referral.service';
 
 import config from '@/config';
 import UserRepository from '@/core/repositories/user.repository';
+import { redis } from '@/infrastructure/database/redis/client';
 import emailService from '@/infrastructure/messaging/email/email.service';
 import SMSService from '@/infrastructure/messaging/sms/sms.service';
 import { WhatsAppService } from '@/infrastructure/messaging/whatsapp';
@@ -246,6 +249,43 @@ export class AuthService {
       });
     }
 
+    // Create referral code for the new user
+    try {
+      await referralService.createReferralCode(user.id);
+      logger.info('Referral code created for new user', { userId: user.id });
+    } catch (error) {
+      logger.error('Failed to create referral code', {
+        userId: user.id,
+        error: (error as Error).message,
+      });
+      // Don't fail registration if referral code creation fails
+    }
+
+    // Send welcome notification (push + in-app)
+    try {
+      await notificationService.create({
+        userId: user.id,
+        type: 'WELCOME' as any,
+        title: `Bienvenue ${user.firstName} ! 🎉`,
+        message: `Merci de rejoindre YaPasGachis ! Découvrez des produits à prix réduits près de chez vous et contribuez à réduire le gaspillage alimentaire.`,
+        priority: 'NORMAL' as any,
+        data: {
+          action: 'open_home',
+          timestamp: new Date().toISOString(),
+        },
+        sendPush: true,
+        sendRealtime: true,
+        sendEmail: false,
+      });
+      logger.info('Welcome notification sent', { userId: user.id });
+    } catch (error) {
+      logger.error('Failed to send welcome notification', {
+        userId: user.id,
+        error: (error as Error).message,
+      });
+      // Don't fail registration if notification fails
+    }
+
     logger.info('User registered', {
       userId: user.id,
       phoneNumber,
@@ -428,6 +468,22 @@ export class AuthService {
   }> {
     const email = data.email.toLowerCase().trim();
 
+    // Check if tokens were recently generated for this email (within 30s)
+    const recentTokenKey = `recent_verification:${email}:${data.purpose}`;
+    const cachedResponse = await redis.get(recentTokenKey);
+
+    if (cachedResponse) {
+      logger.info(
+        'Returning cached response for recent email verification (idempotent)',
+        {
+          email,
+          purpose: data.purpose,
+        }
+      );
+
+      return JSON.parse(cachedResponse);
+    }
+
     // Verify OTP
     await OTPService.verifyEmailOTP(email, data.code, data.purpose);
 
@@ -459,10 +515,15 @@ export class AuthService {
     // Return user without sensitive data
     const { passwordHash: _, ...userWithoutPassword } = user;
 
-    return {
+    const response = {
       user: userWithoutPassword,
       tokens,
     };
+
+    // Cache response for 30 seconds to handle duplicate requests
+    await redis.setex(recentTokenKey, 30, JSON.stringify(response));
+
+    return response;
   }
 
   /**
@@ -506,6 +567,7 @@ export class AuthService {
   async verifyOTP(data: VerifyOTPDTO): Promise<{
     success: boolean;
     message: string;
+    user?: Partial<User>;
     tokens?: {
       accessToken: string;
       refreshToken: string;
@@ -513,6 +575,22 @@ export class AuthService {
     };
   }> {
     const phoneNumber = formatPhoneNumber(data.phoneNumber);
+
+    // Check if tokens were recently generated for this phone (within 30s)
+    const recentTokenKey = `recent_verification:${phoneNumber}:${data.purpose}`;
+    const cachedResponse = await redis.get(recentTokenKey);
+
+    if (cachedResponse) {
+      logger.info(
+        'Returning cached response for recent verification (idempotent)',
+        {
+          phoneNumber,
+          purpose: data.purpose,
+        }
+      );
+
+      return JSON.parse(cachedResponse);
+    }
 
     // Verify OTP
     await OTPService.verifyOTP(phoneNumber, data.code, data.purpose);
@@ -527,22 +605,33 @@ export class AuthService {
       );
     }
 
-    // Verify phone number
-    await this.userRepository.verifyPhoneNumber(user.id);
+    // Verify phone number (only if not already verified)
+    if (!user.phoneVerified) {
+      await this.userRepository.verifyPhoneNumber(user.id);
 
-    // Send welcome message via preferred channel
-    await this.sendWelcomeViaPreferredChannel(phoneNumber, user.firstName);
+      // Send welcome message via preferred channel (only on first verification)
+      await this.sendWelcomeViaPreferredChannel(phoneNumber, user.firstName);
+    }
 
     logger.info('Phone verified', { userId: user.id, phoneNumber });
 
     // Generate tokens for automatic login
     const tokens = await JWTService.generateTokenPair(user.id, user.role);
 
-    return {
+    // Return user without sensitive data
+    const { passwordHash: _, ...userWithoutPassword } = user;
+
+    const response = {
       success: true,
       message: 'Numéro de téléphone vérifié avec succès',
+      user: userWithoutPassword,
       tokens,
     };
+
+    // Cache response for 30 seconds to handle duplicate requests
+    await redis.setex(recentTokenKey, 30, JSON.stringify(response));
+
+    return response;
   }
 
   /**
@@ -812,6 +901,45 @@ export class AuthService {
         });
         isNewUser = true;
 
+        // Create referral code for the new user
+        try {
+          await referralService.createReferralCode(user.id);
+          logger.info('Referral code created for Google user', {
+            userId: user.id,
+          });
+        } catch (error) {
+          logger.error('Failed to create referral code for Google user', {
+            userId: user.id,
+            error: (error as Error).message,
+          });
+        }
+
+        // Send welcome notification (push + in-app)
+        try {
+          await notificationService.create({
+            userId: user.id,
+            type: 'WELCOME' as any,
+            title: `Bienvenue ${user.firstName} ! 🎉`,
+            message: `Merci de rejoindre YaPasGachis ! Découvrez des produits à prix réduits près de chez vous et contribuez à réduire le gaspillage alimentaire.`,
+            priority: 'NORMAL' as any,
+            data: {
+              action: 'open_home',
+              timestamp: new Date().toISOString(),
+            },
+            sendPush: true,
+            sendRealtime: true,
+            sendEmail: false,
+          });
+          logger.info('Welcome notification sent to Google user', {
+            userId: user.id,
+          });
+        } catch (error) {
+          logger.error('Failed to send welcome notification to Google user', {
+            userId: user.id,
+            error: (error as Error).message,
+          });
+        }
+
         logger.info('New user registered via Google', {
           userId: user.id,
           googleId: googleUser.googleId,
@@ -992,6 +1120,38 @@ export class AuthService {
     return {
       message: 'Mot de passe modifié avec succès',
     };
+  }
+
+  /**
+   * Get current user with full profile based on role
+   */
+  async getCurrentUser(userId: string) {
+    const user = await this.userRepository.findById(userId);
+
+    if (!user) {
+      throw new AppError(
+        APP_CONSTANTS.HTTP_STATUS.NOT_FOUND,
+        'Utilisateur non trouvé',
+        APP_CONSTANTS.ERROR_CODES.NOT_FOUND
+      );
+    }
+
+    // Fetch user with profile relations based on role
+    const userWithProfile =
+      await this.userRepository.findByIdWithProfile(userId);
+
+    if (!userWithProfile) {
+      throw new AppError(
+        APP_CONSTANTS.HTTP_STATUS.NOT_FOUND,
+        'Profil utilisateur non trouvé',
+        APP_CONSTANTS.ERROR_CODES.NOT_FOUND
+      );
+    }
+
+    // Remove sensitive data
+    const { passwordHash, ...userWithoutPassword } = userWithProfile;
+
+    return userWithoutPassword;
   }
 }
 

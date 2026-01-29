@@ -74,6 +74,38 @@ export const paginationSchema = z.object({
   }),
 });
 
+// ==================== SUPPLIER RESPONSE VALIDATORS ====================
+
+export const createReviewResponseSchema = z.object({
+  params: z.object({
+    id: z.string().uuid('ID de review invalide'),
+  }),
+  body: z.object({
+    response: z
+      .string()
+      .min(10, 'La réponse doit contenir au moins 10 caractères')
+      .max(1000, 'La réponse ne peut pas dépasser 1000 caractères'),
+  }),
+});
+
+export const updateReviewResponseSchema = z.object({
+  params: z.object({
+    id: z.string().uuid('ID de review invalide'),
+  }),
+  body: z.object({
+    response: z
+      .string()
+      .min(10, 'La réponse doit contenir au moins 10 caractères')
+      .max(1000, 'La réponse ne peut pas dépasser 1000 caractères'),
+  }),
+});
+
+export const deleteReviewResponseSchema = z.object({
+  params: z.object({
+    id: z.string().uuid('ID de review invalide'),
+  }),
+});
+
 // Types
 export type CreateReviewInput = z.infer<typeof createReviewSchema>['body'];
 export type UpdateReviewInput = z.infer<typeof updateReviewSchema>['body'];
@@ -83,3 +115,12 @@ export type GetProductReviewsQuery = z.infer<
 export type GetSupplierReviewsQuery = z.infer<
   typeof getSupplierReviewsSchema
 >['query'];
+export type CreateReviewResponseInput = z.infer<
+  typeof createReviewResponseSchema
+>;
+export type UpdateReviewResponseInput = z.infer<
+  typeof updateReviewResponseSchema
+>;
+export type DeleteReviewResponseInput = z.infer<
+  typeof deleteReviewResponseSchema
+>;

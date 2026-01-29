@@ -38,7 +38,6 @@ export class SupplierStoreService {
       pickupEnabled?: boolean;
       deliveryRadius?: number;
       acceptCashPayment?: boolean;
-      waveAccountId?: string;
     }
   ): Promise<SupplierStore> {
     try {
@@ -101,7 +100,6 @@ export class SupplierStoreService {
         pickupEnabled: data.pickupEnabled !== false,
         deliveryRadius: data.deliveryRadius,
         acceptCashPayment: data.acceptCashPayment || false,
-        waveAccountId: data.waveAccountId,
       });
 
       logger.info('Store created', {
@@ -145,7 +143,6 @@ export class SupplierStoreService {
       pickupEnabled?: boolean;
       deliveryRadius?: number;
       acceptCashPayment?: boolean;
-      waveAccountId?: string;
     }
   ): Promise<SupplierStore> {
     try {

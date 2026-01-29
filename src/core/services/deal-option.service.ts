@@ -74,7 +74,7 @@ export class DealOptionService {
     }
 
     if (activeOnly) {
-      return await dealOptionRepository.findActiveDealOptions(dealId);
+      return await dealOptionRepository.findActiveDealRooms(dealId);
     }
 
     return await dealOptionRepository.findByDealId(dealId);

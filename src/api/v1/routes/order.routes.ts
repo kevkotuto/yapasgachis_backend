@@ -8,6 +8,7 @@ import {
   updateOrderStatusSchema,
   cancelOrderSchema,
   checkPaymentStatusSchema,
+  calculateDeliveryFeeSchema,
 } from '../validators/order.validator';
 
 import { authMiddleware } from '@/middleware/auth.middleware';
@@ -95,6 +96,17 @@ router.get(
   authMiddleware,
   supplierOnly,
   orderController.getSupplierStatistics
+);
+
+/**
+ * Calculate delivery fee
+ * POST /calculate-delivery-fee
+ * Public route (no auth required to check delivery availability)
+ */
+router.post(
+  '/calculate-delivery-fee',
+  validate(calculateDeliveryFeeSchema),
+  orderController.calculateDeliveryFee
 );
 
 // ==================== PARAMETERIZED ROUTES (/:id) ====================

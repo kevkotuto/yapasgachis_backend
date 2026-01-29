@@ -11,6 +11,7 @@ interface Config {
     port: number;
     name: string;
     url: string;
+    frontendUrl: string;
     apiVersion: string;
   };
   database: {
@@ -219,6 +220,7 @@ const config: Config = {
     port: parseInt(process.env.PORT || '3000', 10),
     name: process.env.APP_NAME || 'YapaGachis',
     url: process.env.APP_URL || 'http://localhost:3000',
+    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
     apiVersion: process.env.API_VERSION || 'v1',
   },
   database: {

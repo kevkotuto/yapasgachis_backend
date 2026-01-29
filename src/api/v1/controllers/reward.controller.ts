@@ -32,17 +32,13 @@ export class RewardController {
    */
   getTransactions = asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user.id;
-    const { page, limit, type } = req.query as {
-      page?: string;
-      limit?: string;
-      type?: string;
-    };
+    const { page, limit, type } = req.query;
 
     const result = await rewardService.getTransactionHistory(
       userId,
-      parseInt(page || '1', 10),
-      parseInt(limit || '20', 10),
-      type
+      Number(page) || 1,
+      Number(limit) || 20,
+      type as any
     );
 
     res.json({

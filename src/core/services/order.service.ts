@@ -11,6 +11,7 @@ import eventService, { AppEvent } from '@/core/services/event.service';
 import platformSettingsService from '@/core/services/platform-settings.service';
 import { prisma } from '@/infrastructure/database/prisma';
 import logger from '@/infrastructure/monitoring/logger';
+import socketService from '@/infrastructure/websocket/socket.service';
 import { AppError } from '@/middleware/error-handler.middleware';
 import { generateQRCode } from '@/utils/qr-code.utils';
 
@@ -42,6 +43,7 @@ export interface CreateOrderParams {
   deliveryNotes?: string;
   // Pour le pickup
   pickupSlot?: Date;
+  scheduledPickupTime?: string; // Créneau horaire "14:00-16:00"
 }
 
 export interface OrderWithDetails extends Order {
@@ -230,6 +232,7 @@ export class OrderService {
           total,
           pickupCode,
           pickupSlot: params.pickupSlot,
+          scheduledPickupTime: params.scheduledPickupTime,
           deliveryAddress: params.deliveryAddress,
           deliveryLatitude: params.deliveryLatitude,
           deliveryLongitude: params.deliveryLongitude,
@@ -274,13 +277,24 @@ export class OrderService {
 
       // 10. Si paiement Wave, créer l'escrow et obtenir l'URL de paiement
       if (params.paymentMethod === 'WAVE') {
+        // Extract Wave account info from payout account info
+        let supplierWaveId: string | undefined;
+        if (
+          supplier.payoutAccountInfo &&
+          typeof supplier.payoutAccountInfo === 'object'
+        ) {
+          const accountInfo = supplier.payoutAccountInfo as any;
+          supplierWaveId =
+            accountInfo.phoneNumber || accountInfo.accountId || undefined;
+        }
+
         const escrowResult = await escrowService.createEscrow({
           orderId: order.id,
           amount: total,
           commission,
           waveTransferFee,
           supplierId: supplier.id,
-          supplierWaveId: supplier.waveAccountId || undefined,
+          supplierWaveId,
         });
         paymentUrl = escrowResult.checkoutUrl;
       }
@@ -301,6 +315,11 @@ export class OrderService {
         supplierId: supplier.id,
         storeId: undefined,
         totalAmount: total,
+      });
+
+      // Send WebSocket notification to supplier
+      socketService.sendToUser(supplier.id, 'order:new', {
+        order,
       });
 
       return {
@@ -468,6 +487,16 @@ export class OrderService {
       supplierId: order.supplierId,
     });
 
+    // Send WebSocket notifications
+    socketService.sendToUser(order.supplierId, 'order:completed', {
+      order: updated,
+    });
+    socketService.sendToOrder(orderId, 'order:status_changed', {
+      orderId,
+      status: OrderStatus.COMPLETED,
+      oldStatus: order.status,
+    });
+
     return updated as unknown as OrderWithDetails;
   }
 
@@ -545,6 +574,16 @@ export class OrderService {
       supplierId,
       oldStatus: order.status,
       newStatus,
+    });
+
+    // Send WebSocket notifications
+    socketService.sendToUser(order.clientId, 'order:updated', {
+      order: updated,
+    });
+    socketService.sendToOrder(orderId, 'order:status_changed', {
+      orderId,
+      status: newStatus,
+      oldStatus: order.status,
     });
 
     return updated as unknown as OrderWithDetails;
@@ -661,6 +700,20 @@ export class OrderService {
       supplierId: order.supplierId,
       reason,
       cancelledBy: isSupplier ? 'supplier' : 'client',
+    });
+
+    // Send WebSocket notifications
+    const targetUserId = isSupplier ? order.clientId : order.supplierId;
+    socketService.sendToUser(targetUserId, 'order:cancelled', {
+      order: updated,
+      reason,
+      cancelledBy: isSupplier ? 'supplier' : 'client',
+    });
+    socketService.sendToOrder(orderId, 'order:status_changed', {
+      orderId,
+      status: OrderStatus.CANCELLED,
+      oldStatus: order.status,
+      reason,
     });
 
     return updated as unknown as OrderWithDetails;
@@ -964,6 +1017,166 @@ export class OrderService {
         },
       });
     }
+  }
+
+  /**
+   * Calculer les frais de livraison
+   */
+  async calculateDeliveryFee(params: {
+    storeId?: string;
+    supplierId?: string;
+    deliveryLatitude: number;
+    deliveryLongitude: number;
+  }): Promise<{
+    deliveryFee: number;
+    distance: number;
+    estimatedTime: number;
+    canDeliver: boolean;
+    message?: string;
+  }> {
+    try {
+      let storeLatitude: number;
+      let storeLongitude: number;
+      let deliveryRadius: number;
+
+      if (params.storeId) {
+        // Récupérer le magasin
+        const store = await prisma.supplierStore.findUnique({
+          where: { id: params.storeId },
+        });
+
+        if (!store) {
+          throw new AppError(404, 'Magasin non trouvé');
+        }
+
+        if (!store.deliveryEnabled) {
+          return {
+            deliveryFee: 0,
+            distance: 0,
+            estimatedTime: 0,
+            canDeliver: false,
+            message: 'Ce magasin ne propose pas la livraison',
+          };
+        }
+
+        if (!store.latitude || !store.longitude) {
+          throw new AppError(
+            400,
+            'Les coordonnées du magasin ne sont pas configurées'
+          );
+        }
+
+        storeLatitude = store.latitude;
+        storeLongitude = store.longitude;
+        deliveryRadius = store.deliveryRadius || 20;
+      } else if (params.supplierId) {
+        // Récupérer le fournisseur
+        const supplier = await prisma.supplierProfile.findUnique({
+          where: { id: params.supplierId },
+        });
+
+        if (!supplier) {
+          throw new AppError(404, 'Fournisseur non trouvé');
+        }
+
+        if (!supplier.deliveryEnabled) {
+          return {
+            deliveryFee: 0,
+            distance: 0,
+            estimatedTime: 0,
+            canDeliver: false,
+            message: 'Ce fournisseur ne propose pas la livraison',
+          };
+        }
+
+        if (!supplier.latitude || !supplier.longitude) {
+          throw new AppError(
+            400,
+            'Les coordonnées du fournisseur ne sont pas configurées'
+          );
+        }
+
+        storeLatitude = supplier.latitude;
+        storeLongitude = supplier.longitude;
+        deliveryRadius = supplier.deliveryRadius || 20;
+      } else {
+        throw new AppError(
+          400,
+          'Vous devez fournir soit un storeId soit un supplierId'
+        );
+      }
+
+      // Calculer la distance
+      const distance = this.calculateDistance(
+        storeLatitude,
+        storeLongitude,
+        params.deliveryLatitude,
+        params.deliveryLongitude
+      );
+
+      // Vérifier si dans le rayon de livraison
+      if (distance > deliveryRadius) {
+        return {
+          deliveryFee: 0,
+          distance,
+          estimatedTime: 0,
+          canDeliver: false,
+          message: `Livraison non disponible (distance: ${distance.toFixed(1)} km, maximum: ${deliveryRadius} km)`,
+        };
+      }
+
+      // Récupérer les paramètres de livraison
+      const businessSettings =
+        await platformSettingsService.getBusinessSettings();
+
+      // Calculer les frais
+      const deliveryFee =
+        businessSettings.defaultDeliveryFee +
+        distance * businessSettings.deliveryFeePerKm;
+
+      // Estimer le temps (30 km/h en moyenne en ville)
+      const estimatedTime = Math.ceil((distance / 30) * 60); // en minutes
+
+      return {
+        deliveryFee: Math.round(deliveryFee),
+        distance: Math.round(distance * 10) / 10, // Arrondi à 1 décimale
+        estimatedTime,
+        canDeliver: true,
+      };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      logger.error('Error calculating delivery fee', {
+        error: (error as Error).message,
+      });
+      throw new AppError(500, 'Erreur lors du calcul des frais de livraison');
+    }
+  }
+
+  /**
+   * Calculer la distance entre deux points GPS (formule de Haversine)
+   * @returns distance en kilomètres
+   */
+  private calculateDistance(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ): number {
+    const R = 6371; // Rayon de la Terre en km
+    const dLat = this.toRad(lat2 - lat1);
+    const dLon = this.toRad(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(this.toRad(lat1)) *
+        Math.cos(this.toRad(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  private toRad(degrees: number): number {
+    return (degrees * Math.PI) / 180;
   }
 
   private generatePickupCode(): string {

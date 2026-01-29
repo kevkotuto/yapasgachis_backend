@@ -1,3 +1,4 @@
+/// <reference path="./types/express.d.ts" />
 import http from 'http';
 
 import app from './app';
@@ -71,11 +72,15 @@ process.on('unhandledRejection', (reason: any) => {
 // Start server
 const startServer = async (): Promise<void> => {
   try {
+    logger.info('🔍 Starting health checks...');
+
     // Test database connections
     const [dbHealthy, redisHealthy] = await Promise.all([
       PrismaService.healthCheck(),
       RedisService.healthCheck(),
     ]);
+
+    logger.info('✅ Health checks completed', { dbHealthy, redisHealthy });
 
     if (!dbHealthy) {
       throw new Error('Database connection failed');
@@ -84,6 +89,8 @@ const startServer = async (): Promise<void> => {
     if (!redisHealthy) {
       throw new Error('Redis connection failed');
     }
+
+    logger.info('🔌 Initializing WebSocket...');
 
     // Initialize WebSocket server
     if (config.features?.websocket !== false) {

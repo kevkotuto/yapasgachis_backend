@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 
 import dealService from '@/core/services/deal.service';
 import { AppError, asyncHandler } from '@/middleware/error-handler.middleware';
+import { normalizeImages, normalizeImagesList } from '@/utils/normalize.utils';
 
 /**
  * Deal Controller
@@ -46,7 +47,7 @@ export class DealController {
 
     res.json({
       success: true,
-      data: result.deals,
+      data: normalizeImagesList(result.deals),
       pagination: {
         total: result.total,
         pages: result.pages,
@@ -66,7 +67,7 @@ export class DealController {
 
     res.json({
       success: true,
-      data: deal,
+      data: normalizeImages(deal),
     });
   });
 
@@ -79,17 +80,25 @@ export class DealController {
   bookDeal = asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user.id;
     const { dealId } = req.params;
-    const { bookingDate, bookingSlot, quantity, paymentMethod, userNotes } =
-      req.body as {
-        bookingDate: string;
-        bookingSlot: string;
-        quantity: number;
-        paymentMethod: 'WAVE' | 'CASH_ON_DELIVERY';
-        userNotes?: string;
-      };
+    const {
+      bookingDate,
+      bookingEndDate,
+      bookingSlot,
+      quantity,
+      paymentMethod,
+      userNotes,
+    } = req.body as {
+      bookingDate: string;
+      bookingEndDate?: string;
+      bookingSlot?: string;
+      quantity: number;
+      paymentMethod: 'WAVE' | 'CASH_ON_DELIVERY';
+      userNotes?: string;
+    };
 
     const booking = await dealService.bookDeal(userId, dealId, {
       bookingDate: new Date(bookingDate),
+      bookingEndDate: bookingEndDate ? new Date(bookingEndDate) : undefined,
       bookingSlot,
       quantity,
       paymentMethod,
@@ -99,6 +108,32 @@ export class DealController {
     res.status(201).json({
       success: true,
       message: 'Réservation créée avec succès',
+      data: booking,
+    });
+  });
+
+  /**
+   * Purchase a deal (no booking required)
+   * POST /api/v1/deals/:dealId/purchase
+   */
+  purchaseDeal = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user.id;
+    const { dealId } = req.params;
+    const { quantity, paymentMethod, userNotes } = req.body as {
+      quantity?: number;
+      paymentMethod: 'WAVE' | 'CASH_ON_DELIVERY';
+      userNotes?: string;
+    };
+
+    const booking = await dealService.purchaseDeal(userId, dealId, {
+      quantity,
+      paymentMethod,
+      userNotes,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Achat effectué avec succès',
       data: booking,
     });
   });
@@ -198,6 +233,7 @@ export class DealController {
       requiresBooking?: boolean;
       bookingLeadTime?: number;
       cancellationHours?: number;
+      bookingMode?: 'SINGLE_DATE' | 'DATE_RANGE';
       contactPhone?: string;
       contactEmail?: string;
     };
@@ -211,7 +247,7 @@ export class DealController {
     res.status(201).json({
       success: true,
       message: 'Deal créé avec succès. En attente de validation.',
-      data: deal,
+      data: normalizeImages(deal),
     });
   });
 
@@ -246,7 +282,7 @@ export class DealController {
     res.json({
       success: true,
       message: 'Deal mis à jour avec succès',
-      data: deal,
+      data: normalizeImages(deal),
     });
   });
 
@@ -268,7 +304,7 @@ export class DealController {
     res.json({
       success: true,
       message: `Deal ${deal.status === 'PAUSED' ? 'mis en pause' : 'réactivé'} avec succès`,
-      data: deal,
+      data: normalizeImages(deal),
     });
   });
 
@@ -294,7 +330,7 @@ export class DealController {
   });
 
   /**
-   * Get supplier's deals
+   * Get supplier's deals (with pagination)
    * GET /api/v1/supplier/deals
    */
   getSupplierDeals = asyncHandler(async (req: Request, res: Response) => {
@@ -304,16 +340,23 @@ export class DealController {
       throw new AppError(403, 'Profil fournisseur requis', 'SUPPLIER_REQUIRED');
     }
 
-    const { status } = req.query;
+    const { status, page, limit } = req.query;
 
-    const deals = await dealService.getSupplierDeals(
-      supplierId,
-      status as DealStatus | undefined
-    );
+    const result = await dealService.getSupplierDeals(supplierId, {
+      status: status as DealStatus | undefined,
+      page: page ? parseInt(page as string) : undefined,
+      limit: limit ? parseInt(limit as string) : undefined,
+    });
 
     res.json({
       success: true,
-      data: deals,
+      data: normalizeImagesList(result.deals),
+      pagination: {
+        total: result.total,
+        pages: result.pages,
+        page: page ? parseInt(page as string) : 1,
+        limit: limit ? parseInt(limit as string) : 20,
+      },
     });
   });
 
@@ -396,7 +439,7 @@ export class DealController {
 
     res.json({
       success: true,
-      data: result.deals,
+      data: normalizeImagesList(result.deals),
       pagination: {
         total: result.total,
         pages: result.pages,
@@ -419,7 +462,7 @@ export class DealController {
     res.json({
       success: true,
       message: 'Deal approuvé avec succès',
-      data: deal,
+      data: normalizeImages(deal),
     });
   });
 
@@ -437,7 +480,7 @@ export class DealController {
     res.json({
       success: true,
       message: 'Deal rejeté',
-      data: deal,
+      data: normalizeImages(deal),
     });
   });
 }

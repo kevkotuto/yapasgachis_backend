@@ -1,11 +1,11 @@
-import { PointOfSale, Prisma } from '@prisma/client';
+import { SupplierStore, Prisma } from '@prisma/client';
 
 import { prisma } from '@/infrastructure/database/prisma';
 import logger from '@/infrastructure/monitoring/logger';
 
 /**
  * Point of Sale Repository
- * Data access layer for points of sale (POS)
+ * Data access layer for points of sale (POS) - Uses SupplierStore model
  */
 export class PointOfSaleRepository {
   /**
@@ -14,7 +14,7 @@ export class PointOfSaleRepository {
   async create(data: {
     supplierId: string;
     name: string;
-    type: string;
+    type?: string;
     address: string;
     city: string;
     commune: string;
@@ -24,16 +24,31 @@ export class PointOfSaleRepository {
     phoneNumber?: string;
     email?: string;
     isActive: boolean;
-    acceptsOrders: boolean;
-    acceptsPickup: boolean;
-    acceptsDelivery: boolean;
+    acceptsOrders?: boolean;
+    acceptsPickup?: boolean;
+    acceptsDelivery?: boolean;
     description?: string;
     images?: any;
     amenities?: any;
-  }): Promise<PointOfSale> {
+  }): Promise<SupplierStore> {
     try {
-      return await prisma.pointOfSale.create({
-        data,
+      const {
+        acceptsPickup,
+        acceptsDelivery,
+        type,
+        acceptsOrders,
+        amenities,
+        ...storeData
+      } = data;
+
+      return await prisma.supplierStore.create({
+        data: {
+          ...storeData,
+          pickupEnabled: acceptsPickup ?? false,
+          deliveryEnabled: acceptsDelivery ?? false,
+          operatingHours: {},
+          // Note: type, acceptsOrders, and amenities are ignored as they don't exist in SupplierStore
+        },
       });
     } catch (error) {
       logger.error('Error creating POS', {
@@ -47,9 +62,9 @@ export class PointOfSaleRepository {
   /**
    * Find POS by ID
    */
-  async findById(id: string): Promise<PointOfSale | null> {
+  async findById(id: string): Promise<SupplierStore | null> {
     try {
-      return await prisma.pointOfSale.findUnique({
+      return await prisma.supplierStore.findUnique({
         where: { id },
         include: {
           supplier: {
@@ -76,14 +91,14 @@ export class PointOfSaleRepository {
   async findBySupplier(
     supplierId: string,
     activeOnly = false
-  ): Promise<PointOfSale[]> {
+  ): Promise<SupplierStore[]> {
     try {
-      const where: Prisma.PointOfSaleWhereInput = {
+      const where: Prisma.SupplierStoreWhereInput = {
         supplierId,
         ...(activeOnly && { isActive: true }),
       };
 
-      return await prisma.pointOfSale.findMany({
+      return await prisma.supplierStore.findMany({
         where,
         orderBy: { createdAt: 'desc' },
       });
@@ -111,15 +126,13 @@ export class PointOfSaleRepository {
     acceptsDelivery?: boolean;
     page?: number;
     limit?: number;
-  }): Promise<{ pos: PointOfSale[]; total: number }> {
+  }): Promise<{ pos: SupplierStore[]; total: number }> {
     const {
       latitude,
       longitude,
       radius = 10,
       city,
       commune,
-      type,
-      acceptsOrders,
       acceptsPickup,
       acceptsDelivery,
       page = 1,
@@ -129,23 +142,23 @@ export class PointOfSaleRepository {
     const skip = (page - 1) * limit;
 
     try {
-      const where: Prisma.PointOfSaleWhereInput = {
+      const where: Prisma.SupplierStoreWhereInput = {
         isActive: true,
         ...(city && { city }),
         ...(commune && { commune }),
-        ...(type && { type }),
-        ...(acceptsOrders !== undefined && { acceptsOrders }),
-        ...(acceptsPickup !== undefined && { acceptsPickup }),
-        ...(acceptsDelivery !== undefined && { acceptsDelivery }),
+        ...(acceptsPickup !== undefined && { pickupEnabled: acceptsPickup }),
+        ...(acceptsDelivery !== undefined && {
+          deliveryEnabled: acceptsDelivery,
+        }),
       };
 
       // If geolocation provided, filter by distance
-      let pos: PointOfSale[];
+      let pos: SupplierStore[];
       let total: number;
 
       if (latitude && longitude) {
         // Get all matching POS
-        const allPos = await prisma.pointOfSale.findMany({
+        const allPos = await prisma.supplierStore.findMany({
           where,
           include: {
             supplier: {
@@ -177,7 +190,7 @@ export class PointOfSaleRepository {
       } else {
         // No geolocation, just paginate
         [pos, total] = await Promise.all([
-          prisma.pointOfSale.findMany({
+          prisma.supplierStore.findMany({
             where,
             include: {
               supplier: {
@@ -192,7 +205,7 @@ export class PointOfSaleRepository {
             take: limit,
             orderBy: { createdAt: 'desc' },
           }),
-          prisma.pointOfSale.count({ where }),
+          prisma.supplierStore.count({ where }),
         ]);
       }
 
@@ -230,11 +243,28 @@ export class PointOfSaleRepository {
       images?: any;
       amenities?: any;
     }
-  ): Promise<PointOfSale> {
+  ): Promise<SupplierStore> {
     try {
-      return await prisma.pointOfSale.update({
+      const {
+        acceptsPickup,
+        acceptsDelivery,
+        type,
+        acceptsOrders,
+        amenities,
+        ...storeData
+      } = data;
+
+      const updateData: any = { ...storeData };
+
+      if (acceptsPickup !== undefined) updateData.pickupEnabled = acceptsPickup;
+      if (acceptsDelivery !== undefined)
+        updateData.deliveryEnabled = acceptsDelivery;
+
+      // Note: type, acceptsOrders, and amenities are ignored as they don't exist in SupplierStore
+
+      return await prisma.supplierStore.update({
         where: { id },
-        data,
+        data: updateData,
       });
     } catch (error) {
       logger.error('Error updating POS', {
@@ -248,9 +278,9 @@ export class PointOfSaleRepository {
   /**
    * Delete POS
    */
-  async delete(id: string): Promise<PointOfSale> {
+  async delete(id: string): Promise<SupplierStore> {
     try {
-      return await prisma.pointOfSale.delete({
+      return await prisma.supplierStore.delete({
         where: { id },
       });
     } catch (error) {
@@ -267,7 +297,7 @@ export class PointOfSaleRepository {
    */
   async countBySupplier(supplierId: string): Promise<number> {
     try {
-      return await prisma.pointOfSale.count({
+      return await prisma.supplierStore.count({
         where: { supplierId },
       });
     } catch (error) {

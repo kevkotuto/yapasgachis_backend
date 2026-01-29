@@ -10,6 +10,7 @@ import {
 import reviewService from '@/core/services/review.service';
 import logger from '@/infrastructure/monitoring/logger';
 import { asyncHandler } from '@/utils/helpers';
+import { normalizeImages, normalizeImagesList } from '@/utils/normalize.utils';
 
 /**
  * Review Controller
@@ -37,7 +38,7 @@ export class ReviewController {
     res.status(201).json({
       success: true,
       message: 'Avis créé avec succès',
-      data: { review },
+      data: { review: normalizeImages(review) },
     });
   });
 
@@ -52,7 +53,10 @@ export class ReviewController {
 
     res.json({
       success: true,
-      data: result,
+      data: {
+        ...result,
+        reviews: normalizeImagesList(result.reviews || []),
+      },
     });
   });
 
@@ -72,7 +76,10 @@ export class ReviewController {
 
     res.json({
       success: true,
-      data: result,
+      data: {
+        ...result,
+        reviews: normalizeImagesList(result.reviews || []),
+      },
     });
   });
 
@@ -88,7 +95,10 @@ export class ReviewController {
 
     res.json({
       success: true,
-      data: result,
+      data: {
+        ...result,
+        reviews: normalizeImagesList(result.reviews || []),
+      },
     });
   });
 
@@ -108,7 +118,10 @@ export class ReviewController {
 
     res.json({
       success: true,
-      data: result,
+      data: {
+        ...result,
+        reviews: normalizeImagesList(result.reviews || []),
+      },
     });
   });
 
@@ -134,7 +147,7 @@ export class ReviewController {
       res.json({
         success: true,
         message: 'Avis mis à jour avec succès',
-        data: { review },
+        data: { review: normalizeImages(review) },
       });
     }
   );
@@ -175,7 +188,7 @@ export class ReviewController {
       res.json({
         success: true,
         message: 'Avis marqué comme utile',
-        data: { review },
+        data: { review: normalizeImages(review) },
       });
     }
   );
@@ -224,7 +237,10 @@ export class ReviewController {
 
     res.json({
       success: true,
-      data: result,
+      data: {
+        ...result,
+        reviews: normalizeImagesList(result.reviews || []),
+      },
     });
   });
 
@@ -246,7 +262,7 @@ export class ReviewController {
       res.json({
         success: true,
         message: 'Signalement effacé',
-        data: { review },
+        data: { review: normalizeImages(review) },
       });
     }
   );
@@ -273,6 +289,82 @@ export class ReviewController {
       });
     }
   );
+
+  /**
+   * Create supplier response to a review
+   * POST /api/v1/reviews/:id/response
+   */
+  createSupplierResponse = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const { response } = req.body;
+
+    const review = await reviewService.createSupplierResponse(
+      userId,
+      id,
+      response
+    );
+
+    logger.info('Supplier response created', {
+      userId,
+      reviewId: id,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Réponse ajoutée avec succès',
+      data: { review: normalizeImages(review) },
+    });
+  });
+
+  /**
+   * Update supplier response to a review
+   * PUT /api/v1/reviews/:id/response
+   */
+  updateSupplierResponse = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const { response } = req.body;
+
+    const review = await reviewService.updateSupplierResponse(
+      userId,
+      id,
+      response
+    );
+
+    logger.info('Supplier response updated', {
+      userId,
+      reviewId: id,
+    });
+
+    res.json({
+      success: true,
+      message: 'Réponse modifiée avec succès',
+      data: { review: normalizeImages(review) },
+    });
+  });
+
+  /**
+   * Delete supplier response from a review
+   * DELETE /api/v1/reviews/:id/response
+   */
+  deleteSupplierResponse = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user.id;
+    const { id } = req.params;
+
+    const review = await reviewService.deleteSupplierResponse(userId, id);
+
+    logger.info('Supplier response deleted', {
+      userId,
+      reviewId: id,
+    });
+
+    res.json({
+      success: true,
+      message: 'Réponse supprimée avec succès',
+      data: { review: normalizeImages(review) },
+    });
+  });
 }
 
 export default new ReviewController();

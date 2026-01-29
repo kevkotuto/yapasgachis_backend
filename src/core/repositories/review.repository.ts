@@ -14,20 +14,24 @@ export class ReviewRepository {
   async create(data: {
     userId: string;
     productId?: string;
+    dealId?: string;
     orderId?: string;
     rating: number;
     comment?: string;
     images?: any;
+    isVerified?: boolean;
   }): Promise<Review> {
     try {
       return await prisma.review.create({
         data: {
           userId: data.userId,
           productId: data.productId,
+          dealId: data.dealId,
           orderId: data.orderId,
           rating: data.rating,
           comment: data.comment,
           images: data.images,
+          isVerified: data.isVerified ?? false,
         },
         include: {
           user: {
@@ -284,6 +288,112 @@ export class ReviewRepository {
   }
 
   /**
+   * Toggle helpful for a review (with user tracking)
+   */
+  async toggleHelpful(
+    reviewId: string,
+    userId: string
+  ): Promise<{ isHelpful: boolean; count: number }> {
+    try {
+      // Check if user already marked this review as helpful
+      const existing = await prisma.reviewHelpful.findUnique({
+        where: {
+          reviewId_userId: {
+            reviewId,
+            userId,
+          },
+        },
+      });
+
+      if (existing) {
+        // Remove helpful
+        await prisma.reviewHelpful.delete({
+          where: {
+            reviewId_userId: {
+              reviewId,
+              userId,
+            },
+          },
+        });
+
+        await prisma.review.update({
+          where: { id: reviewId },
+          data: {
+            helpful: { decrement: 1 },
+          },
+        });
+
+        const updated = await prisma.review.findUnique({
+          where: { id: reviewId },
+        });
+
+        return {
+          isHelpful: false,
+          count: updated?.helpful || 0,
+        };
+      } else {
+        // Add helpful
+        await prisma.reviewHelpful.create({
+          data: {
+            reviewId,
+            userId,
+          },
+        });
+
+        await prisma.review.update({
+          where: { id: reviewId },
+          data: {
+            helpful: { increment: 1 },
+          },
+        });
+
+        const updated = await prisma.review.findUnique({
+          where: { id: reviewId },
+        });
+
+        return {
+          isHelpful: true,
+          count: updated?.helpful || 0,
+        };
+      }
+    } catch (error) {
+      logger.error('Error toggling review helpful', {
+        reviewId,
+        userId,
+        error: (error as Error).message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Check if user marked review as helpful
+   */
+  async hasUserMarkedHelpful(
+    reviewId: string,
+    userId: string
+  ): Promise<boolean> {
+    try {
+      const helpful = await prisma.reviewHelpful.findUnique({
+        where: {
+          reviewId_userId: {
+            reviewId,
+            userId,
+          },
+        },
+      });
+      return helpful !== null;
+    } catch (error) {
+      logger.error('Error checking if user marked review as helpful', {
+        reviewId,
+        userId,
+        error: (error as Error).message,
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Report a review
    */
   async report(id: string): Promise<Review> {
@@ -412,6 +522,106 @@ export class ReviewRepository {
   }
 
   /**
+   * Get complete review stats for a product
+   */
+  async getProductReviewStats(productId: string): Promise<{
+    averageRating: number;
+    totalReviews: number;
+    ratingDistribution: { [key: number]: number };
+  }> {
+    try {
+      const [total, avgResult, distribution] = await Promise.all([
+        prisma.review.count({ where: { productId } }),
+        prisma.review.aggregate({
+          where: { productId },
+          _avg: { rating: true },
+        }),
+        prisma.review.groupBy({
+          by: ['rating'],
+          where: { productId },
+          _count: { rating: true },
+        }),
+      ]);
+
+      // Initialize all ratings to 0
+      const ratingDistribution: { [key: number]: number } = {
+        1: 0,
+        2: 0,
+        3: 0,
+        4: 0,
+        5: 0,
+      };
+
+      // Fill in actual counts
+      distribution.forEach((d) => {
+        ratingDistribution[d.rating] = d._count.rating;
+      });
+
+      return {
+        averageRating: avgResult._avg.rating || 0,
+        totalReviews: total,
+        ratingDistribution,
+      };
+    } catch (error) {
+      logger.error('Error getting product review stats', {
+        productId,
+        error: (error as Error).message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get complete review stats for a deal
+   */
+  async getDealReviewStats(dealId: string): Promise<{
+    averageRating: number;
+    totalReviews: number;
+    ratingDistribution: { [key: number]: number };
+  }> {
+    try {
+      const [total, avgResult, distribution] = await Promise.all([
+        prisma.review.count({ where: { dealId } }),
+        prisma.review.aggregate({
+          where: { dealId },
+          _avg: { rating: true },
+        }),
+        prisma.review.groupBy({
+          by: ['rating'],
+          where: { dealId },
+          _count: { rating: true },
+        }),
+      ]);
+
+      // Initialize all ratings to 0
+      const ratingDistribution: { [key: number]: number } = {
+        1: 0,
+        2: 0,
+        3: 0,
+        4: 0,
+        5: 0,
+      };
+
+      // Fill in actual counts
+      distribution.forEach((d) => {
+        ratingDistribution[d.rating] = d._count.rating;
+      });
+
+      return {
+        averageRating: avgResult._avg.rating || 0,
+        totalReviews: total,
+        ratingDistribution,
+      };
+    } catch (error) {
+      logger.error('Error getting deal review stats', {
+        dealId,
+        error: (error as Error).message,
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Get supplier reviews (all reviews for supplier's products)
    */
   async getSupplierReviews(
@@ -521,6 +731,104 @@ export class ReviewRepository {
     } catch (error) {
       logger.error('Error getting deal reviews', {
         dealId,
+        error: (error as Error).message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Update supplier response for a review
+   */
+  async updateSupplierResponse(
+    reviewId: string,
+    response: string,
+    userId: string
+  ): Promise<Review> {
+    try {
+      return await prisma.review.update({
+        where: { id: reviewId },
+        data: {
+          supplierResponse: response,
+          supplierRespondedAt: new Date(),
+          supplierRespondedBy: userId,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatar: true,
+            },
+          },
+          product: {
+            select: {
+              id: true,
+              title: true,
+              images: true,
+              supplierId: true,
+            },
+          },
+          deal: {
+            select: {
+              id: true,
+              title: true,
+              images: true,
+              supplierId: true,
+            },
+          },
+        },
+      });
+    } catch (error) {
+      logger.error('Error updating supplier response', {
+        reviewId,
+        error: (error as Error).message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Delete supplier response from a review
+   */
+  async deleteSupplierResponse(reviewId: string): Promise<Review> {
+    try {
+      return await prisma.review.update({
+        where: { id: reviewId },
+        data: {
+          supplierResponse: null,
+          supplierRespondedAt: null,
+          supplierRespondedBy: null,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatar: true,
+            },
+          },
+          product: {
+            select: {
+              id: true,
+              title: true,
+              images: true,
+            },
+          },
+          deal: {
+            select: {
+              id: true,
+              title: true,
+              images: true,
+            },
+          },
+        },
+      });
+    } catch (error) {
+      logger.error('Error deleting supplier response', {
+        reviewId,
         error: (error as Error).message,
       });
       throw error;

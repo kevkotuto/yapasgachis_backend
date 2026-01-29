@@ -82,12 +82,26 @@ export class SupplierController {
   updateProfile = asyncHandler(
     async (req: Request<{}, {}, UpdateSupplierProfileInput>, res: Response) => {
       const userId = req.user.id;
+      const files = req.files as {
+        idCardFront?: Express.Multer.File[];
+        idCardBack?: Express.Multer.File[];
+        selfie?: Express.Multer.File[];
+      };
 
-      const profile = await supplierService.updateProfile(userId, req.body);
+      const profile = await supplierService.updateProfile(
+        userId,
+        req.body,
+        files
+      );
 
       logger.info('Supplier profile updated via API', {
         userId,
         profileId: profile.id,
+        kycFilesUploaded: !!(
+          files?.idCardFront ||
+          files?.idCardBack ||
+          files?.selfie
+        ),
       });
 
       res.json({

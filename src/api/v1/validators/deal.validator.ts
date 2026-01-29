@@ -54,6 +54,7 @@ export const createDealSchema = z.object({
       requiresBooking: z.boolean().default(true),
       bookingLeadTime: z.number().int().min(0).default(0),
       cancellationHours: z.number().int().min(0).default(24),
+      bookingMode: z.enum(['SINGLE_DATE', 'DATE_RANGE']).optional(),
       contactPhone: z.string().optional(),
       contactEmail: z.string().email().optional(),
     })
@@ -145,6 +146,16 @@ export const searchDealsSchema = z.object({
 export const supplierDealsQuerySchema = z.object({
   query: z.object({
     status: z.nativeEnum(DealStatus).optional(),
+    page: z
+      .string()
+      .transform(Number)
+      .pipe(z.number().int().positive())
+      .optional(),
+    limit: z
+      .string()
+      .transform(Number)
+      .pipe(z.number().int().positive().max(100))
+      .optional(),
   }),
 });
 
@@ -154,9 +165,34 @@ export const bookDealSchema = z.object({
   params: z.object({
     dealId: z.string().uuid(),
   }),
+  body: z
+    .object({
+      bookingDate: z.string().datetime(),
+      bookingEndDate: z.string().datetime().optional(),
+      bookingSlot: z.string().optional(),
+      quantity: z.number().int().positive().default(1),
+      paymentMethod: z.enum(['WAVE', 'CASH_ON_DELIVERY']),
+      userNotes: z.string().max(500).optional(),
+    })
+    .refine(
+      (data) => {
+        if (data.bookingEndDate) {
+          return new Date(data.bookingEndDate) > new Date(data.bookingDate);
+        }
+        return true;
+      },
+      {
+        message: 'La date de fin doit être postérieure à la date de début',
+        path: ['bookingEndDate'],
+      }
+    ),
+});
+
+export const purchaseDealSchema = z.object({
+  params: z.object({
+    dealId: z.string().uuid(),
+  }),
   body: z.object({
-    bookingDate: z.string().datetime(),
-    bookingSlot: z.string().optional(),
     quantity: z.number().int().positive().default(1),
     paymentMethod: z.enum(['WAVE', 'CASH_ON_DELIVERY']),
     userNotes: z.string().max(500).optional(),
@@ -242,6 +278,7 @@ export type CreateDealInput = z.infer<typeof createDealSchema>;
 export type UpdateDealInput = z.infer<typeof updateDealSchema>;
 export type SearchDealsInput = z.infer<typeof searchDealsSchema>;
 export type BookDealInput = z.infer<typeof bookDealSchema>;
+export type PurchaseDealInput = z.infer<typeof purchaseDealSchema>;
 export type CancelBookingInput = z.infer<typeof cancelBookingSchema>;
 export type ValidateBookingInput = z.infer<typeof validateBookingSchema>;
 export type UserBookingsQueryInput = z.infer<typeof userBookingsQuerySchema>;

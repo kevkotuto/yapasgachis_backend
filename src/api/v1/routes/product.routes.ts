@@ -13,6 +13,7 @@ import {
   uploadImagesSchema,
   deleteImageSchema,
   getSupplierProductsSchema,
+  toggleProductStatusSchema,
 } from '../validators/product.validator';
 
 import { authMiddleware } from '@/middleware/auth.middleware';
@@ -158,6 +159,19 @@ router.delete(
   supplierOnly,
   validate(deleteImageSchema),
   productController.deleteImage
+);
+
+/**
+ * Toggle product status
+ * PATCH /:id/toggle-status
+ * Requires: Authentication + SUPPLIER role
+ */
+router.patch(
+  '/:id/toggle-status',
+  authMiddleware,
+  supplierOnly,
+  validate(toggleProductStatusSchema),
+  productController.toggleStatus
 );
 
 // ==================== PARAMETERIZED ROUTES (MUST BE LAST) ====================

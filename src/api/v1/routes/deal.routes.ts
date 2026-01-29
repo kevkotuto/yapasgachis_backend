@@ -1,12 +1,14 @@
 import { Router } from 'express';
 
 import dealController from '@/api/v1/controllers/deal.controller';
+import { dealRoomController } from '@/api/v1/controllers/deal-room.controller';
 import {
   createDealSchema,
   updateDealSchema,
   dealIdParamSchema,
   searchDealsSchema,
   bookDealSchema,
+  purchaseDealSchema,
   bookingIdParamSchema,
   cancelBookingSchema,
   validateBookingSchema,
@@ -14,6 +16,13 @@ import {
   supplierBookingsQuerySchema,
   supplierDealsQuerySchema,
 } from '@/api/v1/validators/deal.validator';
+import {
+  createDealRoomSchema,
+  updateDealRoomSchema,
+  getRoomsByDealIdSchema,
+  getRoomByIdSchema,
+  deleteRoomSchema,
+} from '@/api/v1/validators/deal-room.validator';
 import {
   authenticate,
   optionalAuthenticate,
@@ -31,6 +40,49 @@ router.get('/', validate(searchDealsSchema), dealController.searchDeals);
 // Get deal by ID
 router.get('/:dealId', validate(dealIdParamSchema), dealController.getDealById);
 
+// ==================== DEAL ROOMS ROUTES ====================
+
+// Get rooms for a deal (public)
+router.get(
+  '/:dealId/rooms',
+  validate(getRoomsByDealIdSchema),
+  dealRoomController.getRoomsByDealId
+);
+
+// Get specific room (public)
+router.get(
+  '/:dealId/rooms/:roomId',
+  validate(getRoomByIdSchema),
+  dealRoomController.getRoomById
+);
+
+// Create room (supplier only)
+router.post(
+  '/:dealId/rooms',
+  authenticate,
+  requireRole(['SUPPLIER_DEALS']),
+  validate(createDealRoomSchema),
+  dealRoomController.createRoom
+);
+
+// Update room (supplier only)
+router.put(
+  '/:dealId/rooms/:roomId',
+  authenticate,
+  requireRole(['SUPPLIER_DEALS']),
+  validate(updateDealRoomSchema),
+  dealRoomController.updateRoom
+);
+
+// Delete room (supplier only)
+router.delete(
+  '/:dealId/rooms/:roomId',
+  authenticate,
+  requireRole(['SUPPLIER_DEALS']),
+  validate(deleteRoomSchema),
+  dealRoomController.deleteRoom
+);
+
 // ==================== USER ROUTES ====================
 
 // Book a deal
@@ -39,6 +91,14 @@ router.post(
   authenticate,
   validate(bookDealSchema),
   dealController.bookDeal
+);
+
+// Purchase a deal (no booking required)
+router.post(
+  '/:dealId/purchase',
+  authenticate,
+  validate(purchaseDealSchema),
+  dealController.purchaseDeal
 );
 
 // Get user's bookings

@@ -1,4 +1,9 @@
-import { PointTransaction, Prisma } from '@prisma/client';
+import {
+  PointTransaction,
+  Prisma,
+  PointTransactionType,
+  RewardTier,
+} from '@prisma/client';
 
 import { prisma } from '@/infrastructure/database/prisma';
 import logger from '@/infrastructure/monitoring/logger';
@@ -34,7 +39,7 @@ export class RewardRepository {
       totalPoints?: number;
       availablePoints?: number;
       lifetimePoints?: number;
-      currentTier?: string;
+      currentTier?: RewardTier;
     }
   ) {
     try {
@@ -45,7 +50,7 @@ export class RewardRepository {
           totalPoints: data.totalPoints || 0,
           availablePoints: data.availablePoints || 0,
           lifetimePoints: data.lifetimePoints || 0,
-          currentTier: data.currentTier || 'BRONZE',
+          currentTier: data.currentTier || RewardTier.BRONZE,
         },
         update: data,
       });
@@ -64,7 +69,7 @@ export class RewardRepository {
   async createTransaction(data: {
     userId: string;
     amount: number;
-    type: string;
+    type: PointTransactionType;
     source: string;
     description: string;
     reference?: string;
@@ -99,7 +104,7 @@ export class RewardRepository {
     userId: string,
     page = 1,
     limit = 20,
-    type?: string
+    type?: PointTransactionType
   ): Promise<{ transactions: PointTransaction[]; total: number }> {
     const skip = (page - 1) * limit;
 
@@ -147,7 +152,7 @@ export class RewardRepository {
           data: {
             userId,
             amount,
-            type: 'EARNED',
+            type: PointTransactionType.EARNED,
             source,
             description,
             reference,
@@ -164,7 +169,7 @@ export class RewardRepository {
             totalPoints: amount,
             availablePoints: amount,
             lifetimePoints: amount,
-            currentTier: 'BRONZE',
+            currentTier: RewardTier.BRONZE,
           },
           update: {
             totalPoints: { increment: amount },
@@ -216,7 +221,7 @@ export class RewardRepository {
           data: {
             userId,
             amount: -amount,
-            type: 'REDEEMED',
+            type: PointTransactionType.REDEEMED,
             source: 'REDEMPTION',
             description,
             reference,
@@ -261,14 +266,8 @@ export class RewardRepository {
       // Find expired transactions
       const expiredTransactions = await prisma.pointTransaction.findMany({
         where: {
-          type: 'EARNED',
+          type: PointTransactionType.EARNED,
           expiresAt: { lte: now },
-          // Not already expired
-          NOT: {
-            pointTransactions: {
-              some: { source: 'EXPIRATION' },
-            },
-          },
         },
       });
 
@@ -301,11 +300,11 @@ export class RewardRepository {
   /**
    * Calculate user tier based on lifetime points
    */
-  calculateTier(lifetimePoints: number): string {
-    if (lifetimePoints >= 10000) return 'PLATINUM';
-    if (lifetimePoints >= 5000) return 'GOLD';
-    if (lifetimePoints >= 1000) return 'SILVER';
-    return 'BRONZE';
+  calculateTier(lifetimePoints: number): RewardTier {
+    if (lifetimePoints >= 10000) return RewardTier.PLATINUM;
+    if (lifetimePoints >= 5000) return RewardTier.GOLD;
+    if (lifetimePoints >= 1000) return RewardTier.SILVER;
+    return RewardTier.BRONZE;
   }
 
   /**

@@ -1,12 +1,16 @@
-import { TeamMember, Prisma } from '@prisma/client';
+import { StoreStaff, Prisma } from '@prisma/client';
 
 import { prisma } from '@/infrastructure/database/prisma';
 import logger from '@/infrastructure/monitoring/logger';
 
+/**
+ * Team Member Repository
+ * Uses StoreStaff model for store team management
+ */
 export class TeamMemberRepository {
-  async create(data: any): Promise<TeamMember> {
+  async create(data: any): Promise<StoreStaff> {
     try {
-      return await prisma.teamMember.create({ data });
+      return await prisma.storeStaff.create({ data });
     } catch (error) {
       logger.error('Error creating team member', {
         error: (error as Error).message,
@@ -15,13 +19,19 @@ export class TeamMemberRepository {
     }
   }
 
-  async findById(id: string): Promise<TeamMember | null> {
+  async findById(id: string): Promise<StoreStaff | null> {
     try {
-      return await prisma.teamMember.findUnique({
+      return await prisma.storeStaff.findUnique({
         where: { id },
         include: {
-          supplier: { select: { id: true, businessName: true } },
-          store: { select: { id: true, name: true } },
+          store: {
+            select: {
+              id: true,
+              name: true,
+              supplierId: true,
+              supplier: { select: { id: true, businessName: true } },
+            },
+          },
           user: {
             select: { id: true, firstName: true, lastName: true, avatar: true },
           },
@@ -38,20 +48,20 @@ export class TeamMemberRepository {
   async findBySupplier(
     supplierId: string,
     filters?: any
-  ): Promise<{ members: TeamMember[]; total: number }> {
+  ): Promise<{ members: StoreStaff[]; total: number }> {
     const { page = 1, limit = 20, role, isActive, storeId } = filters || {};
     const skip = (page - 1) * limit;
 
     try {
-      const where: Prisma.TeamMemberWhereInput = {
-        supplierId,
+      const where: Prisma.StoreStaffWhereInput = {
+        store: { supplierId }, // Filter by supplier through store relation
         ...(role && { role }),
         ...(isActive !== undefined && { isActive }),
         ...(storeId && { storeId }),
       };
 
       const [members, total] = await Promise.all([
-        prisma.teamMember.findMany({
+        prisma.storeStaff.findMany({
           where,
           include: {
             store: { select: { id: true, name: true } },
@@ -68,7 +78,7 @@ export class TeamMemberRepository {
           take: limit,
           orderBy: { createdAt: 'desc' },
         }),
-        prisma.teamMember.count({ where }),
+        prisma.storeStaff.count({ where }),
       ]);
 
       return { members, total };
@@ -80,9 +90,9 @@ export class TeamMemberRepository {
     }
   }
 
-  async update(id: string, data: any): Promise<TeamMember> {
+  async update(id: string, data: any): Promise<StoreStaff> {
     try {
-      return await prisma.teamMember.update({ where: { id }, data });
+      return await prisma.storeStaff.update({ where: { id }, data });
     } catch (error) {
       logger.error('Error updating team member', {
         error: (error as Error).message,
@@ -91,9 +101,9 @@ export class TeamMemberRepository {
     }
   }
 
-  async delete(id: string): Promise<TeamMember> {
+  async delete(id: string): Promise<StoreStaff> {
     try {
-      return await prisma.teamMember.delete({ where: { id } });
+      return await prisma.storeStaff.delete({ where: { id } });
     } catch (error) {
       logger.error('Error deleting team member', {
         error: (error as Error).message,
@@ -104,15 +114,17 @@ export class TeamMemberRepository {
 
   async getStats(supplierId: string) {
     try {
+      const where = { store: { supplierId } };
+
       const [total, active, pending, byRole] = await Promise.all([
-        prisma.teamMember.count({ where: { supplierId } }),
-        prisma.teamMember.count({ where: { supplierId, isActive: true } }),
-        prisma.teamMember.count({
-          where: { supplierId, invitationStatus: 'PENDING' },
+        prisma.storeStaff.count({ where }),
+        prisma.storeStaff.count({ where: { ...where, isActive: true } }),
+        prisma.storeStaff.count({
+          where: { ...where, inviteStatus: 'PENDING' },
         }),
-        prisma.teamMember.groupBy({
+        prisma.storeStaff.groupBy({
           by: ['role'],
-          where: { supplierId },
+          where,
           _count: { role: true },
         }),
       ]);

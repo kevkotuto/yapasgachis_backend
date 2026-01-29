@@ -6,9 +6,11 @@ import {
   ReorderDealOptionsInput,
 } from '../validators/deal-option.validator';
 
+import { CreateDealOptionDTO } from '@/core/interfaces/dtos/deal-option.dto';
 import dealOptionService from '@/core/services/deal-option.service';
 import logger from '@/infrastructure/monitoring/logger';
 import { asyncHandler } from '@/utils/helpers';
+import { normalizeImages, normalizeImagesList } from '@/utils/normalize.utils';
 
 /**
  * Deal Option Controller
@@ -21,7 +23,7 @@ export class DealOptionController {
    */
   createDealOption = asyncHandler(async (req: Request, res: Response) => {
     const supplierId = req.user.id;
-    const body = req.body as CreateDealOptionInput;
+    const body = req.body as CreateDealOptionDTO;
 
     const option = await dealOptionService.createDealOption(supplierId, body);
 
@@ -34,7 +36,7 @@ export class DealOptionController {
     res.status(201).json({
       success: true,
       message: 'Option créée avec succès',
-      data: { option },
+      data: { option: normalizeImages(option) },
     });
   });
 
@@ -53,7 +55,7 @@ export class DealOptionController {
 
     res.json({
       success: true,
-      data: { options },
+      data: { options: normalizeImagesList(options) },
     });
   });
 
@@ -68,7 +70,7 @@ export class DealOptionController {
 
     res.json({
       success: true,
-      data: { option },
+      data: { option: normalizeImages(option) },
     });
   });
 
@@ -98,7 +100,7 @@ export class DealOptionController {
       res.json({
         success: true,
         message: 'Option mise à jour avec succès',
-        data: { option },
+        data: { option: normalizeImages(option) },
       });
     }
   );
@@ -153,7 +155,7 @@ export class DealOptionController {
       res.json({
         success: true,
         message: 'Options réordonnées avec succès',
-        data: { options },
+        data: { options: normalizeImagesList(options) },
       });
     }
   );

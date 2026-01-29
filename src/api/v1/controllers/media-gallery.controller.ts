@@ -4,39 +4,42 @@ import logger from '@/infrastructure/monitoring/logger';
 import { asyncHandler } from '@/utils/helpers';
 
 export class MediaGalleryController {
-  uploadMedia = asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user.id;
-    const { entityType, entityId } = req.body;
-    const files = req.files as Express.Multer.File[];
+  uploadMedia = asyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const userId = req.user.id;
+      const { entityType, entityId } = req.body;
+      const files = req.files as Express.Multer.File[];
 
-    if (!files || files.length === 0) {
-      return res
-        .status(400)
-        .json({ success: false, message: 'Aucun fichier fourni' });
-    }
-
-    const media = await mediaGalleryService.uploadMedia(
-      userId,
-      entityType,
-      entityId,
-      files,
-      {
-        isPrimary: req.body.isPrimary === 'true',
-        caption: req.body.caption,
-        altText: req.body.altText,
+      if (!files || files.length === 0) {
+        res
+          .status(400)
+          .json({ success: false, message: 'Aucun fichier fourni' });
+        return;
       }
-    );
 
-    logger.info('Media uploaded via API', {
-      userId,
-      entityType,
-      entityId,
-      count: files.length,
-    });
-    res
-      .status(201)
-      .json({ success: true, message: 'Médias uploadés', data: { media } });
-  });
+      const media = await mediaGalleryService.uploadMedia(
+        userId,
+        entityType,
+        entityId,
+        files,
+        {
+          isPrimary: req.body.isPrimary === 'true',
+          caption: req.body.caption,
+          altText: req.body.altText,
+        }
+      );
+
+      logger.info('Media uploaded via API', {
+        userId,
+        entityType,
+        entityId,
+        count: files.length,
+      });
+      res
+        .status(201)
+        .json({ success: true, message: 'Médias uploadés', data: { media } });
+    }
+  );
 
   getMediaGallery = asyncHandler(async (req: Request, res: Response) => {
     const { entityType, entityId } = req.params;

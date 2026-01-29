@@ -8,6 +8,7 @@ import {
   CancelOrderInput,
   CheckPaymentStatusInput,
   SearchOrdersInput,
+  CalculateDeliveryFeeInput,
 } from '../validators/order.validator';
 
 import orderRepository from '@/core/repositories/order.repository';
@@ -231,6 +232,21 @@ export class OrderController {
     return res.json({
       success: true,
       data: { statistics },
+    });
+  });
+
+  /**
+   * Calculate delivery fee
+   * POST /api/v1/orders/calculate-delivery-fee
+   */
+  calculateDeliveryFee = asyncHandler(async (req: Request, res: Response) => {
+    const body = req.body as CalculateDeliveryFeeInput;
+
+    const result = await orderService.calculateDeliveryFee(body);
+
+    res.json({
+      success: true,
+      data: result,
     });
   });
 

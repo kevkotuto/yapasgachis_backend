@@ -10,6 +10,7 @@ import supplierRepository, {
 } from '@/core/repositories/supplier.repository';
 import UserRepository from '@/core/repositories/user.repository';
 import geocodingService from '@/infrastructure/geolocation/geocoding.service';
+import cloudinaryService from '@/infrastructure/storage/cloudinary.service';
 import logger from '@/infrastructure/monitoring/logger';
 import { AppError } from '@/middleware/error-handler.middleware';
 
@@ -176,6 +177,14 @@ export class SupplierService {
       bankAccountNumber?: string;
       logoUrl?: string;
       bannerUrl?: string;
+      idCardType?: string;
+      idCardNumber?: string;
+      idCardExpiry?: Date;
+    },
+    files?: {
+      idCardFront?: Express.Multer.File[];
+      idCardBack?: Express.Multer.File[];
+      selfie?: Express.Multer.File[];
     }
   ): Promise<SupplierProfile> {
     try {
@@ -203,15 +212,81 @@ export class SupplierService {
         }
       }
 
-      const updated = await this.supplierRepo.update(profile.id, {
+      // Upload KYC documents to Cloudinary if provided
+      const uploadedUrls: Partial<{
+        idCardFront: string;
+        idCardBack: string;
+        selfiePhoto: string;
+      }> = {};
+
+      if (files) {
+        if (files.idCardFront?.[0]) {
+          const result = await cloudinaryService.uploadFromBuffer(
+            files.idCardFront[0].buffer,
+            {
+              folder: 'yapasgachis/kyc',
+              format: 'jpg',
+              quality: 90,
+            }
+          );
+          uploadedUrls.idCardFront = result.secure_url;
+        }
+
+        if (files.idCardBack?.[0]) {
+          const result = await cloudinaryService.uploadFromBuffer(
+            files.idCardBack[0].buffer,
+            {
+              folder: 'yapasgachis/kyc',
+              format: 'jpg',
+              quality: 90,
+            }
+          );
+          uploadedUrls.idCardBack = result.secure_url;
+        }
+
+        if (files.selfie?.[0]) {
+          const result = await cloudinaryService.uploadFromBuffer(
+            files.selfie[0].buffer,
+            {
+              folder: 'yapasgachis/kyc',
+              format: 'jpg',
+              quality: 90,
+            }
+          );
+          uploadedUrls.selfiePhoto = result.secure_url;
+        }
+      }
+
+      // Auto-update kycStatus to SUBMITTED if all 3 files are uploaded
+      const hasAllKycDocs =
+        (uploadedUrls.idCardFront || profile.idCardFront) &&
+        (uploadedUrls.idCardBack || profile.idCardBack) &&
+        (uploadedUrls.selfiePhoto || profile.selfiePhoto);
+
+      const updateData: any = {
         ...data,
         latitude,
         longitude,
-      });
+        ...uploadedUrls,
+      };
+
+      // Only update kycStatus if all documents are present and status is still PENDING
+      if (hasAllKycDocs && profile.kycStatus === 'PENDING') {
+        updateData.kycStatus = 'SUBMITTED';
+        updateData.kycSubmittedAt = new Date();
+      }
+
+      const updated = await this.supplierRepo.update(profile.id, updateData);
 
       logger.info('Supplier profile updated', {
         userId,
         profileId: profile.id,
+        kycFilesUploaded: !!(
+          files?.idCardFront ||
+          files?.idCardBack ||
+          files?.selfie
+        ),
+        kycStatus: updated.kycStatus,
       });
 
       return updated;

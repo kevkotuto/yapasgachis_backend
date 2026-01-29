@@ -13,7 +13,7 @@ export enum PointTransactionType {
   EARNED = 'EARNED',
   REDEEMED = 'REDEEMED',
   EXPIRED = 'EXPIRED',
-  BONUS = 'BONUS',
+  ADJUSTED = 'ADJUSTED',
 }
 
 export enum PointSource {

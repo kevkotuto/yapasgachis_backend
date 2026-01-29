@@ -59,6 +59,7 @@ export class DealService {
       requiresBooking?: boolean;
       bookingLeadTime?: number;
       cancellationHours?: number;
+      bookingMode?: 'SINGLE_DATE' | 'DATE_RANGE';
       contactPhone?: string;
       contactEmail?: string;
     }
@@ -102,6 +103,13 @@ export class DealService {
         ((data.originalPrice - data.dealPrice) / data.originalPrice) * 100
       );
 
+      // Auto-set bookingMode based on category if not provided
+      const bookingMode =
+        data.bookingMode ||
+        (['HOTEL_ROOM', 'HOTELS_RESIDENCES'].includes(data.category)
+          ? 'DATE_RANGE'
+          : 'SINGLE_DATE');
+
       const deal = await this.dealRepo.create({
         supplier: { connect: { id: supplierId } },
         ...(data.storeId && { store: { connect: { id: data.storeId } } }),
@@ -127,6 +135,7 @@ export class DealService {
         requiresBooking: data.requiresBooking !== false,
         bookingLeadTime: data.bookingLeadTime || 0,
         cancellationHours: data.cancellationHours || 24,
+        bookingMode,
         contactPhone: data.contactPhone,
         contactEmail: data.contactEmail,
         status: 'PENDING_APPROVAL', // Requires admin approval
@@ -344,13 +353,23 @@ export class DealService {
   }
 
   /**
-   * Get supplier's deals
+   * Get supplier's deals (with pagination)
    */
   async getSupplierDeals(
     supplierId: string,
-    status?: DealStatus
-  ): Promise<Deal[]> {
-    return this.dealRepo.findBySupplierId(supplierId, status);
+    options?: {
+      status?: DealStatus;
+      page?: number;
+      limit?: number;
+    }
+  ): Promise<{ deals: Deal[]; total: number; pages: number }> {
+    const { deals, total } = await this.dealRepo.findBySupplierId(
+      supplierId,
+      options
+    );
+    const limit = options?.limit || 20;
+    const pages = Math.ceil(total / limit);
+    return { deals, total, pages };
   }
 
   // ==================== PUBLIC DEAL BROWSING ====================
@@ -414,6 +433,7 @@ export class DealService {
     dealId: string,
     data: {
       bookingDate: Date;
+      bookingEndDate?: Date;
       bookingSlot?: string;
       quantity?: number;
       paymentMethod: 'WAVE' | 'CASH_ON_DELIVERY';
@@ -454,8 +474,60 @@ export class DealService {
         );
       }
 
-      // Check booking date is within deal availability
+      // Parse booking date early for validations
       const bookingDate = new Date(data.bookingDate);
+
+      // ========== VALIDATION bookingMode ==========
+
+      // 1. DATE_RANGE requires bookingEndDate
+      if (deal.bookingMode === 'DATE_RANGE' && !data.bookingEndDate) {
+        throw new AppError(
+          400,
+          'La date de fin est requise pour ce type de réservation',
+          'BOOKING_END_DATE_REQUIRED'
+        );
+      }
+
+      // 2. SINGLE_DATE refuses bookingEndDate
+      if (deal.bookingMode === 'SINGLE_DATE' && data.bookingEndDate) {
+        throw new AppError(
+          400,
+          'Ce deal ne supporte pas les réservations multi-jours',
+          'BOOKING_END_DATE_NOT_ALLOWED'
+        );
+      }
+
+      // 3. Calculate numberOfNights and validate range
+      let numberOfNights: number | undefined;
+      if (data.bookingEndDate) {
+        const bookingEndDate = new Date(data.bookingEndDate);
+
+        // Verify endDate > startDate
+        if (bookingEndDate <= bookingDate) {
+          throw new AppError(
+            400,
+            'La date de fin doit être postérieure à la date de début',
+            'INVALID_DATE_RANGE'
+          );
+        }
+
+        // Calculate number of nights
+        const diffMs = bookingEndDate.getTime() - bookingDate.getTime();
+        numberOfNights = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+        // Verify endDate is within available range
+        if (bookingEndDate > deal.availableUntil) {
+          throw new AppError(
+            400,
+            'La date de fin dépasse la période de validité du deal',
+            'END_DATE_OUT_OF_RANGE'
+          );
+        }
+      }
+
+      // ========== END VALIDATION bookingMode ==========
+
+      // Check booking date is within deal availability
       if (
         bookingDate < deal.availableFrom ||
         bookingDate > deal.availableUntil
@@ -510,7 +582,9 @@ export class DealService {
       const validationCode = generateRandomCode(8).toUpperCase();
 
       // Calculate total price
-      const totalPrice = deal.dealPrice * quantity;
+      const totalPrice = numberOfNights
+        ? deal.dealPrice * numberOfNights * quantity // DATE_RANGE: price per night
+        : deal.dealPrice * quantity; // SINGLE_DATE: fixed price
 
       // Create booking
       const booking = await this.bookingRepo.create({
@@ -518,6 +592,8 @@ export class DealService {
         userId,
         quantity,
         bookingDate,
+        bookingEndDate: data.bookingEndDate,
+        numberOfNights,
         bookingSlot: data.bookingSlot,
         unitPrice: deal.dealPrice,
         totalPrice,
@@ -535,6 +611,7 @@ export class DealService {
         dealId,
         bookingId: booking.id,
         quantity,
+        numberOfNights: numberOfNights || null,
         totalPrice,
       });
 
@@ -547,6 +624,110 @@ export class DealService {
         error: (error as Error).message,
       });
       throw new AppError(500, 'Erreur lors de la réservation');
+    }
+  }
+
+  /**
+   * Purchase a deal (no booking required)
+   * For deals with requiresBooking = false (e.g., gift cards, event tickets)
+   */
+  async purchaseDeal(
+    userId: string,
+    dealId: string,
+    data: {
+      quantity?: number;
+      paymentMethod: 'WAVE' | 'CASH_ON_DELIVERY';
+      userNotes?: string;
+    }
+  ): Promise<DealBooking> {
+    try {
+      // 1. Récupérer et valider le deal
+      const deal = await this.dealRepo.findById(dealId);
+      if (!deal) {
+        throw new AppError(404, 'Deal non trouvé', 'DEAL_NOT_FOUND');
+      }
+
+      // 2. Vérifier que le deal est en mode achat direct
+      if (deal.requiresBooking) {
+        throw new AppError(
+          400,
+          "Ce deal nécessite une réservation avec date. Utilisez l'endpoint /book",
+          'DEAL_REQUIRES_BOOKING'
+        );
+      }
+
+      // 3. Vérifier que le deal est actif
+      if (deal.status !== 'ACTIVE') {
+        throw new AppError(
+          400,
+          "Ce deal n'est plus disponible",
+          'DEAL_NOT_ACTIVE'
+        );
+      }
+
+      // 4. Normaliser la quantité
+      const quantity = data.quantity || 1;
+
+      // 5. Vérifier le stock disponible
+      if (deal.quantityAvailable < quantity) {
+        throw new AppError(400, 'Stock insuffisant', 'INSUFFICIENT_STOCK');
+      }
+
+      // 6. Vérifier la limite par utilisateur
+      const userBookings = await this.bookingRepo.countUserBookingsForDeal(
+        userId,
+        dealId
+      );
+      if (userBookings + quantity > deal.maxPerUser) {
+        throw new AppError(
+          400,
+          `Vous ne pouvez acheter que ${deal.maxPerUser} fois ce deal`,
+          'MAX_PER_USER_EXCEEDED'
+        );
+      }
+
+      // 7. Générer le code de validation
+      const validationCode = generateRandomCode(8).toUpperCase();
+
+      // 8. Calculer le prix total
+      const totalPrice = deal.dealPrice * quantity;
+
+      // 9. Créer l'achat (DealBooking avec bookingDate = now)
+      const booking = await this.bookingRepo.create({
+        deal: { connect: { id: dealId } },
+        userId,
+        quantity,
+        bookingDate: new Date(), // Date immédiate pour achat direct
+        bookingSlot: null, // Pas de créneau pour achat direct
+        unitPrice: deal.dealPrice,
+        totalPrice,
+        validationCode,
+        paymentMethod: data.paymentMethod,
+        userNotes: data.userNotes,
+        status: 'PENDING',
+      });
+
+      // 10. Décrémenter la quantité disponible
+      await this.dealRepo.decrementQuantity(dealId, quantity);
+
+      // 11. Logger l'opération
+      logger.info('Deal purchased', {
+        userId,
+        dealId,
+        bookingId: booking.id,
+        quantity,
+        totalPrice,
+      });
+
+      return booking;
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      logger.error('Error purchasing deal', {
+        userId,
+        dealId,
+        error: (error as Error).message,
+      });
+      throw new AppError(500, "Erreur lors de l'achat du deal");
     }
   }
 

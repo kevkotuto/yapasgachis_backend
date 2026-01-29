@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 
 import supplierStoreService from '@/core/services/supplier-store.service';
 import { AppError, asyncHandler } from '@/middleware/error-handler.middleware';
+import { normalizeImages, normalizeImagesList } from '@/utils/normalize.utils';
 
 /**
  * Supplier Store Controller
@@ -31,7 +32,7 @@ export class SupplierStoreController {
 
     res.json({
       success: true,
-      data: result.stores,
+      data: normalizeImagesList(result.stores),
       pagination: {
         total: result.total,
         pages: result.pages,
@@ -54,10 +55,10 @@ export class SupplierStoreController {
 
     res.json({
       success: true,
-      data: {
+      data: normalizeImages({
         ...store,
         ...openStatus,
-      },
+      }),
     });
   });
 
@@ -81,7 +82,7 @@ export class SupplierStoreController {
 
     res.json({
       success: true,
-      data: stores,
+      data: normalizeImagesList(stores),
     });
   });
 
@@ -103,7 +104,7 @@ export class SupplierStoreController {
     res.status(201).json({
       success: true,
       message: 'Magasin créé avec succès',
-      data: store,
+      data: normalizeImages(store),
     });
   });
 
@@ -129,7 +130,7 @@ export class SupplierStoreController {
     res.json({
       success: true,
       message: 'Magasin mis à jour avec succès',
-      data: store,
+      data: normalizeImages(store),
     });
   });
 
@@ -175,7 +176,7 @@ export class SupplierStoreController {
 
     res.json({
       success: true,
-      data: storesWithStatus,
+      data: normalizeImagesList(storesWithStatus),
     });
   });
 
@@ -230,7 +231,7 @@ export class SupplierStoreController {
     res.json({
       success: true,
       message: isClosed ? 'Magasin temporairement fermé' : 'Magasin réouvert',
-      data: store,
+      data: normalizeImages(store),
     });
   });
 
@@ -255,7 +256,7 @@ export class SupplierStoreController {
     res.json({
       success: true,
       message: store.isActive ? 'Magasin activé' : 'Magasin désactivé',
-      data: store,
+      data: normalizeImages(store),
     });
   });
 }

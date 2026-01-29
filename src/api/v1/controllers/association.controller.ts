@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 
 import associationService from '@/core/services/association.service';
 import { AppError, asyncHandler } from '@/middleware/error-handler.middleware';
+import { normalizeImages, normalizeImagesList } from '@/utils/normalize.utils';
 
 /**
  * Association Controller
@@ -121,7 +122,7 @@ export class AssociationController {
 
     res.json({
       success: true,
-      data: result.reports,
+      data: normalizeImagesList(result.reports),
       pagination: {
         total: result.total,
         page: page ? parseInt(page as string) : 1,
@@ -188,7 +189,7 @@ export class AssociationController {
     res.status(201).json({
       success: true,
       message: 'Rapport créé avec succès',
-      data: report,
+      data: normalizeImages(report),
     });
   });
 
@@ -208,7 +209,7 @@ export class AssociationController {
 
     res.json({
       success: true,
-      data: result.reports,
+      data: normalizeImagesList(result.reports),
       pagination: {
         total: result.total,
         page: page ? parseInt(page as string) : 1,

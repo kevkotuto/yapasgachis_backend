@@ -13,6 +13,10 @@ import {
 import { authMiddleware } from '@/middleware/auth.middleware';
 import { supplierOnly } from '@/middleware/role-guard.middleware';
 import { validate } from '@/middleware/validation.middleware';
+import {
+  uploadKycDocuments,
+  handleUploadError,
+} from '@/middleware/upload.middleware';
 
 const router: Router = Router();
 
@@ -74,11 +78,14 @@ router.get(
  * Update supplier profile
  * PUT /profile
  * Requires: Authentication + SUPPLIER role
+ * Supports KYC document upload (multipart/form-data)
  */
 router.put(
   '/profile',
   authMiddleware,
   supplierOnly,
+  uploadKycDocuments,
+  handleUploadError,
   validate(updateSupplierProfileSchema),
   supplierController.updateProfile
 );

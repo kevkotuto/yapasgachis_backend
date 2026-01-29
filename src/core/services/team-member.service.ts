@@ -8,18 +8,18 @@ export class TeamMemberService {
   async inviteTeamMember(supplierId: string, data: any) {
     // Verify store belongs to supplier if provided
     if (data.storeId) {
-      const store = await prisma.pointOfSale.findUnique({
+      const store = await prisma.supplierStore.findUnique({
         where: { id: data.storeId },
         select: { supplierId: true },
       });
 
-      if (!store || store.supplierId !== supplierId) {
+      if (!store || store.store.supplierId !== supplierId) {
         throw new AppError(403, 'Magasin invalide');
       }
     }
 
     // Generate invitation token
-    const invitationToken = crypto.randomBytes(32).toString('hex');
+    const inviteToken = crypto.randomBytes(32).toString('hex');
 
     const member = await teamMemberRepository.create({
       supplierId,
@@ -30,8 +30,8 @@ export class TeamMemberService {
       lastName: data.lastName,
       role: data.role,
       permissions: data.permissions || [],
-      invitationToken,
-      invitationStatus: 'PENDING',
+      inviteToken,
+      inviteStatus: 'PENDING',
       isActive: true,
     });
 
@@ -65,7 +65,7 @@ export class TeamMemberService {
   async updateTeamMember(supplierId: string, memberId: string, data: any) {
     const member = await teamMemberRepository.findById(memberId);
     if (!member) throw new AppError(404, 'Membre non trouvé');
-    if (member.supplierId !== supplierId)
+    if (member.store.supplierId !== supplierId)
       throw new AppError(403, 'Non autorisé');
 
     const updated = await teamMemberRepository.update(memberId, data);
@@ -76,7 +76,7 @@ export class TeamMemberService {
   async deleteTeamMember(supplierId: string, memberId: string) {
     const member = await teamMemberRepository.findById(memberId);
     if (!member) throw new AppError(404, 'Membre non trouvé');
-    if (member.supplierId !== supplierId)
+    if (member.store.supplierId !== supplierId)
       throw new AppError(403, 'Non autorisé');
 
     await teamMemberRepository.delete(memberId);
@@ -85,18 +85,18 @@ export class TeamMemberService {
   }
 
   async acceptInvitation(token: string, userId: string) {
-    const member = await prisma.teamMember.findFirst({
-      where: { invitationToken: token },
+    const member = await prisma.storeStaff.findFirst({
+      where: { inviteToken: token },
     });
 
     if (!member) throw new AppError(404, 'Invitation invalide');
-    if (member.invitationStatus !== 'PENDING') {
+    if (member.inviteStatus !== 'PENDING') {
       throw new AppError(400, 'Invitation déjà traitée');
     }
 
     const updated = await teamMemberRepository.update(member.id, {
       userId,
-      invitationStatus: 'ACCEPTED',
+      inviteStatus: 'ACCEPTED',
       acceptedAt: new Date(),
     });
 

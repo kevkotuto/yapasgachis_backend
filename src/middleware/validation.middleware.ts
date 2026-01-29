@@ -12,11 +12,17 @@ import { formatValidationErrors } from '@/utils/validators';
 export const validate = (schema: AnyZodObject): RequestHandler => {
   return (req: Request, res: Response, next: NextFunction): void => {
     try {
-      schema.parse({
+      const validated = schema.parse({
         body: req.body,
         query: req.query,
         params: req.params,
       });
+
+      // Assign transformed values back to request
+      req.body = validated.body;
+      req.query = validated.query;
+      req.params = validated.params;
+
       next();
     } catch (error) {
       if (error instanceof ZodError) {

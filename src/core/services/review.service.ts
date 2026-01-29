@@ -1,4 +1,5 @@
 import reviewRepository from '@/core/repositories/review.repository';
+import supplierRepository from '@/core/repositories/supplier.repository';
 import { prisma } from '@/infrastructure/database/prisma';
 import logger from '@/infrastructure/monitoring/logger';
 import { AppError } from '@/utils/helpers';
@@ -348,6 +349,175 @@ export class ReviewService {
         error: (error as Error).message,
       });
     }
+  }
+
+  /**
+   * Create supplier response to a review
+   */
+  async createSupplierResponse(
+    userId: string,
+    reviewId: string,
+    response: string
+  ) {
+    // Get review with product/deal relation
+    const review = await reviewRepository.findById(reviewId);
+    if (!review) {
+      throw new AppError(404, 'Avis non trouvé', 'REVIEW_NOT_FOUND');
+    }
+
+    // Check if response already exists
+    if (review.supplierResponse) {
+      throw new AppError(
+        400,
+        'Une réponse existe déjà pour cet avis',
+        'RESPONSE_EXISTS'
+      );
+    }
+
+    // Verify supplier ownership
+    const supplier = await supplierRepository.findByUserId(userId);
+    if (!supplier) {
+      throw new AppError(
+        404,
+        'Profil fournisseur non trouvé',
+        'SUPPLIER_NOT_FOUND'
+      );
+    }
+
+    // Check if supplier owns the product or deal being reviewed
+    const supplierId = review.product?.supplierId || review.deal?.supplierId;
+    if (!supplierId || supplierId !== supplier.id) {
+      throw new AppError(
+        403,
+        'Vous ne pouvez pas répondre à cet avis',
+        'FORBIDDEN'
+      );
+    }
+
+    // Create response
+    const updated = await reviewRepository.updateSupplierResponse(
+      reviewId,
+      response,
+      userId
+    );
+
+    logger.info('Supplier response created', {
+      userId,
+      reviewId,
+      supplierId: supplier.id,
+    });
+
+    return updated;
+  }
+
+  /**
+   * Update supplier response to a review
+   */
+  async updateSupplierResponse(
+    userId: string,
+    reviewId: string,
+    response: string
+  ) {
+    // Get review
+    const review = await reviewRepository.findById(reviewId);
+    if (!review) {
+      throw new AppError(404, 'Avis non trouvé', 'REVIEW_NOT_FOUND');
+    }
+
+    // Check if response exists
+    if (!review.supplierResponse) {
+      throw new AppError(
+        400,
+        "Aucune réponse n'existe pour cet avis",
+        'NO_RESPONSE'
+      );
+    }
+
+    // Verify supplier ownership
+    const supplier = await supplierRepository.findByUserId(userId);
+    if (!supplier) {
+      throw new AppError(
+        404,
+        'Profil fournisseur non trouvé',
+        'SUPPLIER_NOT_FOUND'
+      );
+    }
+
+    // Check if supplier owns the product or deal being reviewed
+    const supplierId = review.product?.supplierId || review.deal?.supplierId;
+    if (!supplierId || supplierId !== supplier.id) {
+      throw new AppError(
+        403,
+        'Vous ne pouvez pas modifier cette réponse',
+        'FORBIDDEN'
+      );
+    }
+
+    // Update response
+    const updated = await reviewRepository.updateSupplierResponse(
+      reviewId,
+      response,
+      userId
+    );
+
+    logger.info('Supplier response updated', {
+      userId,
+      reviewId,
+      supplierId: supplier.id,
+    });
+
+    return updated;
+  }
+
+  /**
+   * Delete supplier response from a review
+   */
+  async deleteSupplierResponse(userId: string, reviewId: string) {
+    // Get review
+    const review = await reviewRepository.findById(reviewId);
+    if (!review) {
+      throw new AppError(404, 'Avis non trouvé', 'REVIEW_NOT_FOUND');
+    }
+
+    // Check if response exists
+    if (!review.supplierResponse) {
+      throw new AppError(
+        400,
+        "Aucune réponse n'existe pour cet avis",
+        'NO_RESPONSE'
+      );
+    }
+
+    // Verify supplier ownership
+    const supplier = await supplierRepository.findByUserId(userId);
+    if (!supplier) {
+      throw new AppError(
+        404,
+        'Profil fournisseur non trouvé',
+        'SUPPLIER_NOT_FOUND'
+      );
+    }
+
+    // Check if supplier owns the product or deal being reviewed
+    const supplierId = review.product?.supplierId || review.deal?.supplierId;
+    if (!supplierId || supplierId !== supplier.id) {
+      throw new AppError(
+        403,
+        'Vous ne pouvez pas supprimer cette réponse',
+        'FORBIDDEN'
+      );
+    }
+
+    // Delete response
+    const updated = await reviewRepository.deleteSupplierResponse(reviewId);
+
+    logger.info('Supplier response deleted', {
+      userId,
+      reviewId,
+      supplierId: supplier.id,
+    });
+
+    return updated;
   }
 }
 

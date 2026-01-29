@@ -156,11 +156,36 @@ export class OTPService {
     purpose: OTPPurpose
   ): Promise<boolean> {
     const otpKey = `${APP_CONSTANTS.CACHE_KEYS.OTP_PREFIX}${identifier}:${purpose}`;
+    const verifiedKey = `${APP_CONSTANTS.CACHE_KEYS.OTP_PREFIX}verified:${identifier}:${purpose}`;
+
+    // Check if this OTP was recently verified (within last 30 seconds)
+    const recentlyVerified = await redis.get(verifiedKey);
+    if (recentlyVerified) {
+      const recentData = JSON.parse(recentlyVerified);
+      if (recentData.code === code) {
+        logger.info('OTP already verified recently (idempotent)', {
+          identifier,
+          purpose,
+        });
+        return true;
+      }
+    }
+
     const otpDataStr = await redis.get(otpKey);
 
     if (!otpDataStr) {
+      // Check if it was recently verified to provide better error message
+      if (recentlyVerified) {
+        logger.warn('OTP already used', { identifier, purpose });
+        throw new Error(
+          'Ce code OTP a déjà été utilisé. Veuillez demander un nouveau code si nécessaire'
+        );
+      }
+
       logger.warn('OTP not found or expired', { identifier, purpose });
-      throw new Error('Code OTP invalide ou expiré');
+      throw new Error(
+        'Code OTP expiré ou invalide. Veuillez demander un nouveau code'
+      );
     }
 
     const otpData: OTPData = JSON.parse(otpDataStr);
@@ -192,7 +217,14 @@ export class OTPService {
       );
     }
 
-    // OTP is valid, delete it
+    // OTP is valid, mark as verified for 30 seconds (for idempotency)
+    await redis.setex(
+      verifiedKey,
+      30,
+      JSON.stringify({ code, verifiedAt: new Date().toISOString() })
+    );
+
+    // Delete the OTP
     await redis.del(otpKey);
 
     logger.info('OTP verified successfully', { identifier, purpose });

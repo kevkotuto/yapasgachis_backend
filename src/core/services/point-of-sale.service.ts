@@ -128,10 +128,10 @@ export class PointOfSaleService {
 
     // Check if it's the main POS
     const count = await pointOfSaleRepository.countBySupplier(supplierId);
-    if (count === 1 && pos.type === 'MAIN') {
+    if (count === 1) {
       throw new AppError(
         400,
-        "Impossible de supprimer le point de vente principal. Créez-en un autre d'abord."
+        "Impossible de supprimer le dernier point de vente. Créez-en un autre d'abord."
       );
     }
 

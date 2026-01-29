@@ -14,7 +14,7 @@ export const transactionHistorySchema = z.object({
   query: z.object({
     page: z.coerce.number().min(1).optional().default(1),
     limit: z.coerce.number().min(1).max(100).optional().default(20),
-    type: z.enum(['EARNED', 'REDEEMED', 'EXPIRED', 'BONUS']).optional(),
+    type: z.enum(['EARNED', 'REDEEMED', 'EXPIRED', 'ADJUSTED']).optional(),
   }),
 });
 

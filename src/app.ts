@@ -1,12 +1,14 @@
 import compression from 'compression';
 import express, { Application } from 'express';
 import helmet from 'helmet';
+import path from 'path';
 
 import adminAdvertisingRoutes from '@/api/v1/routes/admin-advertising.routes';
 import adminAssociationRoutes from '@/api/v1/routes/admin-association.routes';
 import adminDealRoutes from '@/api/v1/routes/admin-deal.routes';
 import adminDonationRoutes from '@/api/v1/routes/admin-donation.routes';
 import adminKycRoutes from '@/api/v1/routes/admin-kyc.routes';
+import adminPaymentProviderRoutes from '@/api/v1/routes/admin-payment-provider.routes';
 import adminSubscriptionRoutes from '@/api/v1/routes/admin-subscription.routes';
 import adminRoutes from '@/api/v1/routes/admin.routes';
 import adminSettingsRoutes from '@/api/v1/routes/admin-settings.routes';
@@ -15,18 +17,30 @@ import kycRoutes from '@/api/v1/routes/kyc.routes';
 import associationDonationRoutes from '@/api/v1/routes/association-donation.routes';
 import associationRoutes from '@/api/v1/routes/association.routes';
 import authRoutes from '@/api/v1/routes/auth.routes';
+import categoryRoutes from '@/api/v1/routes/category.routes';
 import dealRoutes from '@/api/v1/routes/deal.routes';
 import donationRoutes from '@/api/v1/routes/donation.routes';
+import mapRoutes from '@/api/v1/routes/map.routes';
 import notificationRoutes from '@/api/v1/routes/notification.routes';
 import orderRoutes from '@/api/v1/routes/order.routes';
+import paymentProviderRoutes from '@/api/v1/routes/payment-provider.routes';
+import payoutRoutes from '@/api/v1/routes/payout.routes';
 import productRoutes from '@/api/v1/routes/product.routes';
+import referralRoutes from '@/api/v1/routes/referral.routes';
+import rewardRoutes from '@/api/v1/routes/reward.routes';
 import reviewRoutes from '@/api/v1/routes/review.routes';
+import savedLocationRoutes from '@/api/v1/routes/saved-location.routes';
+import searchHistoryRoutes from '@/api/v1/routes/search-history.routes';
+import favoriteStoreRoutes from '@/api/v1/routes/favorite-store.routes';
 import storeRoutes from '@/api/v1/routes/store.routes';
 import subscriptionRoutes from '@/api/v1/routes/subscription.routes';
 import supplierDealRoutes from '@/api/v1/routes/supplier-deal.routes';
 import supplierStoreRoutes from '@/api/v1/routes/supplier-store.routes';
 import supplierRoutes from '@/api/v1/routes/supplier.routes';
 import storeStaffRoutes from '@/api/v1/routes/store-staff.routes';
+import stockMovementRoutes from '@/api/v1/routes/stock-movement.routes';
+import userRoutes from '@/api/v1/routes/user.routes';
+import waveRoutes from '@/api/v1/routes/wave.routes';
 import whatsappRoutes from '@/api/v1/routes/whatsapp.routes';
 import config from '@/config';
 import { setupSwagger } from '@/infrastructure/docs/swagger';
@@ -38,7 +52,7 @@ import {
   notFoundHandler,
 } from '@/middleware/error-handler.middleware';
 import { loggingMiddleware } from '@/middleware/logging.middleware';
-import { apiLimiter } from '@/middleware/rate-limit.middleware';
+import { smartLimiter } from '@/middleware/rate-limit.middleware';
 
 // Initialize Sentry
 initSentry();
@@ -61,11 +75,14 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Compression
 app.use(compression());
 
+// Static files - Serve images (payment provider logos, etc.)
+app.use('/images', express.static(path.join(__dirname, 'images')));
+
 // Logging
 app.use(loggingMiddleware);
 
-// Rate limiting
-app.use(`/api/${config.app.apiVersion}`, apiLimiter);
+// Smart rate limiting (adapte automatiquement selon GET vs POST/PUT/DELETE)
+app.use(`/api/${config.app.apiVersion}`, smartLimiter);
 
 // Swagger Documentation (only in development and staging)
 if (config.app.env !== 'production' || process.env.ENABLE_SWAGGER === 'true') {
@@ -117,9 +134,12 @@ app.get(`/api/${config.app.apiVersion}`, (_req, res) => {
 });
 
 app.use(`/api/${config.app.apiVersion}/auth`, authRoutes);
+app.use(`/api/${config.app.apiVersion}/users`, userRoutes);
 app.use(`/api/${config.app.apiVersion}/suppliers`, supplierRoutes);
 app.use(`/api/${config.app.apiVersion}/products`, productRoutes);
+app.use(`/api/${config.app.apiVersion}/categories`, categoryRoutes);
 app.use(`/api/${config.app.apiVersion}/orders`, orderRoutes);
+app.use(`/api/${config.app.apiVersion}/map`, mapRoutes);
 
 // Phase 5: Subscriptions, Deals & Stores routes
 app.use(`/api/${config.app.apiVersion}/subscriptions`, subscriptionRoutes);
@@ -170,8 +190,45 @@ app.use(`/api/${config.app.apiVersion}/admin/kyc`, adminKycRoutes);
 // Phase 13: Store Staff Management
 app.use(`/api/${config.app.apiVersion}/staff`, storeStaffRoutes);
 
+// Stock Movements
+app.use(
+  `/api/${config.app.apiVersion}/supplier/stock-movements`,
+  stockMovementRoutes
+);
+
 // Phase 14: WhatsApp Integration
 app.use(`/api/${config.app.apiVersion}/whatsapp`, whatsappRoutes);
+
+// Payment Providers
+app.use(
+  `/api/${config.app.apiVersion}/payment-providers`,
+  paymentProviderRoutes
+);
+app.use(
+  `/api/${config.app.apiVersion}/admin/payment-providers`,
+  adminPaymentProviderRoutes
+);
+
+// Wave Payment Integration
+app.use(`/api/${config.app.apiVersion}/payments/wave`, waveRoutes);
+
+// Payout Configuration (Supplier)
+app.use(`/api/${config.app.apiVersion}/supplier/payout`, payoutRoutes);
+
+// Saved Locations
+app.use(`/api/${config.app.apiVersion}/saved-locations`, savedLocationRoutes);
+
+// Search History
+app.use(`/api/${config.app.apiVersion}/search`, searchHistoryRoutes);
+
+// Favorite Stores
+app.use(`/api/${config.app.apiVersion}/favorite-stores`, favoriteStoreRoutes);
+
+// Referral System
+app.use(`/api/${config.app.apiVersion}/referrals`, referralRoutes);
+
+// Rewards System
+app.use(`/api/${config.app.apiVersion}/rewards`, rewardRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

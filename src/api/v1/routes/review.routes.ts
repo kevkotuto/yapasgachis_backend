@@ -9,8 +9,12 @@ import {
   reviewIdSchema,
   reportReviewSchema,
   paginationSchema,
+  createReviewResponseSchema,
+  updateReviewResponseSchema,
+  deleteReviewResponseSchema,
 } from '@/api/v1/validators/review.validator';
 import { authenticate, optionalAuth } from '@/middleware/auth.middleware';
+import { supplierOnly } from '@/middleware/role-guard.middleware';
 import { validate } from '@/middleware/validation.middleware';
 
 const router: Router = Router();
@@ -38,9 +42,10 @@ router.get(
   reviewController.getDealReviews
 );
 
-// Mark review as helpful (no auth required)
+// Mark review as helpful (authenticated users only for tracking)
 router.post(
   '/:id/helpful',
+  authenticate,
   validate(reviewIdSchema),
   reviewController.markHelpful
 );
@@ -85,6 +90,35 @@ router.post(
   authenticate,
   validate(reportReviewSchema),
   reviewController.reportReview
+);
+
+// ==================== SUPPLIER RESPONSE ROUTES ====================
+
+// Create supplier response
+router.post(
+  '/:id/response',
+  authenticate,
+  supplierOnly,
+  validate(createReviewResponseSchema),
+  reviewController.createSupplierResponse
+);
+
+// Update supplier response
+router.put(
+  '/:id/response',
+  authenticate,
+  supplierOnly,
+  validate(updateReviewResponseSchema),
+  reviewController.updateSupplierResponse
+);
+
+// Delete supplier response
+router.delete(
+  '/:id/response',
+  authenticate,
+  supplierOnly,
+  validate(deleteReviewResponseSchema),
+  reviewController.deleteSupplierResponse
 );
 
 export default router;

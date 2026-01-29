@@ -73,6 +73,7 @@ export class AuthController {
       success: true,
       message: result.message,
       data: {
+        user: result.user,
         tokens: result.tokens,
       },
     });
@@ -213,15 +214,21 @@ export class AuthController {
   );
 
   /**
-   * Get current user (test endpoint)
+   * Get current user with full profile
    * GET /api/v1/auth/me
    * Requires authentication
    */
   me = asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new Error('User not authenticated');
+    }
+
+    const user = await this.authService.getCurrentUser(req.user.id);
+
     res.status(APP_CONSTANTS.HTTP_STATUS.OK).json({
       success: true,
       data: {
-        user: req.user,
+        user,
       },
     });
   });

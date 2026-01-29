@@ -42,7 +42,7 @@ export class StoreHoursService {
     }
   ) {
     // Verify store belongs to supplier
-    const store = await prisma.pointOfSale.findUnique({
+    const store = await prisma.supplierStore.findUnique({
       where: { id: data.storeId },
       select: { supplierId: true },
     });
@@ -105,7 +105,7 @@ export class StoreHoursService {
     }
   ) {
     // Verify store belongs to supplier
-    const store = await prisma.pointOfSale.findUnique({
+    const store = await prisma.supplierStore.findUnique({
       where: { id: storeId },
       select: { supplierId: true },
     });
@@ -138,7 +138,7 @@ export class StoreHoursService {
    */
   async deleteStoreHours(supplierId: string, storeId: string) {
     // Verify store belongs to supplier
-    const store = await prisma.pointOfSale.findUnique({
+    const store = await prisma.supplierStore.findUnique({
       where: { id: storeId },
       select: { supplierId: true },
     });
@@ -176,7 +176,7 @@ export class StoreHoursService {
     }
   ) {
     // Verify store belongs to supplier
-    const store = await prisma.pointOfSale.findUnique({
+    const store = await prisma.supplierStore.findUnique({
       where: { id: data.storeId },
       select: { supplierId: true },
     });
@@ -228,7 +228,7 @@ export class StoreHoursService {
     }
 
     // Verify store belongs to supplier
-    const store = await prisma.pointOfSale.findUnique({
+    const store = await prisma.supplierStore.findUnique({
       where: { id: closure.storeId },
       select: { supplierId: true },
     });

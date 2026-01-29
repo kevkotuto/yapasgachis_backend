@@ -49,6 +49,16 @@ enum SubscriptionTier {
 }
 
 enum ProductCategory {
+  // Catégories Produits YapaGachis
+  PREPARED_MEALS_INDIVIDUAL // Plats preparés et repas (particuliers)
+  GROCERY_BASKET // Paniers supermarche / Produits d'épicerie / Produits frais
+  SNACKS_SALADS // Snacks/ salades & autres
+  LOCAL_TRADITIONAL // Plats locaux ou tradi (placali, alloco, riz Gras, etc)
+  RESTAURANT_HOT_MEALS // Restaurants/ plats du jours/ plats chauds
+  INTERNATIONAL_CUISINE // Cuisine Internationale (tacos, pizza, sushis)
+  DAIRY_DELI // Produits laitiers et charcuteries
+
+  // Anciennes catégories (pour compatibilité)
   FOOD_PREPARED
   BAKERY
   PASTRY
@@ -56,10 +66,6 @@ enum ProductCategory {
   FRUITS_VEGETABLES
   MEAT_FISH
   DAIRY
-  HOTEL_ROOM
-  SPA_WELLNESS
-  LEISURE
-  TRANSPORT
   OTHER
 }
 
@@ -178,16 +184,25 @@ enum PaymentStatus {
 
 enum PaymentMethod {
   WAVE
+  ORANGE_MONEY
+  MTN_MOBILE_MONEY
+  MOOV_MONEY
   CASH_ON_DELIVERY
 }
 
+enum PaymentProviderStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+}
+
 enum EscrowStatus {
-  PENDING           // En attente de paiement
-  FUNDS_HELD        // Fonds bloqués sur le compte de l'app
-  RELEASED          // Fonds transférés au fournisseur
-  REFUNDED          // Remboursé au client
-  DISPUTED          // En litige
-  CANCELLED         // Annulé
+  PENDING // En attente de paiement
+  FUNDS_HELD // Fonds bloqués sur le compte de l'app
+  RELEASED // Fonds transférés au fournisseur
+  REFUNDED // Remboursé au client
+  DISPUTED // En litige
+  CANCELLED // Annulé
 }
 
 // ==================== PHASE 5: SUBSCRIPTIONS & DEALS ====================
@@ -203,6 +218,16 @@ enum DealStatus {
 }
 
 enum DealCategory {
+  // Nouvelles catégories Bons Plans
+  CLOTHING_ACCESSORIES // Vêtements & accessoires
+  HOME_FAMILY // MAISON & FAMILLE
+  FLOWERS // Fleurs
+  HOTELS_RESIDENCES // Hotels et residences
+  COSMETICS // Cosmetiques
+  FURNITURE // Meubles
+  DIY_HARDWARE // Bricolages
+
+  // Catégories existantes
   HOTEL_ROOM
   SPA_WELLNESS
   POOL_ACCESS
@@ -218,18 +243,18 @@ enum DealCategory {
 // ==================== PHASE 13: STORE STAFF MANAGEMENT ====================
 
 enum StoreStaffRole {
-  OWNER           // Propriétaire - tous les droits
-  MANAGER         // Gérant - peut tout faire sauf supprimer le magasin/gérer le propriétaire
-  CASHIER         // Caissier - peut gérer les commandes
-  STOCK_CLERK     // Magasinier - peut gérer les produits/stock
+  OWNER // Propriétaire - tous les droits
+  MANAGER // Gérant - peut tout faire sauf supprimer le magasin/gérer le propriétaire
+  CASHIER // Caissier - peut gérer les commandes
+  STOCK_CLERK // Magasinier - peut gérer les produits/stock
 }
 
 enum StoreStaffInviteStatus {
-  PENDING         // Invitation envoyée
-  ACCEPTED        // Invitation acceptée
-  REJECTED        // Invitation refusée
-  EXPIRED         // Invitation expirée
-  REVOKED         // Invitation révoquée par le propriétaire
+  PENDING // Invitation envoyée
+  ACCEPTED // Invitation acceptée
+  REJECTED // Invitation refusée
+  EXPIRED // Invitation expirée
+  REVOKED // Invitation révoquée par le propriétaire
 }
 
 enum BookingStatus {
@@ -241,10 +266,15 @@ enum BookingStatus {
   NO_SHOW
 }
 
+enum BookingMode {
+  SINGLE_DATE // Une seule date (spa, restaurant)
+  DATE_RANGE // Intervalle de dates (hôtel)
+}
+
 enum PromoCodeType {
-  PERCENTAGE       // Réduction en pourcentage
-  FIXED_AMOUNT     // Réduction montant fixe
-  FREE_MONTHS      // Mois gratuits sur abonnement
+  PERCENTAGE // Réduction en pourcentage
+  FIXED_AMOUNT // Réduction montant fixe
+  FREE_MONTHS // Mois gratuits sur abonnement
 }
 
 enum PromoCodeStatus {
@@ -254,30 +284,51 @@ enum PromoCodeStatus {
   FULLY_USED
 }
 
+enum ReferralStatus {
+  PENDING
+  COMPLETED
+  REWARDED
+  EXPIRED
+}
+
+enum PointTransactionType {
+  EARNED
+  REDEEMED
+  EXPIRED
+  ADJUSTED
+}
+
+enum RewardTier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+}
+
 // ==================== MODELS ====================
 
 model User {
-  id            String     @id @default(uuid())
-  phoneNumber   String?    @unique
-  email         String?    @unique
-  firstName     String
-  lastName      String?
-  role          UserRole
-  status        UserStatus @default(PENDING_VERIFICATION)
-  passwordHash  String?
-  avatar        String?
-  language      String     @default("fr")
+  id           String     @id @default(uuid())
+  phoneNumber  String?    @unique
+  email        String?    @unique
+  firstName    String
+  lastName     String?
+  role         UserRole
+  status       UserStatus @default(PENDING_VERIFICATION)
+  passwordHash String?
+  avatar       String?
+  language     String     @default("fr")
 
   // OAuth providers
-  googleId      String?    @unique
-  authProvider  String     @default("local") // "local", "google"
+  googleId     String? @unique
+  authProvider String  @default("local") // "local", "google"
 
   // Location
-  city       String?
-  commune    String?
+  city         String?
+  commune      String?
   neighborhood String?
-  latitude   Float?
-  longitude  Float?
+  latitude     Float?
+  longitude    Float?
 
   // Verification
   emailVerified Boolean @default(false)
@@ -294,23 +345,47 @@ model User {
   associationProfile AssociationProfile?
   advertiserProfile  AdvertiserProfile?
 
-  orders        Order[]
-  reviews       Review[]
-  donations     Donation[]
-  favorites     Favorite[]
-  notifications Notification[]
-  refreshTokens RefreshToken[]
+  orders         Order[]
+  reviews        Review[]
+  reviewsHelpful ReviewHelpful[]
+  donations      Donation[]
+  favorites      Favorite[]
+  productViews   ProductView[]
+  dealViews      DealView[]
+  notifications  Notification[]
+  refreshTokens  RefreshToken[]
 
   // Notification system
   deviceTokens           DeviceToken[]
   notificationPreference NotificationPreference?
 
   // Admin: Settings audit logs
-  settingsAuditLogs      PlatformSettingsAudit[] @relation("SettingsAudit")
+  settingsAuditLogs PlatformSettingsAudit[] @relation("SettingsAudit")
 
   // Store Staff: employé dans des magasins
-  storeStaffMemberships  StoreStaff[] @relation("StoreStaffUser")
-  storeStaffInvitations  StoreStaff[] @relation("StoreStaffInviter")
+  storeStaffMemberships StoreStaff[] @relation("StoreStaffUser")
+  storeStaffInvitations StoreStaff[] @relation("StoreStaffInviter")
+
+  // Saved Locations
+  savedLocations SavedLocation[]
+
+  // Search History
+  searchHistory SearchHistory[]
+
+  // Favorite Stores
+  favoriteStores FavoriteStore[]
+
+  // Payment Methods
+  paymentMethods UserPaymentMethod[]
+
+  // Referral System
+  referralCodes     ReferralCode[] // Codes de parrainage créés
+  referralsAsReferrer Referral[]   @relation("Referrer") // Parrainages effectués
+  referralsAsReferred Referral[]   @relation("Referred") // Parrainé par
+
+  // Reward System
+  rewards           UserRewards?
+  pointTransactions PointTransaction[]
 
   // Timestamps
   createdAt DateTime  @default(now())
@@ -352,65 +427,70 @@ model SupplierProfile {
   // Legal
   rccm           String? // Registry number
   niu            String? // Tax ID
-  legalDocuments Json?   // Array of document URLs
+  legalDocuments Json? // Array of document URLs
 
   // Pièce d'identité (KYC)
-  idCardFront    String? // URL de la pièce d'identité recto
-  idCardBack     String? // URL de la pièce d'identité verso
-  selfiePhoto    String? // URL du selfie pour vérification faciale
-  idCardType     String? // CNI, PASSPORT, DRIVING_LICENSE
-  idCardNumber   String? // Numéro de la pièce d'identité
-  idCardExpiry   DateTime? // Date d'expiration
-  kycStatus      String  @default("PENDING") // PENDING, SUBMITTED, VERIFIED, REJECTED
-  kycSubmittedAt DateTime?
-  kycVerifiedAt  DateTime?
+  idCardFront        String? // URL de la pièce d'identité recto
+  idCardBack         String? // URL de la pièce d'identité verso
+  selfiePhoto        String? // URL du selfie pour vérification faciale
+  idCardType         String? // CNI, PASSPORT, DRIVING_LICENSE
+  idCardNumber       String? // Numéro de la pièce d'identité
+  idCardExpiry       DateTime? // Date d'expiration
+  kycStatus          String    @default("PENDING") // PENDING, SUBMITTED, VERIFIED, REJECTED
+  kycSubmittedAt     DateTime?
+  kycVerifiedAt      DateTime?
   kycRejectionReason String?
 
   // Siège social / Adresse principale (si pas de magasins)
-  address        String?
-  latitude       Float?
-  longitude      Float?
-  operatingHours Json?   // {monday: {open: "08:00", close: "20:00"}, ...}
+  address         String?
+  latitude        Float?
+  longitude       Float?
+  operatingHours  Json? // {monday: {open: "08:00", close: "20:00"}, ...}
   deliveryEnabled Boolean @default(false)
   pickupEnabled   Boolean @default(true)
-  deliveryRadius  Float?  // km
+  deliveryRadius  Float? // km
 
   // Subscription
-  subscriptionTier      SubscriptionTier @default(BASIC)
-  subscriptionPlanId    String?          // Lien vers le plan d'abonnement
+  subscriptionTier      SubscriptionTier  @default(BASIC)
+  subscriptionPlanId    String? // Lien vers le plan d'abonnement
   subscriptionPlan      SubscriptionPlan? @relation(fields: [subscriptionPlanId], references: [id])
   subscriptionStartDate DateTime?
   subscriptionEndDate   DateTime?
-  subscriptionActive    Boolean          @default(false)
+  subscriptionActive    Boolean           @default(false)
 
   // Code promo utilisé à l'inscription
-  usedPromoCodeId       String?
-  usedPromoCode         PromoCode?       @relation("SupplierUsedPromoCode", fields: [usedPromoCodeId], references: [id])
+  usedPromoCodeId String?
+  usedPromoCode   PromoCode? @relation("SupplierUsedPromoCode", fields: [usedPromoCodeId], references: [id])
 
   // Payment Settings
-  acceptCashPayment     Boolean          @default(false)
-  waveAccountId         String?
-  commissionRate        Float            @default(0.10)
+  acceptCashPayment Boolean @default(false)
+  commissionRate    Float   @default(0.10)
+
+  // Payout Settings (retrait des fonds)
+  payoutProviderId      String? // Moyen de retrait choisi
+  payoutProvider        PaymentProvider? @relation("SupplierPayoutProvider", fields: [payoutProviderId], references: [id])
+  payoutAccountInfo     Json? // Infos du compte (phoneNumber, accountId, etc.)
+  payoutAccountVerified Boolean          @default(false) // Compte de retrait vérifié
 
   // Stats globaux (agrégés de tous les magasins)
-  totalSales    Int   @default(0)
-  totalRevenue  Float @default(0)
+  totalSales    Int    @default(0)
+  totalRevenue  Float  @default(0)
   averageRating Float?
-  totalReviews  Int   @default(0)
-  wasteReduced  Float @default(0) // kg
+  totalReviews  Int    @default(0)
+  wasteReduced  Float  @default(0) // kg
 
   // Vérification
-  isVerified    Boolean @default(false)
-  verifiedAt    DateTime?
+  isVerified      Boolean   @default(false)
+  verifiedAt      DateTime?
   rejectionReason String?
 
   // Relations
-  stores               SupplierStore[]        // Multi-magasins (Kayzer, Ushigo, etc.)
-  products             Product[]              // Produits (liés au supplier ou à un store)
-  orders               Order[]
-  subscriptionPayments SubscriptionPayment[]
-  deals                Deal[]                 // Bons plans
-  promoCodes           PromoCode[]            // Codes promo créés par admin pour ce fournisseur
+  stores                  SupplierStore[] // Multi-magasins (Kayzer, Ushigo, etc.)
+  products                Product[] // Produits (liés au supplier ou à un store)
+  orders                  Order[]
+  subscriptionPayments    SubscriptionPayment[]
+  deals                   Deal[] // Bons plans
+  promoCodes              PromoCode[] // Codes promo créés par admin pour ce fournisseur
   kycVerificationAttempts KycVerificationAttempt[] // Tentatives de vérification KYC
 
   createdAt DateTime @default(now())
@@ -431,50 +511,56 @@ model SupplierStore {
   supplier   SupplierProfile @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 
   // Store Info
-  name           String          // "Kayzer Cocody", "Ushigo Plateau"
-  description    String?
-  images         Json?           // Photos du magasin
+  name        String // "Kayzer Cocody", "Ushigo Plateau"
+  description String?
+  images      Json?   @default("[]") // Photos du magasin
 
   // Location
-  address        String
-  city           String
-  commune        String?
-  neighborhood   String?
-  latitude       Float
-  longitude      Float
+  address      String
+  city         String
+  commune      String?
+  neighborhood String?
+  latitude     Float
+  longitude    Float
 
   // Contact
-  phoneNumber    String?
-  email          String?
+  phoneNumber String?
+  email       String?
 
   // Operating Hours
-  operatingHours Json            // {monday: {open: "08:00", close: "20:00"}, ...}
+  operatingHours Json // {monday: {open: "08:00", close: "20:00"}, ...}
 
   // Delivery/Pickup Settings (peut être différent du supplier principal)
   deliveryEnabled Boolean @default(false)
   pickupEnabled   Boolean @default(true)
-  deliveryRadius  Float?  // km
+  deliveryRadius  Float? // km
 
   // Payment Settings spécifiques au magasin
   acceptCashPayment Boolean @default(false)
-  waveAccountId     String? // Compte Wave spécifique au magasin
+
+  // Payout Settings (retrait des fonds) - optionnel, sinon hérite du supplier
+  payoutProviderId      String? // Moyen de retrait choisi pour ce magasin
+  payoutProvider        PaymentProvider? @relation("StorePayoutProvider", fields: [payoutProviderId], references: [id])
+  payoutAccountInfo     Json? // Infos du compte (phoneNumber, accountId, etc.)
+  payoutAccountVerified Boolean          @default(false)
 
   // Status
-  isActive       Boolean  @default(true)
+  isActive            Boolean @default(true)
   isTemporarilyClosed Boolean @default(false)
-  closureReason  String?
+  closureReason       String?
 
   // Stats du magasin
-  totalSales     Int   @default(0)
-  totalRevenue   Float @default(0)
-  averageRating  Float?
-  totalReviews   Int   @default(0)
+  totalSales    Int    @default(0)
+  totalRevenue  Float  @default(0)
+  averageRating Float?
+  totalReviews  Int    @default(0)
 
   // Relations
-  products       Product[]       // Produits de ce magasin
-  orders         Order[]         // Commandes de ce magasin
-  deals          Deal[]          // Deals de ce magasin
-  staff          StoreStaff[]    // Personnel du magasin
+  products    Product[] // Produits de ce magasin
+  orders      Order[] // Commandes de ce magasin
+  deals       Deal[] // Deals de ce magasin
+  staff       StoreStaff[] // Personnel du magasin
+  favoritedBy FavoriteStore[] // Utilisateurs ayant mis ce magasin en favoris
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -488,36 +574,36 @@ model SupplierStore {
 
 // Personnel d'un magasin (employés, gérants, etc.)
 model StoreStaff {
-  id        String          @id @default(uuid())
-  storeId   String
-  store     SupplierStore   @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User            @relation("StoreStaffUser", fields: [userId], references: [id], onDelete: Cascade)
+  id      String        @id @default(uuid())
+  storeId String
+  store   SupplierStore @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User          @relation("StoreStaffUser", fields: [userId], references: [id], onDelete: Cascade)
 
   // Rôle et statut
-  role      StoreStaffRole
-  isActive  Boolean         @default(true)
+  role     StoreStaffRole
+  isActive Boolean        @default(true)
 
   // Permissions granulaires (surcharge du rôle si nécessaire)
-  canManageProducts  Boolean @default(false)  // Créer/modifier/supprimer des produits
-  canManageOrders    Boolean @default(false)  // Voir et gérer les commandes
-  canViewStats       Boolean @default(false)  // Voir les statistiques du magasin
-  canManageStaff     Boolean @default(false)  // Inviter/supprimer du personnel
-  canManageDeals     Boolean @default(false)  // Créer/modifier des deals
-  canManageSettings  Boolean @default(false)  // Modifier les paramètres du magasin
+  canManageProducts Boolean @default(false) // Créer/modifier/supprimer des produits
+  canManageOrders   Boolean @default(false) // Voir et gérer les commandes
+  canViewStats      Boolean @default(false) // Voir les statistiques du magasin
+  canManageStaff    Boolean @default(false) // Inviter/supprimer du personnel
+  canManageDeals    Boolean @default(false) // Créer/modifier des deals
+  canManageSettings Boolean @default(false) // Modifier les paramètres du magasin
 
   // Invitation
-  invitedById   String?
-  invitedBy     User?           @relation("StoreStaffInviter", fields: [invitedById], references: [id])
-  invitedAt     DateTime        @default(now())
-  acceptedAt    DateTime?
-  inviteStatus  StoreStaffInviteStatus @default(PENDING)
-  inviteToken   String?         @unique  // Token pour accepter l'invitation
-  inviteExpiresAt DateTime?     // Expiration de l'invitation
+  invitedById     String?
+  invitedBy       User?                  @relation("StoreStaffInviter", fields: [invitedById], references: [id])
+  invitedAt       DateTime               @default(now())
+  acceptedAt      DateTime?
+  inviteStatus    StoreStaffInviteStatus @default(PENDING)
+  inviteToken     String?                @unique // Token pour accepter l'invitation
+  inviteExpiresAt DateTime? // Expiration de l'invitation
 
   // Métadonnées
-  notes         String?         // Notes sur l'employé
-  lastActiveAt  DateTime?       // Dernière activité
+  notes        String? // Notes sur l'employé
+  lastActiveAt DateTime? // Dernière activité
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -536,14 +622,14 @@ model Product {
   supplier   SupplierProfile @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 
   // Optionnel: lié à un magasin spécifique
-  storeId    String?
-  store      SupplierStore?  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  storeId String?
+  store   SupplierStore? @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   // Product Info
   title       String
   description String
   category    ProductCategory
-  images      Json // Array of image URLs
+  images      Json            @default("[]") // Array of image URLs
 
   // Pricing
   originalPrice   Float
@@ -565,7 +651,7 @@ model Product {
   availableUntil DateTime?
 
   // Pickup/Delivery
-  pickupSlots       Json?   // Available time slots
+  pickupSlots       Json? // Available time slots
   deliveryAvailable Boolean @default(false)
 
   // Promotion
@@ -579,10 +665,12 @@ model Product {
   orderCount Int @default(0)
 
   // Relations
-  orderItems OrderItem[]
-  favorites  Favorite[]
-  reviews    Review[]
-  donations  Donation[]
+  orderItems     OrderItem[]
+  favorites      Favorite[]
+  productViews   ProductView[]
+  reviews        Review[]
+  donations      Donation[]
+  stockMovements StockMovement[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -604,25 +692,26 @@ model Order {
   supplier    SupplierProfile @relation(fields: [supplierId], references: [id])
 
   // Optionnel: lié à un magasin spécifique
-  storeId     String?
-  store       SupplierStore?  @relation(fields: [storeId], references: [id])
+  storeId String?
+  store   SupplierStore? @relation(fields: [storeId], references: [id])
 
   // Order Details
   status         OrderStatus    @default(PENDING_PAYMENT)
   deliveryMethod DeliveryMethod
 
   // Amounts
-  subtotal       Float
-  deliveryFee    Float @default(0)
-  commission     Float // Commission prélevée par la plateforme
-  wavePaymentFee Float @default(0) // Frais de paiement Wave (1%) - payé par le client
+  subtotal        Float
+  deliveryFee     Float @default(0)
+  commission      Float // Commission prélevée par la plateforme
+  wavePaymentFee  Float @default(0) // Frais de paiement Wave (1%) - payé par le client
   waveTransferFee Float @default(0) // Frais de transfert Wave (1%) - déduit du fournisseur
-  supplierAmount Float // Montant net à reverser au fournisseur (total - commission - waveTransferFee)
-  total          Float // Total payé par le client (subtotal + deliveryFee + wavePaymentFee)
+  supplierAmount  Float // Montant net à reverser au fournisseur (total - commission - waveTransferFee)
+  total           Float // Total payé par le client (subtotal + deliveryFee + wavePaymentFee)
 
   // Pickup/Delivery
-  pickupCode String?   // QR code / PIN
-  pickupSlot DateTime?
+  pickupCode          String? // QR code / PIN
+  pickupSlot          DateTime?
+  scheduledPickupTime String? // Créneau de retrait "14:00-16:00"
 
   deliveryAddress   String?
   deliveryLatitude  Float?
@@ -630,24 +719,24 @@ model Order {
   deliveryNotes     String?
 
   // Payment
-  paymentMethod    PaymentMethod  // WAVE ou CASH_ON_DELIVERY
-  paymentReference String?        // Référence Wave
+  paymentMethod    PaymentMethod // WAVE ou CASH_ON_DELIVERY
+  paymentReference String? // Référence Wave
   paidAt           DateTime?
 
   // Delivery Confirmation
-  deliveredAt            DateTime?
-  deliveryConfirmedByClient Boolean @default(false)
+  deliveredAt               DateTime?
+  deliveryConfirmedByClient Boolean   @default(false)
 
   // Relations
-  items            OrderItem[]
-  tracking         DeliveryTracking[]
+  items             OrderItem[]
+  tracking          DeliveryTracking[]
   escrowTransaction EscrowTransaction?
 
   // Timestamps
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  completedAt DateTime?
-  cancelledAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  completedAt  DateTime?
+  cancelledAt  DateTime?
   cancelReason String?
 
   @@index([clientId])
@@ -677,18 +766,66 @@ model OrderItem {
 }
 
 model Favorite {
-  id        String  @id @default(uuid())
+  id        String   @id @default(uuid())
   userId    String
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  productId String
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  dealId    String?
+  deal      Deal?    @relation(fields: [dealId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
   @@unique([userId, productId])
+  @@unique([userId, dealId])
   @@index([userId])
   @@index([productId])
+  @@index([dealId])
   @@map("favorites")
+}
+
+// Historique des vues de produits pour recommandations
+model ProductView {
+  id        String  @id @default(uuid())
+  userId    String? // Null pour visiteurs non-connectés
+  user      User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Tracking
+  viewCount    Int      @default(1)
+  lastViewedAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
+  @@index([lastViewedAt])
+  @@map("product_views")
+}
+
+// Historique des vues de deals pour recommandations
+model DealView {
+  id     String  @id @default(uuid())
+  userId String? // Null pour visiteurs non-connectés
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dealId String
+  deal   Deal    @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  // Tracking
+  viewCount    Int      @default(1)
+  lastViewedAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, dealId])
+  @@index([userId])
+  @@index([dealId])
+  @@index([lastViewedAt])
+  @@map("deal_views")
 }
 
 model AssociationProfile {
@@ -831,21 +968,30 @@ model AdCampaign {
 }
 
 model Review {
-  id        String  @id @default(uuid())
+  id        String   @id @default(uuid())
   userId    String
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   productId String?
   product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
   dealId    String?
-  deal      Deal?   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  deal      Deal?    @relation(fields: [dealId], references: [id], onDelete: Cascade)
 
-  orderId String?
-  rating  Int // 1-5
-  comment String?
-  images  Json?
+  orderId    String?
+  rating     Int // 1-5
+  comment    String?
+  images     Json?   @default("[]")
+  isVerified Boolean @default(false) // Achat vérifié
 
   helpful  Int     @default(0)
   reported Boolean @default(false)
+
+  // Supplier Response
+  supplierResponse    String?
+  supplierRespondedAt DateTime?
+  supplierRespondedBy String? // userId du supplier qui a répondu
+
+  // Relations
+  helpfulUsers ReviewHelpful[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -856,6 +1002,21 @@ model Review {
   @@map("reviews")
 }
 
+// Table pour tracker les "utile" des reviews
+model ReviewHelpful {
+  reviewId String
+  review   Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([reviewId, userId])
+  @@index([reviewId])
+  @@index([userId])
+  @@map("review_helpful")
+}
+
 model Notification {
   id      String           @id @default(uuid())
   userId  String
@@ -863,27 +1024,27 @@ model Notification {
   type    NotificationType
   title   String
   message String
-  data    Json?            // Additional payload (orderId, productId, etc.)
+  data    Json? // Additional payload (orderId, productId, etc.)
 
-  read    Boolean   @default(false)
-  readAt  DateTime?
+  read   Boolean   @default(false)
+  readAt DateTime?
 
   // Push notification tracking
   pushSent     Boolean   @default(false)
   pushSentAt   DateTime?
-  pushReceipts Json?     // Store Expo push receipts for debugging
+  pushReceipts Json? // Store Expo push receipts for debugging
 
   // Email tracking (for admin notifications)
-  emailSent    Boolean   @default(false)
-  emailSentAt  DateTime?
+  emailSent   Boolean   @default(false)
+  emailSentAt DateTime?
 
   // Priority and scheduling
   priority     NotificationPriority @default(NORMAL)
-  scheduledFor DateTime?            // For scheduled notifications
-  expiresAt    DateTime?            // Auto-expire notifications
+  scheduledFor DateTime? // For scheduled notifications
+  expiresAt    DateTime? // Auto-expire notifications
 
   // Grouping
-  groupKey     String?              // Group related notifications
+  groupKey String? // Group related notifications
 
   createdAt DateTime @default(now())
 
@@ -896,18 +1057,18 @@ model Notification {
 
 // Device tokens for push notifications (Expo Push)
 model DeviceToken {
-  id         String     @id @default(uuid())
-  userId     String
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  token      String     @unique  // Expo Push Token (ExponentPushToken[xxx])
+  token      String     @unique // Expo Push Token (ExponentPushToken[xxx])
   deviceType DeviceType
-  deviceName String?              // "iPhone 12", "Samsung Galaxy S21"
-  deviceId   String?              // Unique device identifier
+  deviceName String? // "iPhone 12", "Samsung Galaxy S21"
+  deviceId   String? // Unique device identifier
 
   // Token validity
-  isActive   Boolean    @default(true)
-  lastUsedAt DateTime   @default(now())
+  isActive   Boolean  @default(true)
+  lastUsedAt DateTime @default(now())
 
   // Metadata
   appVersion String?
@@ -928,16 +1089,16 @@ model NotificationPreference {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Global toggles
-  pushEnabled   Boolean @default(true)
-  emailEnabled  Boolean @default(true)
-  smsEnabled    Boolean @default(false)
+  pushEnabled  Boolean @default(true)
+  emailEnabled Boolean @default(true)
+  smsEnabled   Boolean @default(false)
 
   // Per notification category
-  orderUpdates        Boolean @default(true)  // Order status changes
-  paymentAlerts       Boolean @default(true)  // Payment confirmations, refunds
-  promotions          Boolean @default(true)  // Deals, discounts, promotions
-  productAlerts       Boolean @default(true)  // New products nearby, expiring products
-  systemAnnouncements Boolean @default(true)  // System-wide announcements
+  orderUpdates        Boolean @default(true) // Order status changes
+  paymentAlerts       Boolean @default(true) // Payment confirmations, refunds
+  promotions          Boolean @default(true) // Deals, discounts, promotions
+  productAlerts       Boolean @default(true) // New products nearby, expiring products
+  systemAnnouncements Boolean @default(true) // System-wide announcements
 
   // Quiet hours (optional)
   quietHoursEnabled Boolean @default(false)
@@ -992,7 +1153,7 @@ model DeliveryTracking {
 }
 
 model AnalyticsEvent {
-  id        String @id @default(uuid())
+  id        String  @id @default(uuid())
   userId    String?
   eventType String // product_view, search, add_to_cart, etc.
   eventData Json
@@ -1014,7 +1175,7 @@ model AssociationReport {
 
   title         String
   description   String
-  images        Json?
+  images        Json?  @default("[]")
   donationsUsed Json? // Array of donation IDs
   beneficiaries Int?
   impactMetrics Json?
@@ -1028,41 +1189,41 @@ model AssociationReport {
 // ==================== PAYMENT & ESCROW ====================
 
 model EscrowTransaction {
-  id        String       @id @default(uuid())
-  orderId   String       @unique
-  order     Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  id      String @id @default(uuid())
+  orderId String @unique
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   // Montants
-  amount           Float   // Montant total payé par le client
-  commission       Float   // Commission de la plateforme
-  waveTransferFee  Float   @default(0) // Frais de transfert Wave (1%) - déduit du fournisseur
-  supplierAmount   Float   // Montant net à verser au fournisseur (après commission et frais Wave)
+  amount          Float // Montant total payé par le client
+  commission      Float // Commission de la plateforme
+  waveTransferFee Float @default(0) // Frais de transfert Wave (1%) - déduit du fournisseur
+  supplierAmount  Float // Montant net à verser au fournisseur (après commission et frais Wave)
 
   // Status
-  status           EscrowStatus @default(PENDING)
+  status EscrowStatus @default(PENDING)
 
   // Wave Payment Info
-  waveCheckoutId   String?      // ID du checkout Wave
-  wavePaymentId    String?      // ID du paiement Wave confirmé
-  waveTransferId   String?      // ID du transfert Wave vers le fournisseur
+  waveCheckoutId String? // ID du checkout Wave
+  wavePaymentId  String? // ID du paiement Wave confirmé
+  waveTransferId String? // ID du transfert Wave vers le fournisseur
 
   // Supplier Info
-  supplierId       String
-  supplierWaveId   String?      // Compte Wave du fournisseur
+  supplierId     String
+  supplierWaveId String? // Compte Wave du fournisseur
 
   // Timestamps
-  paidAt           DateTime?    // Date de réception du paiement
-  releasedAt       DateTime?    // Date de transfert au fournisseur
-  refundedAt       DateTime?    // Date de remboursement si applicable
+  paidAt     DateTime? // Date de réception du paiement
+  releasedAt DateTime? // Date de transfert au fournisseur
+  refundedAt DateTime? // Date de remboursement si applicable
 
   // Dispute handling
-  disputeReason    String?
-  disputeOpenedAt  DateTime?
+  disputeReason     String?
+  disputeOpenedAt   DateTime?
   disputeResolvedAt DateTime?
-  disputeResolution String?     // Description de la résolution
+  disputeResolution String? // Description de la résolution
 
   // Admin actions
-  adminActions     AdminPaymentAction[]
+  adminActions AdminPaymentAction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1078,15 +1239,15 @@ model AdminPaymentAction {
   escrowTransactionId String
   escrowTransaction   EscrowTransaction @relation(fields: [escrowTransactionId], references: [id], onDelete: Cascade)
 
-  adminId     String              // ID de l'admin qui a effectué l'action
-  actionType  String              // REFUND, RELEASE, DISPUTE_OPEN, DISPUTE_CLOSE, MANUAL_TRANSFER
-  description String?             // Description de l'action
-  amount      Float?              // Montant si applicable (remboursement partiel, etc.)
+  adminId     String // ID de l'admin qui a effectué l'action
+  actionType  String // REFUND, RELEASE, DISPUTE_OPEN, DISPUTE_CLOSE, MANUAL_TRANSFER
+  description String? // Description de l'action
+  amount      Float? // Montant si applicable (remboursement partiel, etc.)
 
   // Metadata
-  previousStatus String?          // Status avant l'action
-  newStatus      String?          // Status après l'action
-  metadata       Json?            // Données additionnelles
+  previousStatus String? // Status avant l'action
+  newStatus      String? // Status après l'action
+  metadata       Json? // Données additionnelles
 
   createdAt DateTime @default(now())
 
@@ -1100,39 +1261,39 @@ model AdminPaymentAction {
 
 // Plans d'abonnement définis par l'admin
 model SubscriptionPlan {
-  id          String           @id @default(uuid())
+  id String @id @default(uuid())
 
   // Plan Info
-  name        String           // "Basic", "Pro", "Premium"
+  name        String // "Basic", "Pro", "Premium"
   tier        SubscriptionTier @unique
   description String?
 
   // Pricing
-  monthlyPrice    Float        // Prix mensuel en XOF
-  yearlyPrice     Float?       // Prix annuel (avec réduction)
-  currency        String       @default("XOF")
+  monthlyPrice Float // Prix mensuel en XOF
+  yearlyPrice  Float? // Prix annuel (avec réduction)
+  currency     String @default("XOF")
 
   // Limites et fonctionnalités
-  maxStores       Int          @default(1)    // Nombre max de magasins
-  maxProducts     Int          @default(10)   // Nombre max de produits
-  maxDeals        Int          @default(0)    // Nombre max de deals (0 = illimité)
-  canCreateDeals  Boolean      @default(false) // Peut créer des deals
-  priorityListing Boolean      @default(false) // Mise en avant dans les résultats
-  analyticsAccess Boolean      @default(false) // Accès aux analytics avancées
+  maxStores       Int     @default(1) // Nombre max de magasins
+  maxProducts     Int     @default(10) // Nombre max de produits
+  maxDeals        Int     @default(0) // Nombre max de deals (0 = illimité)
+  canCreateDeals  Boolean @default(false) // Peut créer des deals
+  priorityListing Boolean @default(false) // Mise en avant dans les résultats
+  analyticsAccess Boolean @default(false) // Accès aux analytics avancées
 
   // Commission
-  commissionRate  Float        @default(0.10) // Taux de commission sur les ventes
+  commissionRate Float @default(0.10) // Taux de commission sur les ventes
 
   // Promo options
-  trialDays       Int          @default(0)    // Jours d'essai gratuit
+  trialDays Int @default(0) // Jours d'essai gratuit
 
   // Status
-  isActive        Boolean      @default(true)
-  isPublic        Boolean      @default(true) // Visible publiquement ou sur invitation
+  isActive Boolean @default(true)
+  isPublic Boolean @default(true) // Visible publiquement ou sur invitation
 
   // Relations
-  suppliers       SupplierProfile[]
-  promoCodes      PromoCode[]  // Codes promo applicables à ce plan
+  suppliers  SupplierProfile[]
+  promoCodes PromoCode[] // Codes promo applicables à ce plan
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1143,18 +1304,18 @@ model SubscriptionPlan {
 
 // Codes promo créés par l'admin pour fournisseurs particuliers
 model PromoCode {
-  id              String          @id @default(uuid())
+  id String @id @default(uuid())
 
   // Code Info
-  code            String          @unique // "KAYZER2024", "USHIGO50"
-  description     String?
+  code        String  @unique // "KAYZER2024", "USHIGO50"
+  description String?
 
   // Type de réduction
-  type            PromoCodeType   // PERCENTAGE, FIXED_AMOUNT, FREE_MONTHS
-  value           Float           // Valeur (%, montant, ou nombre de mois)
+  type  PromoCodeType // PERCENTAGE, FIXED_AMOUNT, FREE_MONTHS
+  value Float // Valeur (%, montant, ou nombre de mois)
 
   // Applicabilité
-  applicablePlanId String?        // Si null, applicable à tous les plans
+  applicablePlanId String? // Si null, applicable à tous les plans
   applicablePlan   SubscriptionPlan? @relation(fields: [applicablePlanId], references: [id])
 
   // Fournisseur spécifique (si réservé à un fournisseur)
@@ -1162,16 +1323,16 @@ model PromoCode {
   reservedForSupplier   SupplierProfile? @relation(fields: [reservedForSupplierId], references: [id])
 
   // Limites d'utilisation
-  maxUses         Int?            // Nombre max d'utilisations (null = illimité)
-  currentUses     Int             @default(0)
-  maxUsesPerUser  Int             @default(1) // Utilisations max par fournisseur
+  maxUses        Int? // Nombre max d'utilisations (null = illimité)
+  currentUses    Int  @default(0)
+  maxUsesPerUser Int  @default(1) // Utilisations max par fournisseur
 
   // Validité
-  validFrom       DateTime        @default(now())
-  validUntil      DateTime?       // null = pas d'expiration
+  validFrom  DateTime  @default(now())
+  validUntil DateTime? // null = pas d'expiration
 
   // Status
-  status          PromoCodeStatus @default(ACTIVE)
+  status PromoCodeStatus @default(ACTIVE)
 
   // Créé par admin
   createdByAdminId String
@@ -1191,15 +1352,15 @@ model PromoCode {
 
 // Historique d'utilisation des codes promo
 model PromoCodeUsage {
-  id           String     @id @default(uuid())
-  promoCodeId  String
-  promoCode    PromoCode  @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
+  id          String    @id @default(uuid())
+  promoCodeId String
+  promoCode   PromoCode @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
 
-  supplierId   String     // Fournisseur qui a utilisé le code
+  supplierId String // Fournisseur qui a utilisé le code
 
   // Détails de l'utilisation
-  discountAmount Float    // Montant économisé
-  appliedTo      String   // "SUBSCRIPTION", "FIRST_MONTH", etc.
+  discountAmount Float // Montant économisé
+  appliedTo      String // "SUBSCRIPTION", "FIRST_MONTH", etc.
 
   // Paiement associé
   subscriptionPaymentId String?
@@ -1213,72 +1374,76 @@ model PromoCodeUsage {
 
 // Deals / Bons Plans (ex: entrée piscine gratuite, chambre d'hôtel -50%)
 model Deal {
-  id          String          @id @default(uuid())
-  supplierId  String
-  supplier    SupplierProfile @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  id         String          @id @default(uuid())
+  supplierId String
+  supplier   SupplierProfile @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 
   // Optionnel: lié à un magasin spécifique
-  storeId     String?
-  store       SupplierStore?  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  storeId String?
+  store   SupplierStore? @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   // Deal Info
-  title       String          // "Entrée piscine gratuite", "Chambre double -50%"
+  title       String // "Entrée piscine gratuite", "Chambre double -50%"
   description String
   category    DealCategory
-  images      Json            // Array of image URLs
+  images      Json         @default("[]") // Array of image URLs
 
   // Pricing
-  originalPrice   Float       // Prix original
-  dealPrice       Float       // Prix avec réduction
-  discountPercent Float?      // Pourcentage de réduction calculé
-  currency        String      @default("XOF")
+  originalPrice   Float // Prix original
+  dealPrice       Float // Prix avec réduction
+  discountPercent Float? // Pourcentage de réduction calculé
+  currency        String @default("XOF")
 
   // Ce qui est inclus
-  includes        Json?       // ["Serviette", "Casier", "Accès vestiaires"]
-  excludes        Json?       // ["Repas", "Boissons"]
-  terms           String?     // Conditions d'utilisation
+  includes Json? // ["Serviette", "Casier", "Accès vestiaires"]
+  excludes Json? // ["Repas", "Boissons"]
+  terms    String? // Conditions d'utilisation
 
   // Disponibilité
-  status          DealStatus  @default(DRAFT)
-  availableFrom   DateTime    // Date de début de validité
-  availableUntil  DateTime    // Date de fin de validité
+  status         DealStatus @default(DRAFT)
+  availableFrom  DateTime // Date de début de validité
+  availableUntil DateTime // Date de fin de validité
 
   // Créneaux disponibles
-  availableSlots  Json?       // Créneaux horaires disponibles
+  availableSlots Json? // Créneaux horaires disponibles
   // Ex: [{"day": "monday", "slots": ["09:00-12:00", "14:00-18:00"]}]
 
   // Limites
-  totalQuantity     Int       // Nombre total disponible
-  quantityAvailable Int       // Nombre restant
-  maxPerUser        Int       @default(1) // Max par utilisateur
+  totalQuantity     Int // Nombre total disponible
+  quantityAvailable Int // Nombre restant
+  maxPerUser        Int @default(1) // Max par utilisateur
 
   // Période creuse (optionnel)
-  isOffPeakOnly     Boolean   @default(false)
-  offPeakDays       Json?     // ["monday", "tuesday", "wednesday"]
-  offPeakHours      Json?     // {"start": "09:00", "end": "17:00"}
+  isOffPeakOnly Boolean @default(false)
+  offPeakDays   Json? // ["monday", "tuesday", "wednesday"]
+  offPeakHours  Json? // {"start": "09:00", "end": "17:00"}
 
   // Réservation requise
-  requiresBooking   Boolean   @default(true)
-  bookingLeadTime   Int       @default(0) // Heures à l'avance pour réserver
-  cancellationHours Int       @default(24) // Heures avant pour annuler gratuitement
+  requiresBooking   Boolean @default(true)
+  bookingLeadTime   Int     @default(0) // Heures à l'avance pour réserver
+  cancellationHours Int     @default(24) // Heures avant pour annuler gratuitement
+  bookingMode       BookingMode @default(SINGLE_DATE) // Mode de réservation
 
   // Contact pour le deal
-  contactPhone      String?
-  contactEmail      String?
+  contactPhone String?
+  contactEmail String?
 
   // Stats
-  views             Int       @default(0)
-  bookingsCount     Int       @default(0)
-  usedCount         Int       @default(0)
+  views         Int @default(0)
+  bookingsCount Int @default(0)
+  usedCount     Int @default(0)
 
   // Modération
-  moderatedAt       DateTime?
+  moderatedAt        DateTime?
   moderatedByAdminId String?
-  rejectionReason   String?
+  rejectionReason    String?
 
   // Relations
-  bookings          DealBooking[]
-  reviews           Review[]
+  bookings  DealBooking[]
+  reviews   Review[]
+  rooms     DealRoom[]
+  favorites Favorite[]
+  dealViews DealView[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1291,49 +1456,84 @@ model Deal {
   @@map("deals")
 }
 
+// Chambres/Rooms pour les deals hôteliers
+model DealRoom {
+  id     String @id @default(uuid())
+  dealId String
+  deal   Deal   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  // Room Info
+  title       String // "Studio pour 2 personnes"
+  description String?
+  price       Float // Prix de la chambre
+
+  // Caractéristiques
+  capacity String? // "2 pers max"
+  size     String? // "28 m2"
+  floor    String? // "Etage supérieur"
+
+  // Équipements
+  amenities Json? // ["WiFi gratuit", "Climatisation", etc.]
+  bedTypes  Json? // ["Lit(s) double(s)"]
+  images    Json? @default("[]") // Array of image URLs
+
+  // Limites
+  maxOccupancy Int?
+  isAvailable  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dealId])
+  @@index([isAvailable])
+  @@map("deal_rooms")
+}
+
 // Réservations de deals
 model DealBooking {
-  id        String        @id @default(uuid())
-  dealId    String
-  deal      Deal          @relation(fields: [dealId], references: [id], onDelete: Cascade)
-  userId    String
+  id     String @id @default(uuid())
+  dealId String
+  deal   Deal   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  userId String
 
   // Booking Info
-  bookingNumber   String    @unique @default(uuid())
-  quantity        Int       @default(1)
+  bookingNumber String @unique @default(uuid())
+  quantity      Int    @default(1)
 
   // Date et créneau réservés
-  bookingDate     DateTime  // Date de la réservation
-  bookingSlot     String?   // Créneau horaire "14:00-18:00"
+  bookingDate    DateTime  // Date de la réservation (check-in pour DATE_RANGE)
+  bookingSlot    String?   // Créneau horaire "14:00-18:00"
+  bookingEndDate DateTime? // Date de fin (check-out) - NULL pour SINGLE_DATE
+  numberOfNights Int?      // Nombre de nuits - NULL pour SINGLE_DATE
 
   // Prix
-  unitPrice       Float
-  totalPrice      Float
+  unitPrice  Float
+  totalPrice Float
 
   // Status
-  status          BookingStatus @default(PENDING)
+  status BookingStatus @default(PENDING)
 
   // Code de validation
-  validationCode  String    @unique // Code QR / PIN pour valider
+  validationCode String @unique // Code QR / PIN pour valider
 
   // Payment
-  paymentMethod   PaymentMethod
+  paymentMethod    PaymentMethod
   paymentReference String?
-  paidAt          DateTime?
+  paidAt           DateTime?
 
   // Utilisation
-  usedAt          DateTime?
-  usedByStaffId   String?   // Staff qui a validé
+  usedAt        DateTime?
+  usedByStaffId String? // Staff qui a validé
 
   // Annulation
-  cancelledAt     DateTime?
-  cancelReason    String?
-  refundedAt      DateTime?
-  refundAmount    Float?
+  cancelledAt  DateTime?
+  cancelReason String?
+  refundedAt   DateTime?
+  refundAmount Float?
 
   // Notes
-  userNotes       String?   // Notes du client
-  supplierNotes   String?   // Notes du fournisseur
+  userNotes     String? // Notes du client
+  supplierNotes String? // Notes du fournisseur
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1343,6 +1543,7 @@ model DealBooking {
   @@index([status])
   @@index([bookingDate])
   @@index([validationCode])
+  @@index([dealId, bookingDate, bookingEndDate])
   @@map("deal_bookings")
 }
 
@@ -1350,52 +1551,52 @@ model DealBooking {
 
 // Paramètres de la plateforme modifiables par l'admin
 model PlatformSettings {
-  id        String   @id @default("default") // Single row with ID "default"
+  id String @id @default("default") // Single row with ID "default"
 
   // ===== BUSINESS SETTINGS =====
   // Commission
-  defaultCommissionRate   Float   @default(0.10)  // 10%
-  premiumCommissionRate   Float   @default(0.05)  // 5%
+  defaultCommissionRate Float @default(0.10) // 10%
+  premiumCommissionRate Float @default(0.05) // 5%
 
   // Delivery
-  defaultDeliveryFee      Float   @default(1000)  // FCFA
-  deliveryFeePerKm        Float   @default(200)   // FCFA/km
-  maxDeliveryDistance     Float   @default(20)    // km
+  defaultDeliveryFee  Float @default(1000) // FCFA
+  deliveryFeePerKm    Float @default(200) // FCFA/km
+  maxDeliveryDistance Float @default(20) // km
 
   // ===== PAYMENT FEES =====
-  wavePaymentFeeRate      Float   @default(0.01)  // 1% - payé par le client
-  waveTransferFeeRate     Float   @default(0.01)  // 1% - déduit du fournisseur
+  wavePaymentFeeRate  Float @default(0.01) // 1% - payé par le client
+  waveTransferFeeRate Float @default(0.01) // 1% - déduit du fournisseur
 
   // ===== FEATURE FLAGS =====
-  graphqlEnabled          Boolean @default(false)
-  websocketEnabled        Boolean @default(true)
-  analyticsEnabled        Boolean @default(false)
-  notificationsEnabled    Boolean @default(true)
+  graphqlEnabled       Boolean @default(false)
+  websocketEnabled     Boolean @default(true)
+  analyticsEnabled     Boolean @default(false)
+  notificationsEnabled Boolean @default(true)
 
   // ===== RATE LIMITING =====
-  rateLimitWindowMs       Int     @default(900000)  // 15 minutes
-  rateLimitMaxRequests    Int     @default(100)
-  authRateLimitMaxRequests Int    @default(5)
+  rateLimitWindowMs        Int @default(900000) // 15 minutes
+  rateLimitMaxRequests     Int @default(100)
+  authRateLimitMaxRequests Int @default(5)
 
   // ===== SECURITY =====
-  bcryptRounds            Int     @default(12)
-  otpExpiration           Int     @default(600000)  // 10 minutes in ms
-  otpLength               Int     @default(6)
+  bcryptRounds  Int @default(12)
+  otpExpiration Int @default(600000) // 10 minutes in ms
+  otpLength     Int @default(6)
 
   // ===== CACHE TTL (seconds) =====
-  cacheTtlShort           Int     @default(300)     // 5 min
-  cacheTtlMedium          Int     @default(1800)    // 30 min
-  cacheTtlLong            Int     @default(86400)   // 24h
+  cacheTtlShort  Int @default(300) // 5 min
+  cacheTtlMedium Int @default(1800) // 30 min
+  cacheTtlLong   Int @default(86400) // 24h
 
   // ===== PAGINATION =====
-  defaultPageSize         Int     @default(20)
-  maxPageSize             Int     @default(100)
+  defaultPageSize Int @default(20)
+  maxPageSize     Int @default(100)
 
   // ===== UPLOAD LIMITS =====
-  maxFileSize             Int     @default(10485760) // 10MB
+  maxFileSize Int @default(10485760) // 10MB
 
   // ===== METADATA =====
-  updatedById             String? // ID de l'admin qui a fait la dernière mise à jour
+  updatedById String? // ID de l'admin qui a fait la dernière mise à jour
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1405,18 +1606,18 @@ model PlatformSettings {
 
 // Historique des modifications des paramètres
 model PlatformSettingsAudit {
-  id          String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  settingKey  String   // Nom du paramètre modifié
-  oldValue    String?  // Ancienne valeur (JSON string)
-  newValue    String   // Nouvelle valeur (JSON string)
+  settingKey String // Nom du paramètre modifié
+  oldValue   String? // Ancienne valeur (JSON string)
+  newValue   String // Nouvelle valeur (JSON string)
 
   changedById String
-  changedBy   User     @relation("SettingsAudit", fields: [changedById], references: [id])
+  changedBy   User   @relation("SettingsAudit", fields: [changedById], references: [id])
 
-  reason      String?  // Raison du changement (optionnel)
+  reason String? // Raison du changement (optionnel)
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([settingKey])
   @@index([changedById])
@@ -1430,81 +1631,81 @@ model PlatformSettingsAudit {
 // ==================== PHASE 12: KYC AI VERIFICATION ====================
 
 enum KycVerificationStatus {
-  PENDING          // En attente de traitement
-  PROCESSING       // En cours de vérification par l'IA
-  AI_APPROVED      // Approuvé automatiquement par l'IA
-  AI_REJECTED      // Rejeté automatiquement par l'IA
-  MANUAL_REVIEW    // Score trop bas, nécessite review manuel
+  PENDING // En attente de traitement
+  PROCESSING // En cours de vérification par l'IA
+  AI_APPROVED // Approuvé automatiquement par l'IA
+  AI_REJECTED // Rejeté automatiquement par l'IA
+  MANUAL_REVIEW // Score trop bas, nécessite review manuel
   MANUALLY_APPROVED // Approuvé manuellement par admin
   MANUALLY_REJECTED // Rejeté manuellement par admin
-  FAILED           // Erreur technique lors de la vérification
+  FAILED // Erreur technique lors de la vérification
 }
 
 enum IdCardType {
-  CNI             // Carte Nationale d'Identité
-  PASSPORT        // Passeport
+  CNI // Carte Nationale d'Identité
+  PASSPORT // Passeport
   DRIVING_LICENSE // Permis de conduire
-  RESIDENCE_CARD  // Carte de séjour
+  RESIDENCE_CARD // Carte de séjour
 }
 
 enum KycCheckType {
-  DOCUMENT_OCR       // Extraction de texte du document
-  DOCUMENT_VALIDITY  // Vérification de validité (format, expiration)
+  DOCUMENT_OCR // Extraction de texte du document
+  DOCUMENT_VALIDITY // Vérification de validité (format, expiration)
   DOCUMENT_AUTHENTICITY // Détection de falsification
-  FACE_MATCH         // Correspondance visage ID vs selfie
+  FACE_MATCH // Correspondance visage ID vs selfie
   LIVENESS_DETECTION // Détection de vivacité (anti-spoofing)
 }
 
 // Tentative de vérification KYC
 model KycVerificationAttempt {
-  id           String                  @id @default(uuid())
-  supplierId   String
-  supplier     SupplierProfile         @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  id         String          @id @default(uuid())
+  supplierId String
+  supplier   SupplierProfile @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 
   // Documents soumis
-  idCardFrontUrl   String              // URL de la pièce d'identité recto
-  idCardBackUrl    String?             // URL de la pièce d'identité verso (optionnel selon le type)
-  selfieUrl        String              // URL du selfie
-  idCardType       IdCardType          // Type de document
+  idCardFrontUrl String // URL de la pièce d'identité recto
+  idCardBackUrl  String? // URL de la pièce d'identité verso (optionnel selon le type)
+  selfieUrl      String // URL du selfie
+  idCardType     IdCardType // Type de document
 
   // Status de la vérification
-  status           KycVerificationStatus @default(PENDING)
+  status KycVerificationStatus @default(PENDING)
 
   // Scores globaux (0-100)
-  overallScore         Float?           // Score global de confiance
-  documentScore        Float?           // Score qualité/authenticité document
-  faceMatchScore       Float?           // Score correspondance visage
-  livenessScore        Float?           // Score de vivacité
+  overallScore   Float? // Score global de confiance
+  documentScore  Float? // Score qualité/authenticité document
+  faceMatchScore Float? // Score correspondance visage
+  livenessScore  Float? // Score de vivacité
 
   // Seuils utilisés pour cette vérification
-  autoApproveThreshold Float   @default(85)  // Score minimum pour approbation auto
-  manualReviewThreshold Float  @default(60)  // Score en dessous = review manuel
+  autoApproveThreshold  Float @default(85) // Score minimum pour approbation auto
+  manualReviewThreshold Float @default(60) // Score en dessous = review manuel
 
   // Résultats détaillés (JSON)
-  ocrResults           Json?            // Données extraites par OCR
-  documentAnalysis     Json?            // Analyse du document (authenticité, validité)
-  faceAnalysis         Json?            // Analyse de la correspondance faciale
-  livenessAnalysis     Json?            // Analyse de la vivacité
+  ocrResults       Json? // Données extraites par OCR
+  documentAnalysis Json? // Analyse du document (authenticité, validité)
+  faceAnalysis     Json? // Analyse de la correspondance faciale
+  livenessAnalysis Json? // Analyse de la vivacité
 
   // Erreurs éventuelles
-  errorCode            String?          // Code d'erreur si échec
-  errorMessage         String?          // Message d'erreur détaillé
+  errorCode    String? // Code d'erreur si échec
+  errorMessage String? // Message d'erreur détaillé
 
   // Provider utilisé
-  aiProvider           String           @default("aws-rekognition") // aws-rekognition, azure, google
+  aiProvider String @default("aws-rekognition") // aws-rekognition, azure, google
 
   // Timing
-  processingStartedAt  DateTime?
+  processingStartedAt   DateTime?
   processingCompletedAt DateTime?
-  processingDurationMs Int?             // Durée en millisecondes
+  processingDurationMs  Int? // Durée en millisecondes
 
   // Review manuel (si nécessaire)
-  reviewedByAdminId    String?
-  reviewedAt           DateTime?
-  reviewNotes          String?
+  reviewedByAdminId String?
+  reviewedAt        DateTime?
+  reviewNotes       String?
 
   // Relations
-  checks               KycVerificationCheck[]
+  checks KycVerificationCheck[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1517,28 +1718,28 @@ model KycVerificationAttempt {
 
 // Détail de chaque vérification individuelle (OCR, Face Match, etc.)
 model KycVerificationCheck {
-  id              String                   @id @default(uuid())
-  attemptId       String
-  attempt         KycVerificationAttempt   @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  id        String                 @id @default(uuid())
+  attemptId String
+  attempt   KycVerificationAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
 
   // Type de vérification
-  checkType       KycCheckType
+  checkType KycCheckType
 
   // Résultat
-  passed          Boolean?                 // null = en cours, true = réussi, false = échoué
-  score           Float?                   // Score de confiance (0-100)
-  confidence      Float?                   // Niveau de confiance de l'IA
+  passed     Boolean? // null = en cours, true = réussi, false = échoué
+  score      Float? // Score de confiance (0-100)
+  confidence Float? // Niveau de confiance de l'IA
 
   // Détails du résultat (JSON spécifique au type de check)
-  result          Json?
+  result Json?
 
   // Raison d'échec si applicable
-  failureReason   String?
+  failureReason String?
 
   // Timing
-  startedAt       DateTime?
-  completedAt     DateTime?
-  durationMs      Int?
+  startedAt   DateTime?
+  completedAt DateTime?
+  durationMs  Int?
 
   createdAt DateTime @default(now())
 
@@ -1549,34 +1750,34 @@ model KycVerificationCheck {
 
 // Données extraites par OCR du document d'identité
 model KycExtractedData {
-  id              String                   @id @default(uuid())
-  attemptId       String                   @unique
+  id        String @id @default(uuid())
+  attemptId String @unique
 
   // Informations extraites
-  documentNumber  String?                  // Numéro du document
-  firstName       String?                  // Prénom
-  lastName        String?                  // Nom
-  dateOfBirth     DateTime?                // Date de naissance
-  placeOfBirth    String?                  // Lieu de naissance
-  gender          String?                  // Sexe (M/F)
-  nationality     String?                  // Nationalité
+  documentNumber String? // Numéro du document
+  firstName      String? // Prénom
+  lastName       String? // Nom
+  dateOfBirth    DateTime? // Date de naissance
+  placeOfBirth   String? // Lieu de naissance
+  gender         String? // Sexe (M/F)
+  nationality    String? // Nationalité
 
   // Dates du document
-  issueDate       DateTime?                // Date d'émission
-  expiryDate      DateTime?                // Date d'expiration
-  issuingAuthority String?                 // Autorité émettrice
-  issuingCountry  String?                  // Pays d'émission
+  issueDate        DateTime? // Date d'émission
+  expiryDate       DateTime? // Date d'expiration
+  issuingAuthority String? // Autorité émettrice
+  issuingCountry   String? // Pays d'émission
 
   // Adresse (si présente)
-  address         String?
+  address String?
 
   // Confiance de l'extraction
-  extractionConfidence Float?              // Confiance globale de l'extraction (0-100)
-  fieldConfidences     Json?               // Confiance par champ {"firstName": 95.5, "lastName": 92.3, ...}
+  extractionConfidence Float? // Confiance globale de l'extraction (0-100)
+  fieldConfidences     Json? // Confiance par champ {"firstName": 95.5, "lastName": 92.3, ...}
 
   // Validation
-  isExpired       Boolean?                 // Document expiré ?
-  isValid         Boolean?                 // Format valide ?
+  isExpired Boolean? // Document expiré ?
+  isValid   Boolean? // Format valide ?
 
   createdAt DateTime @default(now())
 
@@ -1585,27 +1786,335 @@ model KycExtractedData {
 
 // Historique des notifications KYC envoyées
 model KycNotification {
-  id              String   @id @default(uuid())
-  supplierId      String
+  id         String @id @default(uuid())
+  supplierId String
 
   // Type de notification
-  notificationType String  // KYC_SUBMITTED, KYC_APPROVED, KYC_REJECTED, KYC_MANUAL_REVIEW, KYC_RESUBMIT_REQUIRED
+  notificationType String // KYC_SUBMITTED, KYC_APPROVED, KYC_REJECTED, KYC_MANUAL_REVIEW, KYC_RESUBMIT_REQUIRED
 
   // Contenu
-  title           String
-  message         String
+  title   String
+  message String
 
   // Méthodes de livraison
-  pushSent        Boolean  @default(false)
-  emailSent       Boolean  @default(false)
-  smsSent         Boolean  @default(false)
+  pushSent  Boolean @default(false)
+  emailSent Boolean @default(false)
+  smsSent   Boolean @default(false)
 
   // Référence à la tentative
-  attemptId       String?
+  attemptId String?
 
   createdAt DateTime @default(now())
 
   @@index([supplierId])
   @@index([attemptId])
   @@map("kyc_notifications")
+}
+
+// ==================== SAVED LOCATIONS ====================
+
+// Adresses favorites des utilisateurs
+model SavedLocation {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Location Info
+  label        String // "Maison", "Bureau", "Chez Maman", etc.
+  address      String
+  city         String?
+  commune      String?
+  neighborhood String?
+  latitude     Float
+  longitude    Float
+
+  // Additional Info
+  instructions String? // Instructions de livraison
+  phoneNumber  String? // Numéro à contacter pour cette adresse
+
+  // Flags
+  isDefault Boolean @default(false) // Adresse par défaut
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, isDefault])
+  @@map("saved_locations")
+}
+
+// Historique des recherches pour suggestions et tendances
+model SearchHistory {
+  id     String  @id @default(uuid())
+  userId String? // Null pour utilisateurs non connectés
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Search details
+  query   String // Terme recherché
+  type    String // 'product' ou 'deal'
+  filters Json? // Filtres appliqués (category, price range, etc.)
+
+  // Metadata
+  resultCount Int? // Nombre de résultats trouvés
+  clicked     Boolean @default(false) // L'utilisateur a-t-il cliqué sur un résultat?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([query]) // Pour trending searches
+  @@index([type, createdAt])
+  @@map("search_history")
+}
+
+// Magasins/Fournisseurs favoris des utilisateurs
+model FavoriteStore {
+  id              String        @id @default(uuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  supplierStoreId String
+  supplierStore   SupplierStore @relation(fields: [supplierStoreId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, supplierStoreId])
+  @@index([userId])
+  @@index([supplierStoreId])
+  @@map("favorite_stores")
+}
+
+// ==================== STOCK MOVEMENTS ====================
+
+enum StockMovementType {
+  PURCHASE // Achat/Approvisionnement
+  SALE // Vente
+  ADJUSTMENT // Ajustement manuel
+  LOSS // Perte (expiration, casse)
+  RETURN // Retour client
+  TRANSFER // Transfert entre magasins
+}
+
+// Historique des mouvements de stock
+model StockMovement {
+  id        String  @id @default(uuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Type et quantité
+  type          StockMovementType
+  quantity      Int // Positif pour entrée, négatif pour sortie
+  previousStock Int // Stock avant le mouvement
+  newStock      Int // Stock après le mouvement
+
+  // Reference
+  orderId    String? // Si lié à une commande
+  supplierId String // Fournisseur concerné
+  storeId    String? // Magasin concerné (si applicable)
+
+  // Details
+  reason        String? // Raison du mouvement
+  notes         String? // Notes additionnelles
+  performedById String? // ID de l'utilisateur qui a effectué le mouvement
+
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@index([supplierId])
+  @@index([storeId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("stock_movements")
+}
+
+// ==================== PAYMENT PROVIDERS ====================
+
+// Fournisseurs de paiement configurables par l'admin
+model PaymentProvider {
+  id String @id @default(uuid())
+
+  // Provider Info
+  name        String // "Wave", "Orange Money", "MTN Mobile Money"
+  slug        String  @unique // "wave", "orange-money", "mtn-mobile-money"
+  description String? // Description du moyen de paiement
+
+  // Logo
+  logoUrl String? // URL du logo
+  iconUrl String? // URL de l'icône (optionnel, version plus petite)
+
+  // Configuration
+  isActive Boolean               @default(true)
+  status   PaymentProviderStatus @default(ACTIVE)
+
+  // Frais
+  paymentFeeRate  Float  @default(0) // Frais de paiement (%)
+  transferFeeRate Float  @default(0) // Frais de transfert (%)
+  minAmount       Float? // Montant minimum
+  maxAmount       Float? // Montant maximum
+
+  // Pays supportés
+  supportedCountries  Json? // ["CI", "SN", "BF", ...]
+  supportedCurrencies Json? // ["XOF", "XAF", ...]
+
+  // Configuration technique (API keys, etc.) - chiffrée en production
+  config Json? // Configuration spécifique au provider
+
+  // Métadonnées
+  displayOrder Int     @default(0) // Ordre d'affichage
+  isFeatured   Boolean @default(false) // Mise en avant
+
+  // Admin
+  createdByAdminId String?
+  updatedByAdminId String?
+
+  // Relations - Fournisseurs utilisant ce moyen de paiement pour les retraits
+  supplierPayouts SupplierProfile[] @relation("SupplierPayoutProvider")
+  storePayouts    SupplierStore[]   @relation("StorePayoutProvider")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@index([isActive, status])
+  @@index([displayOrder])
+  @@map("payment_providers")
+}
+
+// ==================== USER PAYMENT METHODS ====================
+
+// Méthodes de paiement enregistrées par les utilisateurs
+model UserPaymentMethod {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Provider info
+  provider    String // "WAVE", "ORANGE_MONEY", "MTN_MONEY", "MOOV_MONEY"
+  phoneNumber String // Numéro de compte mobile money
+  accountName String // Nom sur le compte
+
+  // Status
+  isDefault  Boolean @default(false)
+  isActive   Boolean @default(true)
+  isVerified Boolean @default(false)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([provider])
+  @@index([isDefault])
+  @@map("user_payment_methods")
+}
+
+// ==================== REFERRAL SYSTEM ====================
+
+// Codes de parrainage créés par les utilisateurs
+model ReferralCode {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Code
+  code      String   @unique  // "JOHN2024", "YAPAS-ABC123"
+
+  // Usage
+  timesUsed Int      @default(0)
+  maxUses   Int?     // Null = illimité
+  isActive  Boolean  @default(true)
+
+  // Expiration
+  expiresAt DateTime?
+
+  // Relations
+  referrals Referral[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([code])
+  @@map("referral_codes")
+}
+
+// Historique des parrainages
+model Referral {
+  id              String         @id @default(uuid())
+
+  // Parrain
+  referrerId      String
+  referrer        User           @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referralCodeId  String
+  referralCode    ReferralCode   @relation(fields: [referralCodeId], references: [id], onDelete: Cascade)
+
+  // Filleul
+  referredUserId  String
+  referredUser    User           @relation("Referred", fields: [referredUserId], references: [id], onDelete: Cascade)
+
+  // Status
+  status          ReferralStatus @default(PENDING)
+
+  // Récompenses
+  rewardEarned    Float?         // Montant/points gagnés
+
+  // Dates
+  completedAt     DateTime?      // Quand le filleul a fait son 1er achat
+  rewardedAt      DateTime?      // Quand la récompense a été donnée
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([referralCodeId, referredUserId])
+  @@index([referrerId])
+  @@index([referredUserId])
+  @@map("referrals")
+}
+
+// ==================== REWARD SYSTEM ====================
+
+model UserRewards {
+  id              String     @id @default(uuid())
+  userId          String     @unique
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Points
+  totalPoints     Float      @default(0) // Total des points actuels
+  availablePoints Float      @default(0) // Points disponibles pour utilisation
+  lifetimePoints  Float      @default(0) // Total des points gagnés à vie
+
+  // Tier/Niveau
+  currentTier     RewardTier @default(BRONZE)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([currentTier])
+  @@map("user_rewards")
+}
+
+model PointTransaction {
+  id          String               @id @default(uuid())
+  userId      String
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Transaction details
+  amount      Float                // Montant (positif = gagné, négatif = dépensé)
+  type        PointTransactionType // Type de transaction
+  source      String               // Source (REFERRAL, ORDER, REVIEW, etc.)
+  description String               // Description de la transaction
+
+  // Metadata
+  reference   String?              // Référence externe (ex: order ID, referral ID)
+  balance     Float                @default(0) // Solde après transaction
+  expiresAt   DateTime?            // Date d'expiration des points (si applicable)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@index([source])
+  @@index([createdAt])
+  @@map("point_transactions")
 }

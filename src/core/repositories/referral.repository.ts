@@ -193,7 +193,7 @@ export class ReferralRepository {
     try {
       const where: Prisma.ReferralWhereInput = {
         referrerId: userId,
-        ...(status && { status }),
+        ...(status && { status: status as Prisma.EnumReferralStatusFilter }),
       };
 
       const [referrals, total] = await Promise.all([
@@ -236,10 +236,15 @@ export class ReferralRepository {
     rewardEarned?: number
   ): Promise<Referral> {
     try {
+      const statusValue = status as
+        | 'PENDING'
+        | 'COMPLETED'
+        | 'REWARDED'
+        | 'EXPIRED';
       return await prisma.referral.update({
         where: { id },
         data: {
-          status,
+          status: statusValue,
           rewardEarned,
           completedAt: status === 'COMPLETED' ? new Date() : undefined,
         },

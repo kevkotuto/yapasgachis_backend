@@ -278,3 +278,14 @@ export const getSupplierProductsSchema = z.object({
 export type GetSupplierProductsInput = z.infer<
   typeof getSupplierProductsSchema
 >['query'];
+
+// Toggle product status
+export const toggleProductStatusSchema = z.object({
+  params: z.object({
+    id: z.string().uuid('ID de produit invalide'),
+  }),
+});
+
+export type ToggleProductStatusInput = z.infer<
+  typeof toggleProductStatusSchema
+>['params'];

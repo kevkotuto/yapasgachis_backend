@@ -259,35 +259,51 @@ export class DealRepository {
   }
 
   /**
-   * Get deals by supplier
+   * Get deals by supplier (with pagination)
    */
   async findBySupplierId(
     supplierId: string,
-    status?: DealStatus
-  ): Promise<Deal[]> {
+    options?: {
+      status?: DealStatus;
+      page?: number;
+      limit?: number;
+    }
+  ): Promise<{ deals: Deal[]; total: number }> {
     try {
-      return await prisma.deal.findMany({
-        where: {
-          supplierId,
-          ...(status && { status }),
-        },
-        include: {
-          store: {
-            select: {
-              id: true,
-              name: true,
-              city: true,
+      const { status, page = 1, limit = 20 } = options || {};
+      const skip = (page - 1) * limit;
+
+      const where = {
+        supplierId,
+        ...(status && { status }),
+      };
+
+      const [deals, total] = await Promise.all([
+        prisma.deal.findMany({
+          where,
+          include: {
+            store: {
+              select: {
+                id: true,
+                name: true,
+                city: true,
+              },
+            },
+            bookings: {
+              select: {
+                id: true,
+                status: true,
+              },
             },
           },
-          bookings: {
-            select: {
-              id: true,
-              status: true,
-            },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-      });
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+        }),
+        prisma.deal.count({ where }),
+      ]);
+
+      return { deals, total };
     } catch (error) {
       logger.error('Error finding deals by supplier ID', {
         supplierId,

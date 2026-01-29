@@ -1,4 +1,4 @@
-import { DealOption, Prisma } from '@prisma/client';
+import { DealRoom, Prisma } from '@prisma/client';
 
 import { prisma } from '@/infrastructure/database/prisma';
 import logger from '@/infrastructure/monitoring/logger';
@@ -7,7 +7,7 @@ import logger from '@/infrastructure/monitoring/logger';
  * Deal Option Repository
  * Data access layer for deal options/variants
  */
-export class DealOptionRepository {
+export class DealRoomRepository {
   /**
    * Create a new deal option
    */
@@ -23,9 +23,9 @@ export class DealOptionRepository {
     imageUrl?: string;
     stock?: number;
     sortOrder?: number;
-  }): Promise<DealOption> {
+  }): Promise<DealRoom> {
     try {
-      return await prisma.dealOption.create({
+      return await prisma.dealRoom.create({
         data: {
           dealId: data.dealId,
           title: data.title,
@@ -52,9 +52,9 @@ export class DealOptionRepository {
   /**
    * Find deal option by ID
    */
-  async findById(id: string): Promise<DealOption | null> {
+  async findById(id: string): Promise<DealRoom | null> {
     try {
-      return await prisma.dealOption.findUnique({
+      return await prisma.dealRoom.findUnique({
         where: { id },
         include: {
           deal: {
@@ -78,9 +78,9 @@ export class DealOptionRepository {
   /**
    * Find all options for a deal
    */
-  async findByDealId(dealId: string): Promise<DealOption[]> {
+  async findByDealId(dealId: string): Promise<DealRoom[]> {
     try {
-      return await prisma.dealOption.findMany({
+      return await prisma.dealRoom.findMany({
         where: { dealId },
         orderBy: { sortOrder: 'asc' },
       });
@@ -96,9 +96,9 @@ export class DealOptionRepository {
   /**
    * Find active options for a deal
    */
-  async findActiveDealOptions(dealId: string): Promise<DealOption[]> {
+  async findActiveDealRooms(dealId: string): Promise<DealRoom[]> {
     try {
-      return await prisma.dealOption.findMany({
+      return await prisma.dealRoom.findMany({
         where: {
           dealId,
           isActive: true,
@@ -132,9 +132,9 @@ export class DealOptionRepository {
       isActive?: boolean;
       sortOrder?: number;
     }
-  ): Promise<DealOption> {
+  ): Promise<DealRoom> {
     try {
-      return await prisma.dealOption.update({
+      return await prisma.dealRoom.update({
         where: { id },
         data,
       });
@@ -150,9 +150,9 @@ export class DealOptionRepository {
   /**
    * Delete a deal option
    */
-  async delete(id: string): Promise<DealOption> {
+  async delete(id: string): Promise<DealRoom> {
     try {
-      return await prisma.dealOption.delete({
+      return await prisma.dealRoom.delete({
         where: { id },
       });
     } catch (error) {
@@ -167,9 +167,9 @@ export class DealOptionRepository {
   /**
    * Update stock for a deal option
    */
-  async updateStock(id: string, quantity: number): Promise<DealOption> {
+  async updateStock(id: string, quantity: number): Promise<DealRoom> {
     try {
-      return await prisma.dealOption.update({
+      return await prisma.dealRoom.update({
         where: { id },
         data: {
           stock: { decrement: quantity },
@@ -194,7 +194,7 @@ export class DealOptionRepository {
     try {
       await prisma.$transaction(
         updates.map((update) =>
-          prisma.dealOption.update({
+          prisma.dealRoom.update({
             where: { id: update.id },
             data: { sortOrder: update.sortOrder },
           })
@@ -213,7 +213,7 @@ export class DealOptionRepository {
    */
   async checkAvailability(id: string, quantity: number): Promise<boolean> {
     try {
-      const option = await prisma.dealOption.findUnique({
+      const option = await prisma.dealRoom.findUnique({
         where: { id },
         select: { stock: true, isActive: true },
       });
@@ -239,4 +239,4 @@ export class DealOptionRepository {
   }
 }
 
-export default new DealOptionRepository();
+export default new DealRoomRepository();

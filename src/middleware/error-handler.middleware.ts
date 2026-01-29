@@ -28,24 +28,40 @@ export const errorHandler = (
   res: Response,
   _next: NextFunction
 ): void => {
-  // Log error
+  // Zod validation errors
+  if (err instanceof ZodError) {
+    const formattedErrors = formatValidationErrors(err);
+
+    // Log validation error with detailed context
+    logError(err, {
+      method: req.method,
+      url: req.url,
+      ip: req.ip,
+      userId: (req as any).user?.id,
+      statusCode: 422,
+      body: req.body,
+      query: req.query,
+      params: req.params,
+      validationErrors: formattedErrors,
+    });
+
+    res.status(APP_CONSTANTS.HTTP_STATUS.UNPROCESSABLE_ENTITY).json({
+      success: false,
+      message: 'Erreur de validation',
+      code: APP_CONSTANTS.ERROR_CODES.VALIDATION_ERROR,
+      errors: formattedErrors,
+    });
+    return;
+  }
+
+  // Log other errors
   logError(err, {
     method: req.method,
     url: req.url,
     ip: req.ip,
     userId: (req as any).user?.id,
+    statusCode: err instanceof AppError ? err.statusCode : 500,
   });
-
-  // Zod validation errors
-  if (err instanceof ZodError) {
-    res.status(APP_CONSTANTS.HTTP_STATUS.UNPROCESSABLE_ENTITY).json({
-      success: false,
-      message: 'Erreur de validation',
-      code: APP_CONSTANTS.ERROR_CODES.VALIDATION_ERROR,
-      errors: formatValidationErrors(err),
-    });
-    return;
-  }
 
   // Application errors
   if (err instanceof AppError) {

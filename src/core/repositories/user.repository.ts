@@ -23,6 +23,20 @@ export class UserRepository {
   }
 
   /**
+   * Find user by ID with profile relations
+   */
+  async findByIdWithProfile(id: string) {
+    return prisma.user.findUnique({
+      where: { id },
+      include: {
+        supplierProfile: true,
+        associationProfile: true,
+        advertiserProfile: true,
+      },
+    });
+  }
+
+  /**
    * Find user by phone number
    */
   async findByPhoneNumber(phoneNumber: string): Promise<User | null> {

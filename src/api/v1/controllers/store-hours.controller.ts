@@ -6,6 +6,10 @@ import {
   CreateSpecialClosureInput,
 } from '../validators/store-hours.validator';
 
+import {
+  CreateStoreHoursDTO,
+  SpecialClosureDTO,
+} from '@/core/interfaces/dtos/store-hours.dto';
 import storeHoursService from '@/core/services/store-hours.service';
 import logger from '@/infrastructure/monitoring/logger';
 import { asyncHandler } from '@/utils/helpers';
@@ -21,7 +25,7 @@ export class StoreHoursController {
    */
   createStoreHours = asyncHandler(async (req: Request, res: Response) => {
     const supplierId = req.user.id;
-    const body = req.body as CreateStoreHoursInput;
+    const body = req.body as CreateStoreHoursDTO;
 
     const storeHours = await storeHoursService.createStoreHours(
       supplierId,
@@ -139,7 +143,7 @@ export class StoreHoursController {
       const closure = await storeHoursService.createSpecialClosure(supplierId, {
         storeId,
         ...req.body,
-      });
+      } as SpecialClosureDTO);
 
       logger.info('Special closure created via API', {
         supplierId,

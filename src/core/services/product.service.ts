@@ -500,6 +500,69 @@ export class ProductService {
   }
 
   /**
+   * Toggle product status between ACTIVE and DRAFT
+   */
+  async toggleProductStatus(
+    userId: string,
+    productId: string
+  ): Promise<Product> {
+    try {
+      // Get product and verify ownership
+      const product = await this.productRepo.findById(productId);
+      if (!product) {
+        throw new AppError(404, 'Produit non trouvé', 'PRODUCT_NOT_FOUND');
+      }
+
+      const supplier = await this.supplierRepo.findByUserId(userId);
+      if (!supplier || product.supplierId !== supplier.id) {
+        throw new AppError(
+          403,
+          'Vous ne pouvez pas modifier ce produit',
+          'FORBIDDEN'
+        );
+      }
+
+      // Toggle status logic:
+      // - If DRAFT → ACTIVE
+      // - If ACTIVE → DRAFT
+      // - If SOLD_OUT or EXPIRED → ACTIVE (reactivate)
+      // - If ARCHIVED → ACTIVE (reactivate)
+      let newStatus: ProductStatus;
+
+      if (product.status === ProductStatus.DRAFT) {
+        newStatus = ProductStatus.ACTIVE;
+      } else if (product.status === ProductStatus.ACTIVE) {
+        newStatus = ProductStatus.DRAFT;
+      } else {
+        // For SOLD_OUT, EXPIRED, ARCHIVED → reactivate to ACTIVE
+        newStatus = ProductStatus.ACTIVE;
+      }
+
+      // Update product status
+      const updated = await this.productRepo.update(productId, {
+        status: newStatus,
+      });
+
+      logger.info('Product status toggled', {
+        userId,
+        productId,
+        oldStatus: product.status,
+        newStatus,
+      });
+
+      return updated;
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      logger.error('Error toggling product status', {
+        userId,
+        productId,
+        error: (error as Error).message,
+      });
+      throw new AppError(500, 'Erreur lors du changement de statut du produit');
+    }
+  }
+
+  /**
    * Mark expired products (cron job)
    */
   async markExpiredProducts(): Promise<number> {
