@@ -94,6 +94,11 @@ enum DeliveryMethod {
   DELIVERY
 }
 
+enum DeliveryPricingMode {
+  FLAT           // Prix fixe unique
+  DISTANCE_BASED // Prix de base + prix par km
+}
+
 enum DonationType {
   FOOD
   FINANCIAL
@@ -534,6 +539,12 @@ model SupplierStore {
   deliveryEnabled Boolean @default(false)
   pickupEnabled   Boolean @default(true)
   deliveryRadius  Float? // km
+
+  // Delivery Pricing Configuration
+  deliveryPricingMode DeliveryPricingMode @default(DISTANCE_BASED)
+  deliveryBasePrice   Decimal?            @db.Decimal(10, 2) // Prix de base (null = utilise businessSettings.defaultDeliveryFee)
+  deliveryPricePerKm  Decimal?            @db.Decimal(10, 2) // Prix par km (null = utilise businessSettings.deliveryFeePerKm)
+  deliveryFlatPrice   Decimal?            @db.Decimal(10, 2) // Prix fixe (null = utilise businessSettings.defaultDeliveryFee)
 
   // Payment Settings spécifiques au magasin
   acceptCashPayment Boolean @default(false)

@@ -12,10 +12,12 @@ import {
   CheckContactsInput,
   AddPaymentMethodInput,
   UpdatePaymentMethodInput,
+  DeleteAccountInput,
 } from '@/api/v1/validators/user.validator';
 
 import { AppError } from '@/middleware/error-handler.middleware';
 import logger from '@/infrastructure/monitoring/logger';
+import { comparePassword } from '@/utils/crypto.utils';
 
 export class UserService {
   constructor(private prisma: PrismaClient) {}
@@ -426,6 +428,90 @@ export class UserService {
       };
     } catch (error) {
       logger.error('Error getting referral code', {
+        error: (error as Error).message,
+        userId,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Delete user account
+   * Requires password verification for security
+   */
+  async deleteAccount(userId: string, data: DeleteAccountInput) {
+    try {
+      // Get user with password
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          phoneNumber: true,
+          passwordHash: true,
+          authProvider: true,
+          status: true,
+        },
+      });
+
+      if (!user) {
+        throw new AppError(404, 'Utilisateur non trouvé', 'USER_NOT_FOUND');
+      }
+
+      // Check if account is already deleted
+      if (user.status === 'DEACTIVATED') {
+        throw new AppError(
+          400,
+          'Ce compte est déjà désactivé',
+          'ACCOUNT_ALREADY_DELETED'
+        );
+      }
+
+      // For OAuth users, verify they have set a password
+      if (!user.passwordHash) {
+        throw new AppError(
+          400,
+          'Impossible de supprimer ce compte. Veuillez contacter le support.',
+          'NO_PASSWORD_SET'
+        );
+      }
+
+      // Verify password
+      const isPasswordValid = await comparePassword(
+        data.password,
+        user.passwordHash
+      );
+
+      if (!isPasswordValid) {
+        throw new AppError(401, 'Mot de passe incorrect', 'INVALID_PASSWORD');
+      }
+
+      // Delete all refresh tokens to invalidate sessions
+      await this.prisma.refreshToken.deleteMany({
+        where: { userId },
+      });
+
+      // Soft delete: update user status to DEACTIVATED and set deletedAt
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          status: 'DEACTIVATED',
+          deletedAt: new Date(),
+        },
+      });
+
+      logger.info('User account deleted', {
+        userId,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+      });
+
+      return {
+        success: true,
+        message: 'Votre compte a été supprimé avec succès',
+      };
+    } catch (error) {
+      logger.error('Error deleting user account', {
         error: (error as Error).message,
         userId,
       });

@@ -360,7 +360,7 @@ export class ReviewService {
     response: string
   ) {
     // Get review with product/deal relation
-    const review = await reviewRepository.findById(reviewId);
+    const review = (await reviewRepository.findById(reviewId)) as any;
     if (!review) {
       throw new AppError(404, 'Avis non trouvé', 'REVIEW_NOT_FOUND');
     }
@@ -419,7 +419,7 @@ export class ReviewService {
     response: string
   ) {
     // Get review
-    const review = await reviewRepository.findById(reviewId);
+    const review = (await reviewRepository.findById(reviewId)) as any;
     if (!review) {
       throw new AppError(404, 'Avis non trouvé', 'REVIEW_NOT_FOUND');
     }
@@ -474,7 +474,7 @@ export class ReviewService {
    */
   async deleteSupplierResponse(userId: string, reviewId: string) {
     // Get review
-    const review = await reviewRepository.findById(reviewId);
+    const review = (await reviewRepository.findById(reviewId)) as any;
     if (!review) {
       throw new AppError(404, 'Avis non trouvé', 'REVIEW_NOT_FOUND');
     }

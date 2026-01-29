@@ -101,3 +101,12 @@ export const setDefaultPaymentMethodSchema = z.object({
 export type SetDefaultPaymentMethodInput = z.infer<
   typeof setDefaultPaymentMethodSchema
 >['params'];
+
+// Delete account schema
+export const deleteAccountSchema = z.object({
+  body: z.object({
+    password: z.string().min(1, 'Le mot de passe est requis'),
+  }),
+});
+
+export type DeleteAccountInput = z.infer<typeof deleteAccountSchema>['body'];

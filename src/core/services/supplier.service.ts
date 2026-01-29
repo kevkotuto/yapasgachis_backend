@@ -225,11 +225,9 @@ export class SupplierService {
             files.idCardFront[0].buffer,
             {
               folder: 'yapasgachis/kyc',
-              format: 'jpg',
-              quality: 90,
             }
           );
-          uploadedUrls.idCardFront = result.secure_url;
+          uploadedUrls.idCardFront = result.secureUrl;
         }
 
         if (files.idCardBack?.[0]) {
@@ -237,11 +235,9 @@ export class SupplierService {
             files.idCardBack[0].buffer,
             {
               folder: 'yapasgachis/kyc',
-              format: 'jpg',
-              quality: 90,
             }
           );
-          uploadedUrls.idCardBack = result.secure_url;
+          uploadedUrls.idCardBack = result.secureUrl;
         }
 
         if (files.selfie?.[0]) {
@@ -249,11 +245,9 @@ export class SupplierService {
             files.selfie[0].buffer,
             {
               folder: 'yapasgachis/kyc',
-              format: 'jpg',
-              quality: 90,
             }
           );
-          uploadedUrls.selfiePhoto = result.secure_url;
+          uploadedUrls.selfiePhoto = result.secureUrl;
         }
       }
 

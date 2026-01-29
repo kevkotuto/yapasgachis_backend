@@ -10,6 +10,7 @@ import {
   UpdatePaymentMethodInput,
   DeletePaymentMethodInput,
   SetDefaultPaymentMethodInput,
+  DeleteAccountInput,
 } from '@/api/v1/validators/user.validator';
 import { asyncHandler } from '@/utils/helpers';
 
@@ -201,6 +202,23 @@ class UserController {
       data: referralData,
     });
   });
+
+  /**
+   * Delete user account
+   * DELETE /api/v1/users/account
+   */
+  deleteAccount = asyncHandler(
+    async (req: Request<{}, {}, DeleteAccountInput>, res: Response) => {
+      const userId = (req as any).user.id;
+
+      const result = await userService.deleteAccount(userId, req.body);
+
+      res.json({
+        success: true,
+        message: result.message,
+      });
+    }
+  );
 }
 
 export default new UserController();

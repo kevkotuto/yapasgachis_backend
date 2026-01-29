@@ -37,6 +37,11 @@ export class SupplierStoreService {
       deliveryEnabled?: boolean;
       pickupEnabled?: boolean;
       deliveryRadius?: number;
+      // Delivery Pricing Configuration
+      deliveryPricingMode?: 'FLAT' | 'DISTANCE_BASED';
+      deliveryBasePrice?: number | null;
+      deliveryPricePerKm?: number | null;
+      deliveryFlatPrice?: number | null;
       acceptCashPayment?: boolean;
     }
   ): Promise<SupplierStore> {
@@ -99,6 +104,11 @@ export class SupplierStoreService {
         deliveryEnabled: data.deliveryEnabled || false,
         pickupEnabled: data.pickupEnabled !== false,
         deliveryRadius: data.deliveryRadius,
+        // Delivery Pricing Configuration
+        deliveryPricingMode: data.deliveryPricingMode,
+        deliveryBasePrice: data.deliveryBasePrice,
+        deliveryPricePerKm: data.deliveryPricePerKm,
+        deliveryFlatPrice: data.deliveryFlatPrice,
         acceptCashPayment: data.acceptCashPayment || false,
       });
 
@@ -142,6 +152,11 @@ export class SupplierStoreService {
       deliveryEnabled?: boolean;
       pickupEnabled?: boolean;
       deliveryRadius?: number;
+      // Delivery Pricing Configuration
+      deliveryPricingMode?: 'FLAT' | 'DISTANCE_BASED';
+      deliveryBasePrice?: number | null;
+      deliveryPricePerKm?: number | null;
+      deliveryFlatPrice?: number | null;
       acceptCashPayment?: boolean;
     }
   ): Promise<SupplierStore> {

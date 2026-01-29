@@ -9,6 +9,7 @@ import {
   updatePaymentMethodSchema,
   deletePaymentMethodSchema,
   setDefaultPaymentMethodSchema,
+  deleteAccountSchema,
 } from '@/api/v1/validators/user.validator';
 import { authenticate } from '@/middleware/auth.middleware';
 import { validate } from '@/middleware/validation.middleware';
@@ -49,6 +50,21 @@ router.put(
  * GET /referral-code
  */
 router.get('/referral-code', authenticate, userController.getReferralCode);
+
+/**
+ * Delete user account (requires password confirmation)
+ * DELETE /account
+ *
+ * Body: { password: string }
+ *
+ * Verifies password, deletes all user data, invalidates all tokens
+ */
+router.delete(
+  '/account',
+  authenticate,
+  validate(deleteAccountSchema),
+  userController.deleteAccount
+);
 
 // ==================== CONTACTS ====================
 

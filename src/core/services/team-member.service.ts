@@ -13,7 +13,7 @@ export class TeamMemberService {
         select: { supplierId: true },
       });
 
-      if (!store || store.store.supplierId !== supplierId) {
+      if (!store || store.supplierId !== supplierId) {
         throw new AppError(403, 'Magasin invalide');
       }
     }
@@ -63,9 +63,9 @@ export class TeamMemberService {
   }
 
   async updateTeamMember(supplierId: string, memberId: string, data: any) {
-    const member = await teamMemberRepository.findById(memberId);
+    const member = (await teamMemberRepository.findById(memberId)) as any;
     if (!member) throw new AppError(404, 'Membre non trouvé');
-    if (member.store.supplierId !== supplierId)
+    if (member.store?.supplierId !== supplierId)
       throw new AppError(403, 'Non autorisé');
 
     const updated = await teamMemberRepository.update(memberId, data);
@@ -74,9 +74,9 @@ export class TeamMemberService {
   }
 
   async deleteTeamMember(supplierId: string, memberId: string) {
-    const member = await teamMemberRepository.findById(memberId);
+    const member = (await teamMemberRepository.findById(memberId)) as any;
     if (!member) throw new AppError(404, 'Membre non trouvé');
-    if (member.store.supplierId !== supplierId)
+    if (member.store?.supplierId !== supplierId)
       throw new AppError(403, 'Non autorisé');
 
     await teamMemberRepository.delete(memberId);

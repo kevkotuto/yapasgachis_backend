@@ -1039,10 +1039,23 @@ export class OrderService {
       let storeLongitude: number;
       let deliveryRadius: number;
 
+      let store: any = null;
+
       if (params.storeId) {
-        // Récupérer le magasin
-        const store = await prisma.supplierStore.findUnique({
+        // Récupérer le magasin avec les champs de pricing
+        store = await prisma.supplierStore.findUnique({
           where: { id: params.storeId },
+          select: {
+            id: true,
+            deliveryEnabled: true,
+            latitude: true,
+            longitude: true,
+            deliveryRadius: true,
+            deliveryPricingMode: true,
+            deliveryBasePrice: true,
+            deliveryPricePerKm: true,
+            deliveryFlatPrice: true,
+          },
         });
 
         if (!store) {
@@ -1125,14 +1138,38 @@ export class OrderService {
         };
       }
 
-      // Récupérer les paramètres de livraison
+      // Récupérer les paramètres de livraison globaux
       const businessSettings =
         await platformSettingsService.getBusinessSettings();
 
-      // Calculer les frais
-      const deliveryFee =
-        businessSettings.defaultDeliveryFee +
-        distance * businessSettings.deliveryFeePerKm;
+      // Calculer les frais selon la configuration du store
+      let deliveryFee: number;
+
+      if (store && params.storeId) {
+        // Utiliser la configuration personnalisée du store si disponible
+        if (store.deliveryPricingMode === 'FLAT') {
+          // Mode prix fixe
+          deliveryFee = store.deliveryFlatPrice
+            ? Number(store.deliveryFlatPrice)
+            : businessSettings.defaultDeliveryFee;
+        } else {
+          // Mode basé sur distance (DISTANCE_BASED)
+          const basePrice = store.deliveryBasePrice
+            ? Number(store.deliveryBasePrice)
+            : businessSettings.defaultDeliveryFee;
+
+          const pricePerKm = store.deliveryPricePerKm
+            ? Number(store.deliveryPricePerKm)
+            : businessSettings.deliveryFeePerKm;
+
+          deliveryFee = basePrice + distance * pricePerKm;
+        }
+      } else {
+        // Fallback : utiliser les paramètres globaux (cas supplierId)
+        deliveryFee =
+          businessSettings.defaultDeliveryFee +
+          distance * businessSettings.deliveryFeePerKm;
+      }
 
       // Estimer le temps (30 km/h en moyenne en ville)
       const estimatedTime = Math.ceil((distance / 30) * 60); // en minutes

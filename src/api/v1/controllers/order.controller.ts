@@ -240,9 +240,15 @@ export class OrderController {
    * POST /api/v1/orders/calculate-delivery-fee
    */
   calculateDeliveryFee = asyncHandler(async (req: Request, res: Response) => {
-    const body = req.body as CalculateDeliveryFeeInput;
+    const { storeId, supplierId, deliveryLatitude, deliveryLongitude } =
+      req.body as CalculateDeliveryFeeInput;
 
-    const result = await orderService.calculateDeliveryFee(body);
+    const result = await orderService.calculateDeliveryFee({
+      storeId,
+      supplierId,
+      deliveryLatitude: deliveryLatitude!,
+      deliveryLongitude: deliveryLongitude!,
+    });
 
     res.json({
       success: true,
