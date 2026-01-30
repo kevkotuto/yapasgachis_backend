@@ -49,6 +49,10 @@ interface Config {
     apiSecret: string;
     folder: string;
   };
+  mediaServer: {
+    baseUrl: string;
+    apiKey: string;
+  };
   aws: {
     region: string;
     accessKeyId: string;
@@ -262,6 +266,11 @@ const config: Config = {
     apiKey: process.env.CLOUDINARY_API_KEY || '',
     apiSecret: process.env.CLOUDINARY_API_SECRET || '',
     folder: process.env.CLOUDINARY_FOLDER || 'yapasgachis',
+  },
+  mediaServer: {
+    baseUrl:
+      process.env.MEDIA_SERVER_BASE_URL || 'https://media.yapasgachis.com',
+    apiKey: process.env.MEDIA_SERVER_API_KEY || '',
   },
   aws: {
     region: process.env.AWS_REGION || 'eu-west-1',

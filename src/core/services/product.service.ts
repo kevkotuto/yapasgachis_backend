@@ -7,7 +7,7 @@ import supplierRepository, {
   SupplierRepository,
 } from '@/core/repositories/supplier.repository';
 import logger from '@/infrastructure/monitoring/logger';
-import cloudinaryService from '@/infrastructure/storage/cloudinary.service';
+import mediaServerService from '@/infrastructure/storage/media-server.service';
 import { AppError } from '@/middleware/error-handler.middleware';
 
 /**
@@ -230,15 +230,18 @@ export class ProductService {
         );
       }
 
-      // Delete product images from Cloudinary
+      // Delete product images from Media Server
       const images = product.images as string[] | null;
       if (images && images.length > 0) {
-        const publicIds = images
-          .map((url) => cloudinaryService.extractPublicId(url))
-          .filter((id): id is string => id !== null);
+        const fileInfos = images
+          .map((url) => mediaServerService.extractFileInfo(url))
+          .filter(
+            (info): info is { folder: string; filename: string } =>
+              info !== null
+          );
 
-        if (publicIds.length > 0) {
-          await cloudinaryService.deleteMultipleFiles(publicIds);
+        if (fileInfos.length > 0) {
+          await mediaServerService.deleteMultipleFiles(fileInfos);
         }
       }
 
@@ -410,18 +413,13 @@ export class ProductService {
         );
       }
 
-      // Upload images to Cloudinary
-      const uploadResults = await cloudinaryService.uploadMultipleImages(
+      // Upload images to Media Server
+      const uploadResults = await mediaServerService.uploadMultipleFiles(
         files,
-        {
-          folder: `yapasgachis/products/${productId}`,
-          width: 1200,
-          height: 1200,
-          quality: 80,
-        }
+        'products'
       );
 
-      const imageUrls = uploadResults.map((result) => result.secureUrl);
+      const imageUrls = uploadResults.map((result) => result.url);
 
       // Update product with new images
       const existingImages = (product.images as string[] | null) || [];
@@ -477,10 +475,10 @@ export class ProductService {
       const updatedImages = currentImages.filter((url) => url !== imageUrl);
       await this.productRepo.update(productId, { images: updatedImages });
 
-      // Delete from Cloudinary
-      const publicId = cloudinaryService.extractPublicId(imageUrl);
-      if (publicId) {
-        await cloudinaryService.deleteFile(publicId);
+      // Delete from Media Server
+      const fileInfo = mediaServerService.extractFileInfo(imageUrl);
+      if (fileInfo) {
+        await mediaServerService.deleteFile(fileInfo.folder, fileInfo.filename);
       }
 
       logger.info('Product image deleted', {
