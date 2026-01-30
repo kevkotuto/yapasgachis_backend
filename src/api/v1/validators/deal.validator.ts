@@ -20,9 +20,7 @@ export const createDealSchema = z.object({
         .string()
         .min(20, 'La description doit avoir au moins 20 caractères'),
       category: z.nativeEnum(DealCategory),
-      images: z
-        .array(z.string().url())
-        .min(1, 'Au moins une image est requise'),
+      images: z.array(z.string().url()).optional(),
       originalPrice: z.number().positive('Le prix original doit être positif'),
       dealPrice: z.number().positive('Le prix du deal doit être positif'),
       includes: z.array(z.string()).optional(),
