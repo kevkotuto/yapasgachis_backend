@@ -1,3 +1,4 @@
+import fs from 'fs';
 import path from 'path';
 
 import winston from 'winston';
@@ -26,6 +27,9 @@ const logFormat = printf(
 
 // Create logs directory if it doesn't exist
 const logsDir = config.logging.filePath || './logs';
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir, { recursive: true });
+}
 
 // Console transport
 const consoleTransport = new winston.transports.Console({
