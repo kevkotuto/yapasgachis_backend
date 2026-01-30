@@ -25,6 +25,7 @@ export class AuthController {
       message: result.message,
       data: {
         user: result.user,
+        tokens: result.tokens, // Include tokens if auto-verify is enabled
       },
     });
   });

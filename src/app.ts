@@ -20,6 +20,7 @@ import authRoutes from '@/api/v1/routes/auth.routes';
 import categoryRoutes from '@/api/v1/routes/category.routes';
 import dealRoutes from '@/api/v1/routes/deal.routes';
 import donationRoutes from '@/api/v1/routes/donation.routes';
+import frontendLogRoutes from '@/api/v1/routes/frontend-log.routes';
 import mapRoutes from '@/api/v1/routes/map.routes';
 import notificationRoutes from '@/api/v1/routes/notification.routes';
 import orderRoutes from '@/api/v1/routes/order.routes';
@@ -168,6 +169,9 @@ app.use(`/api/${config.app.apiVersion}/admin/donations`, adminDonationRoutes);
 
 // Phase 6: Notifications
 app.use(`/api/${config.app.apiVersion}/notifications`, notificationRoutes);
+
+// Frontend Logging
+app.use(`/api/${config.app.apiVersion}/logs`, frontendLogRoutes);
 
 // Phase 7: Administration & Analytics
 app.use(`/api/${config.app.apiVersion}/admin`, adminRoutes);

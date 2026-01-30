@@ -44,19 +44,45 @@ export class WaveController {
       });
 
       if (!order) {
-        throw new AppError(404, 'Commande non trouvée', 'ORDER_NOT_FOUND');
-      }
+        // Si l'order n'existe pas, vérifier si c'est peut-être un bookingId
+        // (le client mobile peut avoir envoyé le mauvais champ)
+        const booking = await prisma.dealBooking.findUnique({
+          where: { id: orderId },
+        });
 
-      if (userId && order.clientId !== userId) {
-        throw new AppError(
-          403,
-          'Accès non autorisé à cette commande',
-          'UNAUTHORIZED'
-        );
-      }
+        if (booking) {
+          // C'est en fait un booking, pas une order
+          if (userId && booking.userId !== userId) {
+            throw new AppError(
+              403,
+              'Accès non autorisé à cette réservation',
+              'UNAUTHORIZED'
+            );
+          }
 
-      clientReference = `order_${orderId}`;
-      transactionType = 'order';
+          clientReference = `booking_${orderId}`;
+          transactionType = 'booking';
+
+          logger.warn('orderId was actually a bookingId - auto-corrected', {
+            userId,
+            bookingId: orderId,
+          });
+        } else {
+          throw new AppError(404, 'Commande non trouvée', 'ORDER_NOT_FOUND');
+        }
+      } else {
+        // C'est bien une order
+        if (userId && order.clientId !== userId) {
+          throw new AppError(
+            403,
+            'Accès non autorisé à cette commande',
+            'UNAUTHORIZED'
+          );
+        }
+
+        clientReference = `order_${orderId}`;
+        transactionType = 'order';
+      }
     } else if (bookingId) {
       // Vérifier que la réservation existe et appartient à l'utilisateur
       const booking = await prisma.dealBooking.findUnique({

@@ -95,7 +95,7 @@ enum DeliveryMethod {
 }
 
 enum DeliveryPricingMode {
-  FLAT           // Prix fixe unique
+  FLAT // Prix fixe unique
   DISTANCE_BASED // Prix de base + prix par km
 }
 
@@ -310,6 +310,13 @@ enum RewardTier {
   PLATINUM
 }
 
+enum FrontendLogLevel {
+  ERROR
+  WARN
+  INFO
+  DEBUG
+}
+
 // ==================== MODELS ====================
 
 model User {
@@ -384,13 +391,16 @@ model User {
   paymentMethods UserPaymentMethod[]
 
   // Referral System
-  referralCodes     ReferralCode[] // Codes de parrainage créés
-  referralsAsReferrer Referral[]   @relation("Referrer") // Parrainages effectués
-  referralsAsReferred Referral[]   @relation("Referred") // Parrainé par
+  referralCodes       ReferralCode[] // Codes de parrainage créés
+  referralsAsReferrer Referral[]     @relation("Referrer") // Parrainages effectués
+  referralsAsReferred Referral[]     @relation("Referred") // Parrainé par
 
   // Reward System
   rewards           UserRewards?
   pointTransactions PointTransaction[]
+
+  // Frontend Logs
+  frontendLogs FrontendLog[]
 
   // Timestamps
   createdAt DateTime  @default(now())
@@ -1430,9 +1440,9 @@ model Deal {
   offPeakHours  Json? // {"start": "09:00", "end": "17:00"}
 
   // Réservation requise
-  requiresBooking   Boolean @default(true)
-  bookingLeadTime   Int     @default(0) // Heures à l'avance pour réserver
-  cancellationHours Int     @default(24) // Heures avant pour annuler gratuitement
+  requiresBooking   Boolean     @default(true)
+  bookingLeadTime   Int         @default(0) // Heures à l'avance pour réserver
+  cancellationHours Int         @default(24) // Heures avant pour annuler gratuitement
   bookingMode       BookingMode @default(SINGLE_DATE) // Mode de réservation
 
   // Contact pour le deal
@@ -1512,10 +1522,10 @@ model DealBooking {
   quantity      Int    @default(1)
 
   // Date et créneau réservés
-  bookingDate    DateTime  // Date de la réservation (check-in pour DATE_RANGE)
-  bookingSlot    String?   // Créneau horaire "14:00-18:00"
+  bookingDate    DateTime // Date de la réservation (check-in pour DATE_RANGE)
+  bookingSlot    String? // Créneau horaire "14:00-18:00"
   bookingEndDate DateTime? // Date de fin (check-out) - NULL pour SINGLE_DATE
-  numberOfNights Int?      // Nombre de nuits - NULL pour SINGLE_DATE
+  numberOfNights Int? // Nombre de nuits - NULL pour SINGLE_DATE
 
   // Prix
   unitPrice  Float
@@ -2021,17 +2031,17 @@ model UserPaymentMethod {
 
 // Codes de parrainage créés par les utilisateurs
 model ReferralCode {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Code
-  code      String   @unique  // "JOHN2024", "YAPAS-ABC123"
+  code String @unique // "JOHN2024", "YAPAS-ABC123"
 
   // Usage
-  timesUsed Int      @default(0)
-  maxUses   Int?     // Null = illimité
-  isActive  Boolean  @default(true)
+  timesUsed Int     @default(0)
+  maxUses   Int? // Null = illimité
+  isActive  Boolean @default(true)
 
   // Expiration
   expiresAt DateTime?
@@ -2049,27 +2059,27 @@ model ReferralCode {
 
 // Historique des parrainages
 model Referral {
-  id              String         @id @default(uuid())
+  id String @id @default(uuid())
 
   // Parrain
-  referrerId      String
-  referrer        User           @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
-  referralCodeId  String
-  referralCode    ReferralCode   @relation(fields: [referralCodeId], references: [id], onDelete: Cascade)
+  referrerId     String
+  referrer       User         @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referralCodeId String
+  referralCode   ReferralCode @relation(fields: [referralCodeId], references: [id], onDelete: Cascade)
 
   // Filleul
-  referredUserId  String
-  referredUser    User           @relation("Referred", fields: [referredUserId], references: [id], onDelete: Cascade)
+  referredUserId String
+  referredUser   User   @relation("Referred", fields: [referredUserId], references: [id], onDelete: Cascade)
 
   // Status
-  status          ReferralStatus @default(PENDING)
+  status ReferralStatus @default(PENDING)
 
   // Récompenses
-  rewardEarned    Float?         // Montant/points gagnés
+  rewardEarned Float? // Montant/points gagnés
 
   // Dates
-  completedAt     DateTime?      // Quand le filleul a fait son 1er achat
-  rewardedAt      DateTime?      // Quand la récompense a été donnée
+  completedAt DateTime? // Quand le filleul a fait son 1er achat
+  rewardedAt  DateTime? // Quand la récompense a été donnée
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2083,17 +2093,17 @@ model Referral {
 // ==================== REWARD SYSTEM ====================
 
 model UserRewards {
-  id              String     @id @default(uuid())
-  userId          String     @unique
-  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Points
-  totalPoints     Float      @default(0) // Total des points actuels
-  availablePoints Float      @default(0) // Points disponibles pour utilisation
-  lifetimePoints  Float      @default(0) // Total des points gagnés à vie
+  totalPoints     Float @default(0) // Total des points actuels
+  availablePoints Float @default(0) // Points disponibles pour utilisation
+  lifetimePoints  Float @default(0) // Total des points gagnés à vie
 
   // Tier/Niveau
-  currentTier     RewardTier @default(BRONZE)
+  currentTier RewardTier @default(BRONZE)
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -2105,20 +2115,20 @@ model UserRewards {
 }
 
 model PointTransaction {
-  id          String               @id @default(uuid())
-  userId      String
-  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Transaction details
-  amount      Float                // Montant (positif = gagné, négatif = dépensé)
+  amount      Float // Montant (positif = gagné, négatif = dépensé)
   type        PointTransactionType // Type de transaction
-  source      String               // Source (REFERRAL, ORDER, REVIEW, etc.)
-  description String               // Description de la transaction
+  source      String // Source (REFERRAL, ORDER, REVIEW, etc.)
+  description String // Description de la transaction
 
   // Metadata
-  reference   String?              // Référence externe (ex: order ID, referral ID)
-  balance     Float                @default(0) // Solde après transaction
-  expiresAt   DateTime?            // Date d'expiration des points (si applicable)
+  reference String? // Référence externe (ex: order ID, referral ID)
+  balance   Float     @default(0) // Solde après transaction
+  expiresAt DateTime? // Date d'expiration des points (si applicable)
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -2128,4 +2138,45 @@ model PointTransaction {
   @@index([source])
   @@index([createdAt])
   @@map("point_transactions")
+}
+
+// ==================== FRONTEND LOGGING ====================
+
+model FrontendLog {
+  id String @id @default(uuid())
+
+  // Basic log information
+  level     FrontendLogLevel
+  message   String           @db.Text
+  timestamp DateTime         @default(now())
+
+  // Context information
+  page   String? @db.VarChar(255)
+  action String? @db.VarChar(255)
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Technical information
+  userAgent String? @db.Text
+  stack     String? @db.Text
+  file      String? @db.VarChar(500)
+  line      Int?
+
+  // Session tracking
+  sessionId String? @db.VarChar(255)
+  deviceId  String? @db.VarChar(255)
+
+  // Additional metadata (extensible)
+  metadata Json? @default("{}")
+
+  createdAt DateTime @default(now())
+
+  // Indexes for efficient querying
+  @@index([level])
+  @@index([timestamp])
+  @@index([userId])
+  @@index([sessionId])
+  @@index([level, timestamp])
+  @@index([userId, timestamp])
+  @@map("frontend_logs")
 }

@@ -179,6 +179,7 @@ interface Config {
     bcryptRounds: number;
     otpExpiration: number;
     otpLength: number;
+    autoVerifyOTP: boolean;
   };
   pagination: {
     defaultPageSize: number;
@@ -395,6 +396,9 @@ const config: Config = {
     bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || '12', 10),
     otpExpiration: parseInt(process.env.OTP_EXPIRATION || '600000', 10),
     otpLength: parseInt(process.env.OTP_LENGTH || '6', 10),
+    autoVerifyOTP:
+      process.env.AUTO_VERIFY_OTP === 'true' ||
+      process.env.NODE_ENV === 'development',
   },
   pagination: {
     defaultPageSize: parseInt(process.env.DEFAULT_PAGE_SIZE || '20', 10),

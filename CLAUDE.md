@@ -162,6 +162,63 @@ npm run build  # Generates static files in out/
 - Password: Ecolfa@961
 - Upload the contents of `docs/yapasgachis-docs/out/` to the FTP root
 
+## Production Deployment
+
+**Server Access:**
+- Host: `150.107.201.144`
+- User: `root`
+- Auth: SSH key (already configured, no password needed)
+- Command: `ssh root@150.107.201.144`
+
+**Production Paths:**
+- Backend code: `/opt/apps/nodejs/yapasgachis_backend/`
+- Environment file: `/opt/apps/nodejs/yapasgachis_backend/.env`
+- Docker Compose: `/opt/docker/docker-compose.yml`
+- Logs: `/opt/apps/nodejs/yapasgachis_backend/logs/`
+- Uploads: `/opt/apps/nodejs/yapasgachis_backend/uploads/`
+
+**Database Backups:**
+- Location: `/root/yapasgachis_backup_YYYYMMDD_HHMMSS.sql`
+- Create backup: `docker exec postgres pg_dump -U root yapasgachis > /root/yapasgachis_backup_$(date +%Y%m%d_%H%M%S).sql`
+- Restore: `docker exec -i postgres psql -U root -d yapasgachis < /root/backup_file.sql`
+
+**Docker Services:**
+- Backend container: `yapasgachis-backend`
+- Database container: `postgres`
+- Redis container: `redis`
+- View logs: `docker logs yapasgachis-backend --tail 100 --follow`
+- Restart: `cd /opt/docker && docker compose restart yapasgachis-backend`
+- Rebuild & restart: `cd /opt/docker && docker compose up -d --build yapasgachis-backend`
+
+**Deployment Steps:**
+1. SSH to server: `ssh root@150.107.201.144`
+2. Navigate to backend: `cd /opt/apps/nodejs/yapasgachis_backend`
+3. Pull latest code: `git pull origin production`
+4. Install dependencies (if needed): `npm install`
+5. Run migrations (if needed): `npx prisma migrate deploy`
+6. Build new image: `docker build -t yapasgachis-backend:latest .`
+7. Restart containers: `cd /opt/docker && docker compose up -d yapasgachis-backend`
+8. Check logs: `docker logs yapasgachis-backend --tail 50`
+
+**Production Database:**
+- URL: `postgresql://root:Postgres85a3e5f8ab48637bdfd1f650@postgres:5432/yapasgachis`
+- Access via Docker: `docker exec -it postgres psql -U root -d yapasgachis`
+- Tables count: `\dt` (inside psql)
+
+**Production Redis:**
+- Host: `redis` (Docker network)
+- Password: `Redisbb0f2a280a729c2cab58c014`
+- Access: `docker exec -it redis redis-cli -a Redisbb0f2a280a729c2cab58c014`
+
+**Important Production Notes:**
+- Always create a database backup before major changes
+- Backend runs on port 3004 (internal), exposed via Nginx reverse proxy
+- Environment is set to `NODE_ENV=production`
+- OTP is currently in mock mode (SMS not configured)
+- Rate limiting: `AUTH_RATE_LIMIT_MAX=50` (updated from 5)
+- Cron jobs are enabled
+- WebSocket is enabled
+
 ## Important Notes
 
 - All validation uses Zod schemas (not express-validator directly)

@@ -178,9 +178,15 @@ export class AuthService {
   /**
    * Register new user
    */
-  async register(
-    data: RegisterDTO
-  ): Promise<{ user: Partial<User>; message: string }> {
+  async register(data: RegisterDTO): Promise<{
+    user: Partial<User>;
+    message: string;
+    tokens?: {
+      accessToken: string;
+      refreshToken: string;
+      expiresIn: number;
+    };
+  }> {
     // Format phone number
     const phoneNumber = formatPhoneNumber(data.phoneNumber);
 
@@ -188,6 +194,114 @@ export class AuthService {
     const existingUser =
       await this.userRepository.findByPhoneNumber(phoneNumber);
     if (existingUser) {
+      // If user exists but is pending verification, allow re-registration with new OTP
+      if (existingUser.status === 'PENDING_VERIFICATION') {
+        // Update user info if provided
+        const updatedUser = await this.userRepository.update(existingUser.id, {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          passwordHash: await hashPassword(data.password),
+          city: data.city,
+          commune: data.commune,
+          neighborhood: data.neighborhood,
+          language: data.language || 'fr',
+        });
+
+        // Generate new OTP
+        const otpCode =
+          config.whatsapp.enabled && config.whatsapp.preferOverSms
+            ? await OTPService.generateWhatsAppOTP(
+                phoneNumber,
+                OTPPurpose.REGISTRATION
+              )
+            : await OTPService.generateOTP(
+                phoneNumber,
+                OTPPurpose.REGISTRATION
+              );
+
+        // Send OTP via preferred channel
+        const { channel } = await this.sendOTPViaPreferredChannel(
+          phoneNumber,
+          otpCode
+        );
+
+        // Also send OTP via email if provided
+        if (data.email) {
+          await emailService.sendOTPEmail({
+            to: data.email,
+            firstName: data.firstName,
+            code: otpCode,
+            purpose: 'registration',
+          });
+        }
+
+        logger.info('User re-registered with new OTP', {
+          userId: existingUser.id,
+          phoneNumber: phoneNumber.slice(-4),
+          otpChannel: channel,
+        });
+
+        // Auto-verify OTP if enabled (development/mock mode)
+        if (config.security.autoVerifyOTP) {
+          // Verify phone number automatically
+          await this.userRepository.verifyPhoneNumber(updatedUser.id);
+
+          // Update user status to ACTIVE
+          const verifiedUser = await this.userRepository.update(
+            updatedUser.id,
+            {
+              status: 'ACTIVE',
+            }
+          );
+
+          // Generate tokens for automatic login
+          const tokens = await JWTService.generateTokenPair(
+            verifiedUser.id,
+            verifiedUser.role
+          );
+
+          // Send welcome message
+          await this.sendWelcomeViaPreferredChannel(
+            phoneNumber,
+            updatedUser.firstName
+          );
+
+          logger.info('User auto-verified on re-registration (mock mode)', {
+            userId: updatedUser.id,
+            phoneNumber: phoneNumber.slice(-4),
+          });
+
+          return {
+            user: {
+              id: verifiedUser.id,
+              phoneNumber: verifiedUser.phoneNumber!,
+              email: verifiedUser.email,
+              firstName: verifiedUser.firstName,
+              lastName: verifiedUser.lastName,
+              role: verifiedUser.role,
+              status: verifiedUser.status,
+            },
+            message:
+              'Réinscription réussie ! Compte automatiquement vérifié (mode développement).',
+            tokens,
+          };
+        }
+
+        return {
+          user: {
+            id: updatedUser.id,
+            phoneNumber: updatedUser.phoneNumber!,
+            email: updatedUser.email,
+            firstName: updatedUser.firstName,
+            lastName: updatedUser.lastName,
+            role: updatedUser.role,
+          },
+          message: `Un nouveau code de vérification a été envoyé par ${channel}`,
+        };
+      }
+
+      // If user is already verified/active, throw error
       throw new AppError(
         APP_CONSTANTS.HTTP_STATUS.CONFLICT,
         'Un compte existe déjà avec ce numéro de téléphone',
@@ -198,7 +312,7 @@ export class AuthService {
     // Check email if provided
     if (data.email) {
       const existingEmail = await this.userRepository.findByEmail(data.email);
-      if (existingEmail) {
+      if (existingEmail && existingEmail.status !== 'PENDING_VERIFICATION') {
         throw new AppError(
           APP_CONSTANTS.HTTP_STATUS.CONFLICT,
           'Un compte existe déjà avec cette adresse email',
@@ -293,6 +407,41 @@ export class AuthService {
       role: user.role,
       otpChannel: channel,
     });
+
+    // Auto-verify OTP if enabled (development/mock mode)
+    if (config.security.autoVerifyOTP) {
+      // Verify phone number automatically
+      await this.userRepository.verifyPhoneNumber(user.id);
+
+      // Update user status to ACTIVE
+      const updatedUser = await this.userRepository.update(user.id, {
+        status: 'ACTIVE',
+      });
+
+      // Generate tokens for automatic login
+      const tokens = await JWTService.generateTokenPair(
+        updatedUser.id,
+        updatedUser.role
+      );
+
+      // Send welcome message
+      await this.sendWelcomeViaPreferredChannel(phoneNumber, user.firstName);
+
+      logger.info('User auto-verified (mock mode)', {
+        userId: user.id,
+        phoneNumber: phoneNumber.slice(-4),
+      });
+
+      // Return user with tokens
+      const { passwordHash: _, ...userWithoutPassword } = updatedUser;
+
+      return {
+        user: userWithoutPassword,
+        message:
+          'Inscription réussie ! Compte automatiquement vérifié (mode développement).',
+        tokens,
+      };
+    }
 
     // Return user without sensitive data
     const { passwordHash: _, ...userWithoutPassword } = user;

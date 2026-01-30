@@ -192,4 +192,43 @@ export const logSecurity = (
   });
 };
 
+// ==================== FRONTEND LOGGER ====================
+
+/**
+ * Dedicated logger for frontend logs
+ * Writes to a separate file: logs/frontend-YYYY-MM-DD.log
+ */
+export const frontendLogger = winston.createLogger({
+  level: 'debug', // Capture all levels from frontend
+  format: combine(timestamp(), errors({ stack: true }), json()),
+  defaultMeta: {
+    service: 'frontend',
+    environment: config.app.env,
+  },
+  transports: [
+    new DailyRotateFile({
+      filename: path.join(logsDir, 'frontend-%DATE%.log'),
+      datePattern: 'YYYY-MM-DD',
+      maxSize: '20m',
+      maxFiles: '14d',
+      format: combine(timestamp(), errors({ stack: true }), json()),
+    }),
+  ],
+});
+
+// Also log to console in development
+if (config.app.env === 'development') {
+  frontendLogger.add(
+    new winston.transports.Console({
+      format: combine(
+        colorize(),
+        timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+        printf(({ level, message, timestamp, ...meta }) => {
+          return `${timestamp} [FRONTEND:${level}]: ${message} ${JSON.stringify(meta)}`;
+        })
+      ),
+    })
+  );
+}
+
 export default logger;
