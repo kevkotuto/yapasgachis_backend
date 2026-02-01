@@ -216,6 +216,7 @@ export class OrderController {
    */
   getSupplierStatistics = asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user.id;
+    const { storeId } = req.query;
 
     // Get supplier profile
     const supplier = await supplierRepository.findByUserId(userId);
@@ -227,7 +228,10 @@ export class OrderController {
       });
     }
 
-    const statistics = await orderRepository.getSupplierStatistics(supplier.id);
+    const statistics = await orderRepository.getSupplierStatistics(
+      supplier.id,
+      storeId as string | undefined
+    );
 
     return res.json({
       success: true,

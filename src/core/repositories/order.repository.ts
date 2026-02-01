@@ -366,7 +366,10 @@ export class OrderRepository {
   /**
    * Get order statistics for a supplier
    */
-  async getSupplierStatistics(supplierId: string): Promise<{
+  async getSupplierStatistics(
+    supplierId: string,
+    storeId?: string
+  ): Promise<{
     totalOrders: number;
     completedOrders: number;
     totalRevenue: number;
@@ -376,6 +379,7 @@ export class OrderRepository {
       // Get all orders containing products from this supplier
       const orders = await prisma.order.findMany({
         where: {
+          ...(storeId && { storeId }),
           items: {
             some: {
               product: {

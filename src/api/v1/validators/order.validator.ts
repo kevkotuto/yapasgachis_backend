@@ -63,6 +63,7 @@ export type GetOrderByIdInput = z.infer<typeof getOrderByIdSchema>['params'];
 // Get user orders
 export const getUserOrdersSchema = z.object({
   query: z.object({
+    storeId: z.string().uuid('ID de magasin invalide').optional(),
     status: z.nativeEnum(OrderStatus).optional(),
     page: z
       .string()
@@ -159,3 +160,14 @@ export const calculateDeliveryFeeSchema = z.object({
 export type CalculateDeliveryFeeInput = z.infer<
   typeof calculateDeliveryFeeSchema
 >['body'];
+
+// Get supplier statistics
+export const getSupplierStatisticsSchema = z.object({
+  query: z.object({
+    storeId: z.string().uuid('ID de magasin invalide').optional(),
+  }),
+});
+
+export type GetSupplierStatisticsInput = z.infer<
+  typeof getSupplierStatisticsSchema
+>['query'];

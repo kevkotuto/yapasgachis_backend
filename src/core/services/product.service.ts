@@ -313,6 +313,7 @@ export class ProductService {
   async getSupplierProducts(
     userId: string,
     filters?: {
+      storeId?: string;
       status?: ProductStatus;
       category?: ProductCategory;
       page?: number;

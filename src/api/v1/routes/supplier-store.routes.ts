@@ -9,6 +9,11 @@ import {
 } from '@/api/v1/validators/supplier-store.validator';
 import { authenticate } from '@/middleware/auth.middleware';
 import { requireRole } from '@/middleware/role-guard.middleware';
+import {
+  uploadImages,
+  handleUploadError,
+  requireFiles,
+} from '@/middleware/upload.middleware';
 import { validate } from '@/middleware/validation.middleware';
 
 const router: Router = Router();
@@ -62,6 +67,23 @@ router.post(
   '/:storeId/toggle-active',
   validate(storeIdParamSchema),
   supplierStoreController.toggleStoreActive
+);
+
+// Upload store images
+router.post(
+  '/:storeId/images',
+  uploadImages,
+  handleUploadError,
+  requireFiles('images'),
+  validate(storeIdParamSchema),
+  supplierStoreController.uploadImages
+);
+
+// Delete store image
+router.delete(
+  '/:storeId/images',
+  validate(storeIdParamSchema),
+  supplierStoreController.deleteImage
 );
 
 export default router;

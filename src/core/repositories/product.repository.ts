@@ -594,18 +594,20 @@ export class ProductRepository {
   async findBySupplierId(
     supplierId: string,
     filters?: {
+      storeId?: string;
       status?: ProductStatus;
       category?: ProductCategory;
       page?: number;
       limit?: number;
     }
   ): Promise<{ products: Product[]; total: number }> {
-    const { status, category, page = 1, limit = 20 } = filters || {};
+    const { storeId, status, category, page = 1, limit = 20 } = filters || {};
     const skip = (page - 1) * limit;
 
     try {
       const where: any = {
         supplierId,
+        ...(storeId && { storeId }),
         ...(status && { status }),
         ...(category && { category }),
       };

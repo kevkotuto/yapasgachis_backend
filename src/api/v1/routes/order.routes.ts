@@ -9,6 +9,7 @@ import {
   cancelOrderSchema,
   checkPaymentStatusSchema,
   calculateDeliveryFeeSchema,
+  getSupplierStatisticsSchema,
 } from '../validators/order.validator';
 
 import { authMiddleware } from '@/middleware/auth.middleware';
@@ -95,6 +96,7 @@ router.get(
   '/supplier-statistics',
   authMiddleware,
   supplierOnly,
+  validate(getSupplierStatisticsSchema),
   orderController.getSupplierStatistics
 );
 

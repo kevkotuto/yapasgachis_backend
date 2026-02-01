@@ -815,6 +815,7 @@ export class OrderService {
   async getSupplierOrders(
     supplierId: string,
     params: {
+      storeId?: string;
       status?: OrderStatus;
       page?: number;
       limit?: number;
@@ -824,11 +825,12 @@ export class OrderService {
     total: number;
     pages: number;
   }> {
-    const { status, page = 1, limit = 20 } = params;
+    const { storeId, status, page = 1, limit = 20 } = params;
     const skip = (page - 1) * limit;
 
     const where: any = {
       supplierId,
+      ...(storeId && { storeId }),
       ...(status && { status }),
     };
 

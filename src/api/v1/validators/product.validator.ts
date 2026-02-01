@@ -260,6 +260,7 @@ export type DeleteImageInput = z.infer<typeof deleteImageSchema>;
 // Get supplier products
 export const getSupplierProductsSchema = z.object({
   query: z.object({
+    storeId: z.string().uuid('ID de magasin invalide').optional(),
     status: z.nativeEnum(ProductStatus).optional(),
     category: z.nativeEnum(ProductCategory).optional(),
     page: z

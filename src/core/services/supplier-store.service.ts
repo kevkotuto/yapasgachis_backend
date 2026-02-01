@@ -5,9 +5,12 @@ import supplierStoreRepository, {
 } from '@/core/repositories/supplier-store.repository';
 import supplierRepository from '@/core/repositories/supplier.repository';
 import subscriptionService from '@/core/services/subscription.service';
+import { MediaServerService } from '@/infrastructure/storage/media-server.service';
 import geocodingService from '@/infrastructure/geolocation/geocoding.service';
 import logger from '@/infrastructure/monitoring/logger';
 import { AppError } from '@/middleware/error-handler.middleware';
+
+const mediaServerService = MediaServerService.getInstance();
 
 /**
  * Supplier Store Service
@@ -460,6 +463,122 @@ export class SupplierStoreService {
     });
 
     return stores;
+  }
+
+  /**
+   * Upload images to store
+   */
+  async uploadImages(
+    supplierId: string,
+    storeId: string,
+    files: { buffer: Buffer; filename: string }[]
+  ): Promise<string[]> {
+    try {
+      const store = await this.storeRepo.findById(storeId);
+      if (!store) {
+        throw new AppError(404, 'Magasin non trouvé', 'STORE_NOT_FOUND');
+      }
+
+      if (store.supplierId !== supplierId) {
+        throw new AppError(
+          403,
+          'Vous ne pouvez pas modifier ce magasin',
+          'FORBIDDEN'
+        );
+      }
+
+      // Upload images to Media Server (O2Switch)
+      const uploadResults = await mediaServerService.uploadMultipleFiles(
+        files,
+        'suppliers'
+      );
+
+      const imageUrls = uploadResults.map((result) => result.url);
+
+      // Update store with new images
+      const existingImages = (store.images as string[] | null) || [];
+      const updatedImages = [...existingImages, ...imageUrls];
+
+      await this.storeRepo.update(storeId, {
+        images: updatedImages,
+      });
+
+      logger.info('Store images uploaded', {
+        supplierId,
+        storeId,
+        count: imageUrls.length,
+      });
+
+      return imageUrls;
+    } catch (error) {
+      logger.error('Failed to upload store images', {
+        supplierId,
+        storeId,
+        error: (error as Error).message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Delete image from store
+   */
+  async deleteImage(
+    supplierId: string,
+    storeId: string,
+    imageUrl: string
+  ): Promise<void> {
+    try {
+      const store = await this.storeRepo.findById(storeId);
+      if (!store) {
+        throw new AppError(404, 'Magasin non trouvé', 'STORE_NOT_FOUND');
+      }
+
+      if (store.supplierId !== supplierId) {
+        throw new AppError(
+          403,
+          'Vous ne pouvez pas modifier ce magasin',
+          'FORBIDDEN'
+        );
+      }
+
+      const existingImages = (store.images as string[] | null) || [];
+      const updatedImages = existingImages.filter((url) => url !== imageUrl);
+
+      await this.storeRepo.update(storeId, {
+        images: updatedImages,
+      });
+
+      // Optionally delete from Media Server (O2Switch)
+      try {
+        // Extract folder and filename from URL
+        // URL format: https://media.yapasgachis.com/suppliers/filename.jpg
+        const urlParts = imageUrl.split('/');
+        const filename = urlParts[urlParts.length - 1];
+        const folder = urlParts[urlParts.length - 2];
+        await mediaServerService.deleteFile(folder, filename);
+      } catch (deleteError) {
+        logger.warn('Failed to delete image from Media Server', {
+          imageUrl,
+          error: (deleteError as Error).message,
+        });
+        // Continue even if deletion from media server fails
+      }
+
+      logger.info('Store image deleted', {
+        supplierId,
+        storeId,
+        imageUrl,
+      });
+    } catch (error) {
+      logger.error('Failed to delete store image', {
+        supplierId,
+        storeId,
+        imageUrl,
+        error: (error as Error).message,
+      });
+      throw error;
+    }
   }
 }
 

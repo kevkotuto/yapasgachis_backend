@@ -259,6 +259,68 @@ export class SupplierStoreController {
       data: normalizeImages(store),
     });
   });
+
+  /**
+   * Upload store images
+   * POST /api/v1/supplier/stores/:storeId/images
+   */
+  uploadImages = asyncHandler(async (req: Request, res: Response) => {
+    const supplierId = req.user?.supplierProfileId;
+
+    if (!supplierId) {
+      throw new AppError(403, 'Profil fournisseur requis', 'SUPPLIER_REQUIRED');
+    }
+
+    const { storeId } = req.params;
+    const files = req.files as Express.Multer.File[] | undefined;
+
+    if (!files || files.length === 0) {
+      throw new AppError(400, 'Aucune image fournie', 'NO_FILES');
+    }
+
+    const filesData = files.map((file) => ({
+      buffer: file.buffer,
+      filename: file.originalname,
+    }));
+
+    const imageUrls = await supplierStoreService.uploadImages(
+      supplierId,
+      storeId,
+      filesData
+    );
+
+    res.json({
+      success: true,
+      message: 'Images téléchargées avec succès',
+      data: { imageUrls },
+    });
+  });
+
+  /**
+   * Delete store image
+   * DELETE /api/v1/supplier/stores/:storeId/images
+   */
+  deleteImage = asyncHandler(async (req: Request, res: Response) => {
+    const supplierId = req.user?.supplierProfileId;
+
+    if (!supplierId) {
+      throw new AppError(403, 'Profil fournisseur requis', 'SUPPLIER_REQUIRED');
+    }
+
+    const { storeId } = req.params;
+    const { imageUrl } = req.body as { imageUrl: string };
+
+    if (!imageUrl) {
+      throw new AppError(400, "URL de l'image requise", 'IMAGE_URL_REQUIRED');
+    }
+
+    await supplierStoreService.deleteImage(supplierId, storeId, imageUrl);
+
+    res.json({
+      success: true,
+      message: 'Image supprimée avec succès',
+    });
+  });
 }
 
 export default new SupplierStoreController();
