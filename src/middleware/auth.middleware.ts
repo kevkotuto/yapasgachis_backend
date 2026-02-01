@@ -2,19 +2,21 @@ import { Request, Response, NextFunction, RequestHandler } from 'express';
 
 import { AppError } from './error-handler.middleware';
 
+import UserRepository from '@/core/repositories/user.repository';
 import JWTService from '@/core/services/jwt.service';
 import { APP_CONSTANTS } from '@/utils/constants';
 
+const userRepository = new UserRepository();
+
 /**
  * Authentication middleware
- * Verifies JWT token and attaches user to request
- * Note: This is synchronous because JWTService.verifyAccessToken is synchronous
+ * Verifies JWT token and attaches user to request with profile IDs
  */
-export const authMiddleware: RequestHandler = (
+export const authMiddleware: RequestHandler = async (
   req: Request,
   _res: Response,
   next: NextFunction
-): void => {
+): Promise<void> => {
   try {
     // Get token from header
     const authHeader = req.headers.authorization;
@@ -42,11 +44,28 @@ export const authMiddleware: RequestHandler = (
     // Verify token (synchronous operation)
     const payload = JWTService.verifyAccessToken(token);
 
-    // Attach user to request
+    // Fetch user with profile relations from database
+    const userWithProfile = await userRepository.findByIdWithProfile(
+      payload.userId
+    );
+
+    if (!userWithProfile) {
+      throw new AppError(
+        APP_CONSTANTS.HTTP_STATUS.UNAUTHORIZED,
+        'Utilisateur non trouvé',
+        APP_CONSTANTS.ERROR_CODES.UNAUTHORIZED
+      );
+    }
+
+    // Attach user to request with profile IDs
     req.user = {
-      id: payload.userId,
-      role: payload.role,
-      phoneNumber: '', // Will be fetched from DB if needed
+      id: userWithProfile.id,
+      role: userWithProfile.role,
+      phoneNumber: userWithProfile.phoneNumber,
+      email: userWithProfile.email || undefined,
+      supplierProfileId: userWithProfile.supplierProfile?.id,
+      associationProfileId: userWithProfile.associationProfile?.id,
+      advertiserProfileId: userWithProfile.advertiserProfile?.id,
     };
 
     next();
@@ -89,11 +108,11 @@ export const authMiddleware: RequestHandler = (
  * Optional authentication middleware
  * Attaches user if token is valid, but doesn't fail if not present
  */
-export const optionalAuthMiddleware: RequestHandler = (
+export const optionalAuthMiddleware: RequestHandler = async (
   req: Request,
   _res: Response,
   next: NextFunction
-): void => {
+): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
 
@@ -111,11 +130,22 @@ export const optionalAuthMiddleware: RequestHandler = (
     const token = parts[1] ?? '';
     const payload = JWTService.verifyAccessToken(token);
 
-    req.user = {
-      id: payload.userId,
-      role: payload.role,
-      phoneNumber: '',
-    };
+    // Fetch user with profile relations from database
+    const userWithProfile = await userRepository.findByIdWithProfile(
+      payload.userId
+    );
+
+    if (userWithProfile) {
+      req.user = {
+        id: userWithProfile.id,
+        role: userWithProfile.role,
+        phoneNumber: userWithProfile.phoneNumber,
+        email: userWithProfile.email || undefined,
+        supplierProfileId: userWithProfile.supplierProfile?.id,
+        associationProfileId: userWithProfile.associationProfile?.id,
+        advertiserProfileId: userWithProfile.advertiserProfile?.id,
+      };
+    }
 
     next();
   } catch {

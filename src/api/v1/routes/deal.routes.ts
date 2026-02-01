@@ -56,29 +56,29 @@ router.get(
   dealRoomController.getRoomById
 );
 
-// Create room (supplier only)
+// Create room (supplier only - both FOOD and DEALS)
 router.post(
   '/:dealId/rooms',
   authenticate,
-  requireRole(['SUPPLIER_DEALS']),
+  requireRole(['SUPPLIER_FOOD', 'SUPPLIER_DEALS']),
   validate(createDealRoomSchema),
   dealRoomController.createRoom
 );
 
-// Update room (supplier only)
+// Update room (supplier only - both FOOD and DEALS)
 router.put(
   '/:dealId/rooms/:roomId',
   authenticate,
-  requireRole(['SUPPLIER_DEALS']),
+  requireRole(['SUPPLIER_FOOD', 'SUPPLIER_DEALS']),
   validate(updateDealRoomSchema),
   dealRoomController.updateRoom
 );
 
-// Delete room (supplier only)
+// Delete room (supplier only - both FOOD and DEALS)
 router.delete(
   '/:dealId/rooms/:roomId',
   authenticate,
-  requireRole(['SUPPLIER_DEALS']),
+  requireRole(['SUPPLIER_FOOD', 'SUPPLIER_DEALS']),
   validate(deleteRoomSchema),
   dealRoomController.deleteRoom
 );

@@ -44,7 +44,7 @@ router.get(
 router.post(
   '/',
   authenticate,
-  requireRole(['SUPPLIER_DEALS']),
+  requireRole(['SUPPLIER_FOOD', 'SUPPLIER_DEALS']),
   validate(createDealOptionSchema),
   dealOptionController.createDealOption
 );
@@ -53,7 +53,7 @@ router.post(
 router.put(
   '/:id',
   authenticate,
-  requireRole(['SUPPLIER_DEALS']),
+  requireRole(['SUPPLIER_FOOD', 'SUPPLIER_DEALS']),
   validate(updateDealOptionSchema),
   dealOptionController.updateDealOption
 );
@@ -62,7 +62,7 @@ router.put(
 router.delete(
   '/:id',
   authenticate,
-  requireRole(['SUPPLIER_DEALS']),
+  requireRole(['SUPPLIER_FOOD', 'SUPPLIER_DEALS']),
   validate(optionIdParamSchema),
   dealOptionController.deleteDealOption
 );
@@ -71,7 +71,7 @@ router.delete(
 router.patch(
   '/deal/:dealId/reorder',
   authenticate,
-  requireRole(['SUPPLIER_DEALS']),
+  requireRole(['SUPPLIER_FOOD', 'SUPPLIER_DEALS']),
   validate(reorderDealOptionsSchema),
   dealOptionController.reorderDealOptions
 );
