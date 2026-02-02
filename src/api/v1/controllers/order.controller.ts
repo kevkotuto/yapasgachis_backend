@@ -34,7 +34,7 @@ export class OrderController {
     // Map paymentProvider to paymentMethod for the service
     const { order, paymentUrl } = await orderService.createOrder({
       userId,
-      items: body.items,
+      items: body.items as Array<{ productId: string; quantity: number }>,
       deliveryMethod: body.deliveryMethod,
       paymentMethod: body.paymentProvider as any,
       deliveryAddress: body.deliveryAddress,
