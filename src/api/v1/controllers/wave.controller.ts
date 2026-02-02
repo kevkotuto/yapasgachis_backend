@@ -236,6 +236,14 @@ export class WaveController {
     // Construct signed payload: timestamp.rawBody (Wave format)
     const signedPayload = `${timestamp}.${rawBody}`;
 
+    // Debug logs
+    logger.info('Wave webhook signature verification', {
+      timestamp,
+      signature: signature.substring(0, 20) + '...',
+      rawBodyLength: rawBody.length,
+      signedPayloadLength: signedPayload.length,
+    });
+
     // Vérifier la signature et parser le webhook
     const webhook = waveService.parseWebhook(signedPayload, signature);
 

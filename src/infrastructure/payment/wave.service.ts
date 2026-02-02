@@ -346,6 +346,13 @@ export class WaveService {
         .update(payload)
         .digest('hex');
 
+      logger.info('Webhook signature comparison', {
+        receivedSignature: signature.substring(0, 20) + '...',
+        expectedSignature: expectedSignature.substring(0, 20) + '...',
+        payloadLength: payload.length,
+        secretLength: this.webhookSecret.length,
+      });
+
       return crypto.timingSafeEqual(
         Buffer.from(signature),
         Buffer.from(expectedSignature)
