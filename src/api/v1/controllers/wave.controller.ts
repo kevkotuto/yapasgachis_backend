@@ -195,13 +195,32 @@ export class WaveController {
    * IMPORTANT: Requires raw body for signature verification
    */
   handleWebhook = asyncHandler(async (req: Request, res: Response) => {
-    const signature = req.headers['x-wave-signature'] as string;
+    const waveSignatureHeader = req.headers['wave-signature'] as string;
 
-    if (!signature) {
+    if (!waveSignatureHeader) {
       throw new AppError(
         400,
         'Signature manquante',
         'MISSING_WEBHOOK_SIGNATURE'
+      );
+    }
+
+    // Parse Wave-Signature header: "t=1639081943, v1=signature_hash"
+    const signatureParts = waveSignatureHeader.split(',').reduce(
+      (acc, part) => {
+        const [key, value] = part.trim().split('=');
+        acc[key] = value;
+        return acc;
+      },
+      {} as Record<string, string>
+    );
+
+    const signature = signatureParts.v1;
+    if (!signature) {
+      throw new AppError(
+        400,
+        'Format de signature invalide',
+        'INVALID_SIGNATURE_FORMAT'
       );
     }
 
