@@ -239,12 +239,15 @@ export class WaveController {
 
     // Debug logs
     logger.info('Wave webhook signature verification', {
+      fullHeader: waveSignatureHeader,
       timestamp,
-      signature: signature.substring(0, 20) + '...',
+      signatureLength: signature.length,
+      signatureFull: signature,
       rawBodyLength: rawBody.length,
       signedPayloadLength: signedPayload.length,
       hasRawBody,
-      rawBodyPreview: rawBody.substring(0, 100) + '...',
+      rawBodyPreview: rawBody.substring(0, 150),
+      signedPayloadPreview: signedPayload.substring(0, 150),
     });
 
     // Vérifier la signature et parser le webhook

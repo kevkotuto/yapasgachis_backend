@@ -347,19 +347,31 @@ export class WaveService {
         .digest('hex');
 
       logger.info('Webhook signature comparison', {
-        receivedSignature: signature.substring(0, 20) + '...',
-        expectedSignature: expectedSignature.substring(0, 20) + '...',
+        receivedSignature: signature,
+        receivedLength: signature.length,
+        expectedSignature: expectedSignature,
+        expectedLength: expectedSignature.length,
         payloadLength: payload.length,
+        payloadPreview: payload.substring(0, 150),
+        secretPrefix: this.webhookSecret.substring(0, 20) + '...',
         secretLength: this.webhookSecret.length,
+        match: signature === expectedSignature,
       });
 
-      return crypto.timingSafeEqual(
-        Buffer.from(signature),
-        Buffer.from(expectedSignature)
-      );
+      const isValid =
+        signature.length === expectedSignature.length &&
+        crypto.timingSafeEqual(
+          Buffer.from(signature),
+          Buffer.from(expectedSignature)
+        );
+
+      logger.info('Signature verification result', { isValid });
+
+      return isValid;
     } catch (error) {
       logger.error('Webhook signature verification failed', {
         error: (error as Error).message,
+        stack: (error as Error).stack,
       });
       return false;
     }
