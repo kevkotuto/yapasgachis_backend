@@ -169,7 +169,10 @@ export const bookDealSchema = z.object({
       bookingEndDate: z.string().datetime().optional(),
       bookingSlot: z.string().optional(),
       quantity: z.number().int().positive().default(1),
-      paymentMethod: z.enum(['WAVE', 'CASH_ON_DELIVERY']),
+      paymentMethod: z
+        .string()
+        .toUpperCase()
+        .pipe(z.enum(['WAVE', 'CASH_ON_DELIVERY'])),
       userNotes: z.string().max(500).optional(),
     })
     .refine(
@@ -192,7 +195,10 @@ export const purchaseDealSchema = z.object({
   }),
   body: z.object({
     quantity: z.number().int().positive().default(1),
-    paymentMethod: z.enum(['WAVE', 'CASH_ON_DELIVERY']),
+    paymentMethod: z
+      .string()
+      .toUpperCase()
+      .pipe(z.enum(['WAVE', 'CASH_ON_DELIVERY'])),
     userNotes: z.string().max(500).optional(),
   }),
 });
