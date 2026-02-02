@@ -31,10 +31,13 @@ export class OrderController {
     const userId = req.user.id;
     const body = req.body as CreateOrderInput;
 
+    // Map paymentProvider to paymentMethod for the service
+    const { paymentProvider, ...rest } = body;
     const { order, paymentUrl } = await orderService.createOrder({
       userId,
-      ...body,
-    } as import('@/core/services/order.service').CreateOrderParams);
+      ...rest,
+      paymentMethod: paymentProvider,
+    });
 
     logger.info('Order created via API', {
       userId,
