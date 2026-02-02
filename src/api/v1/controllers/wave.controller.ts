@@ -4,11 +4,14 @@ import {
   InitiateWavePaymentInput,
   GetWavePaymentStatusInput,
 } from '@/api/v1/validators/wave.validator';
+import notificationService from '@/core/services/notification.service';
 import waveService from '@/infrastructure/payment/wave.service';
 import { asyncHandler, AppError } from '@/middleware/error-handler.middleware';
 import logger from '@/infrastructure/monitoring/logger';
 import { prisma } from '@/infrastructure/database/prisma';
+import socketService from '@/infrastructure/websocket/socket.service';
 import config from '@/config';
+import { NotificationType, NotificationPriority } from '@/utils/enums';
 
 /**
  * Wave Payment Controller
@@ -297,12 +300,24 @@ export class WaveController {
     try {
       if (type === 'order') {
         // Mettre à jour la commande
-        await prisma.order.update({
+        const order = await prisma.order.update({
           where: { id: entityId },
           data: {
             status: 'PAID',
             paymentReference: transaction_id,
             paidAt: new Date(),
+          },
+          include: {
+            client: true,
+            store: {
+              include: {
+                supplier: {
+                  include: {
+                    user: true,
+                  },
+                },
+              },
+            },
           },
         });
 
@@ -311,9 +326,53 @@ export class WaveController {
           transactionId: transaction_id,
           amount,
         });
+
+        // Envoyer notification au client
+        await notificationService.create({
+          userId: order.clientId,
+          type: NotificationType.ORDER_PAID,
+          title: 'Paiement confirmé',
+          message: `Votre paiement de ${amount} XOF pour la commande #${order.orderNumber} a été confirmé avec succès.`,
+          data: {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            amount: order.total,
+            transactionId: transaction_id,
+          },
+          priority: NotificationPriority.HIGH,
+          sendPush: true,
+          sendRealtime: true,
+        });
+
+        // Envoyer notification au fournisseur
+        if (order.store?.supplier?.user?.id) {
+          await notificationService.create({
+            userId: order.store.supplier.user.id,
+            type: NotificationType.PAYMENT_RECEIVED,
+            title: 'Nouveau paiement reçu',
+            message: `Paiement de ${amount} XOF reçu pour la commande #${order.orderNumber}.`,
+            data: {
+              orderId: order.id,
+              orderNumber: order.orderNumber,
+              amount: order.total,
+              transactionId: transaction_id,
+              clientName: `${order.client.firstName} ${order.client.lastName}`,
+            },
+            priority: NotificationPriority.HIGH,
+            sendPush: true,
+            sendRealtime: true,
+          });
+        }
+
+        // Envoyer événement WebSocket
+        socketService.sendToUser(order.clientId, 'order:status_update', {
+          orderId: order.id,
+          status: 'PAID',
+          timestamp: new Date(),
+        });
       } else if (type === 'booking') {
         // Mettre à jour la réservation
-        await prisma.dealBooking.update({
+        const booking = await prisma.dealBooking.update({
           where: { id: entityId },
           data: {
             status: 'CONFIRMED',
@@ -322,18 +381,85 @@ export class WaveController {
           },
         });
 
+        // Récupérer les données nécessaires
+        const deal = await prisma.deal.findUnique({
+          where: { id: booking.dealId },
+          include: {
+            store: {
+              include: {
+                supplier: {
+                  include: {
+                    user: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        const user = await prisma.user.findUnique({
+          where: { id: booking.userId },
+        });
+
         logger.info('Booking payment confirmed via webhook', {
           bookingId: entityId,
           transactionId: transaction_id,
           amount,
         });
+
+        if (deal && user) {
+          // Envoyer notification au client
+          await notificationService.create({
+            userId: booking.userId,
+            type: NotificationType.DEAL_BOOKING_CONFIRMED,
+            title: 'Réservation confirmée',
+            message: `Votre paiement de ${amount} XOF pour le bon plan "${deal.title}" a été confirmé.`,
+            data: {
+              bookingId: booking.id,
+              dealTitle: deal.title,
+              amount: booking.totalPrice,
+              transactionId: transaction_id,
+            },
+            priority: NotificationPriority.HIGH,
+            sendPush: true,
+            sendRealtime: true,
+          });
+
+          // Envoyer notification au fournisseur
+          if (deal.store?.supplier?.user?.id) {
+            await notificationService.create({
+              userId: deal.store.supplier.user.id,
+              type: NotificationType.PAYMENT_RECEIVED,
+              title: 'Nouvelle réservation payée',
+              message: `Paiement de ${amount} XOF reçu pour le bon plan "${deal.title}".`,
+              data: {
+                bookingId: booking.id,
+                dealTitle: deal.title,
+                amount: booking.totalPrice,
+                transactionId: transaction_id,
+                clientName: `${user.firstName} ${user.lastName}`,
+              },
+              priority: NotificationPriority.HIGH,
+              sendPush: true,
+              sendRealtime: true,
+            });
+          }
+        }
       } else if (type === 'donation') {
         // Mettre à jour la donation
-        await prisma.donation.update({
+        const donation = await prisma.donation.update({
           where: { id: entityId },
           data: {
             status: 'COMPLETED',
             paymentReference: transaction_id,
+          },
+          include: {
+            donor: true,
+            association: {
+              include: {
+                user: true,
+              },
+            },
           },
         });
 
@@ -342,6 +468,42 @@ export class WaveController {
           transactionId: transaction_id,
           amount,
         });
+
+        // Envoyer notification au donateur
+        await notificationService.create({
+          userId: donation.donorId,
+          type: NotificationType.DONATION_CONFIRMED,
+          title: 'Don confirmé',
+          message: `Votre don de ${amount} XOF à ${donation.association.name} a été confirmé. Merci pour votre générosité!`,
+          data: {
+            donationId: donation.id,
+            associationName: donation.association.name,
+            amount: donation.amount,
+            transactionId: transaction_id,
+          },
+          priority: NotificationPriority.HIGH,
+          sendPush: true,
+          sendRealtime: true,
+        });
+
+        // Envoyer notification à l'association
+        if (donation.association.user?.id) {
+          await notificationService.create({
+            userId: donation.association.user.id,
+            type: NotificationType.PAYMENT_RECEIVED,
+            title: 'Nouveau don reçu',
+            message: `Don de ${amount} XOF reçu de ${donation.donor.firstName} ${donation.donor.lastName}.`,
+            data: {
+              donationId: donation.id,
+              amount: donation.amount,
+              transactionId: transaction_id,
+              donorName: `${donation.donor.firstName} ${donation.donor.lastName}`,
+            },
+            priority: NotificationPriority.HIGH,
+            sendPush: true,
+            sendRealtime: true,
+          });
+        }
       }
     } catch (error) {
       logger.error('Failed to process checkout completed webhook', {
