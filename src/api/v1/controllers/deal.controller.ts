@@ -96,7 +96,7 @@ export class DealController {
       userNotes?: string;
     };
 
-    const booking = await dealService.bookDeal(userId, dealId, {
+    const { booking, paymentUrl } = await dealService.bookDeal(userId, dealId, {
       bookingDate: new Date(bookingDate),
       bookingEndDate: bookingEndDate ? new Date(bookingEndDate) : undefined,
       bookingSlot,
@@ -108,7 +108,13 @@ export class DealController {
     res.status(201).json({
       success: true,
       message: 'Réservation créée avec succès',
-      data: booking,
+      data: {
+        booking,
+        payment: {
+          paymentUrl,
+          status: booking.status,
+        },
+      },
     });
   });
 
@@ -125,16 +131,26 @@ export class DealController {
       userNotes?: string;
     };
 
-    const booking = await dealService.purchaseDeal(userId, dealId, {
-      quantity,
-      paymentMethod,
-      userNotes,
-    });
+    const { booking, paymentUrl } = await dealService.purchaseDeal(
+      userId,
+      dealId,
+      {
+        quantity,
+        paymentMethod,
+        userNotes,
+      }
+    );
 
     res.status(201).json({
       success: true,
       message: 'Achat effectué avec succès',
-      data: booking,
+      data: {
+        booking,
+        payment: {
+          paymentUrl,
+          status: booking.status,
+        },
+      },
     });
   });
 

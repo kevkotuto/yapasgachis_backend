@@ -6,6 +6,7 @@ import {
   BookingStatus,
 } from '@prisma/client';
 
+import config from '@/config';
 import dealBookingRepository, {
   DealBookingRepository,
 } from '@/core/repositories/deal-booking.repository';
@@ -16,6 +17,7 @@ import supplierStoreRepository from '@/core/repositories/supplier-store.reposito
 import supplierRepository from '@/core/repositories/supplier.repository';
 import subscriptionService from '@/core/services/subscription.service';
 import logger from '@/infrastructure/monitoring/logger';
+import waveService from '@/infrastructure/payment/wave.service';
 import { AppError } from '@/middleware/error-handler.middleware';
 import { generateRandomCode } from '@/utils/helpers';
 import { generateQRCode } from '@/utils/qr-code.utils';
@@ -439,7 +441,10 @@ export class DealService {
       paymentMethod: 'WAVE' | 'CASH_ON_DELIVERY';
       userNotes?: string;
     }
-  ): Promise<DealBooking> {
+  ): Promise<{
+    booking: DealBooking;
+    paymentUrl?: string;
+  }> {
     try {
       const deal = await this.dealRepo.findById(dealId);
       if (!deal) {
@@ -606,6 +611,39 @@ export class DealService {
       // Decrement available quantity
       await this.dealRepo.decrementQuantity(dealId, quantity);
 
+      let paymentUrl: string | undefined;
+
+      // Si paiement Wave, créer le checkout et obtenir l'URL de paiement
+      if (data.paymentMethod === 'WAVE') {
+        try {
+          const checkout = await waveService.createCheckout({
+            amount: totalPrice,
+            orderId: booking.id,
+            successUrl: `${config.app.frontendUrl}/deals/payment/success?bookingId=${booking.id}`,
+            errorUrl: `${config.app.frontendUrl}/deals/payment/error?bookingId=${booking.id}`,
+          });
+
+          // Mettre à jour le booking avec le checkoutId Wave
+          await this.bookingRepo.update(booking.id, {
+            paymentReference: checkout.id,
+          });
+
+          paymentUrl = checkout.wave_launch_url;
+
+          logger.info('Wave checkout created for deal booking', {
+            bookingId: booking.id,
+            checkoutId: checkout.id,
+            amount: totalPrice,
+          });
+        } catch (error) {
+          logger.error('Failed to create Wave checkout for deal', {
+            bookingId: booking.id,
+            error: (error as Error).message,
+          });
+          // Ne pas bloquer la réservation, mais logger l'erreur
+        }
+      }
+
       logger.info('Deal booked', {
         userId,
         dealId,
@@ -613,9 +651,13 @@ export class DealService {
         quantity,
         numberOfNights: numberOfNights || null,
         totalPrice,
+        paymentMethod: data.paymentMethod,
       });
 
-      return booking;
+      return {
+        booking,
+        paymentUrl,
+      };
     } catch (error) {
       if (error instanceof AppError) throw error;
       logger.error('Error booking deal', {
@@ -639,7 +681,10 @@ export class DealService {
       paymentMethod: 'WAVE' | 'CASH_ON_DELIVERY';
       userNotes?: string;
     }
-  ): Promise<DealBooking> {
+  ): Promise<{
+    booking: DealBooking;
+    paymentUrl?: string;
+  }> {
     try {
       // 1. Récupérer et valider le deal
       const deal = await this.dealRepo.findById(dealId);
@@ -710,16 +755,53 @@ export class DealService {
       // 10. Décrémenter la quantité disponible
       await this.dealRepo.decrementQuantity(dealId, quantity);
 
-      // 11. Logger l'opération
+      let paymentUrl: string | undefined;
+
+      // 11. Si paiement Wave, créer le checkout et obtenir l'URL de paiement
+      if (data.paymentMethod === 'WAVE') {
+        try {
+          const checkout = await waveService.createCheckout({
+            amount: totalPrice,
+            orderId: booking.id,
+            successUrl: `${config.app.frontendUrl}/deals/payment/success?bookingId=${booking.id}`,
+            errorUrl: `${config.app.frontendUrl}/deals/payment/error?bookingId=${booking.id}`,
+          });
+
+          // Mettre à jour le booking avec le checkoutId Wave
+          await this.bookingRepo.update(booking.id, {
+            paymentReference: checkout.id,
+          });
+
+          paymentUrl = checkout.wave_launch_url;
+
+          logger.info('Wave checkout created for deal booking', {
+            bookingId: booking.id,
+            checkoutId: checkout.id,
+            amount: totalPrice,
+          });
+        } catch (error) {
+          logger.error('Failed to create Wave checkout for deal', {
+            bookingId: booking.id,
+            error: (error as Error).message,
+          });
+          // Ne pas bloquer l'achat, mais logger l'erreur
+        }
+      }
+
+      // 12. Logger l'opération
       logger.info('Deal purchased', {
         userId,
         dealId,
         bookingId: booking.id,
         quantity,
         totalPrice,
+        paymentMethod: data.paymentMethod,
       });
 
-      return booking;
+      return {
+        booking,
+        paymentUrl,
+      };
     } catch (error) {
       if (error instanceof AppError) throw error;
       logger.error('Error purchasing deal', {
