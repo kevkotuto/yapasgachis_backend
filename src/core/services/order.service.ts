@@ -10,6 +10,7 @@ import escrowService from '@/core/services/escrow.service';
 import eventService, { AppEvent } from '@/core/services/event.service';
 import platformSettingsService from '@/core/services/platform-settings.service';
 import { prisma } from '@/infrastructure/database/prisma';
+import { MobileMoneyProvider } from '@/infrastructure/payment/mobile-money.service';
 import logger from '@/infrastructure/monitoring/logger';
 import socketService from '@/infrastructure/websocket/socket.service';
 import { AppError } from '@/middleware/error-handler.middleware';
@@ -35,7 +36,7 @@ export interface CreateOrderParams {
     quantity: number;
   }>;
   deliveryMethod: 'PICKUP' | 'DELIVERY';
-  paymentMethod: 'WAVE' | 'CASH_ON_DELIVERY';
+  paymentMethod: MobileMoneyProvider | 'CASH_ON_DELIVERY';
   // Pour la livraison
   deliveryAddress?: string;
   deliveryLatitude?: number;
