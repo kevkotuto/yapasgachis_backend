@@ -32,11 +32,16 @@ export class OrderController {
     const body = req.body as CreateOrderInput;
 
     // Map paymentProvider to paymentMethod for the service
-    const { paymentProvider, ...rest } = body;
     const { order, paymentUrl } = await orderService.createOrder({
       userId,
-      ...rest,
-      paymentMethod: paymentProvider,
+      items: body.items,
+      deliveryMethod: body.deliveryMethod,
+      paymentMethod: body.paymentProvider as any,
+      deliveryAddress: body.deliveryAddress,
+      deliveryCity: body.deliveryCity,
+      deliveryPhone: body.deliveryPhone,
+      notes: body.notes,
+      scheduledPickupTime: body.scheduledPickupTime,
     });
 
     logger.info('Order created via API', {
