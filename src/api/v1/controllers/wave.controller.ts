@@ -218,8 +218,10 @@ export class WaveController {
       {} as Record<string, string>
     );
 
+    const timestamp = signatureParts.t;
     const signature = signatureParts.v1;
-    if (!signature) {
+
+    if (!signature || !timestamp) {
       throw new AppError(
         400,
         'Format de signature invalide',
@@ -231,8 +233,11 @@ export class WaveController {
     // Express should preserve rawBody via middleware
     const rawBody = (req as any).rawBody || JSON.stringify(req.body);
 
+    // Construct signed payload: timestamp.rawBody (Wave format)
+    const signedPayload = `${timestamp}.${rawBody}`;
+
     // Vérifier la signature et parser le webhook
-    const webhook = waveService.parseWebhook(rawBody, signature);
+    const webhook = waveService.parseWebhook(signedPayload, signature);
 
     if (!webhook) {
       throw new AppError(
