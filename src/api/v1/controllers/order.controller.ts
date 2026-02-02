@@ -38,9 +38,7 @@ export class OrderController {
       deliveryMethod: body.deliveryMethod,
       paymentMethod: body.paymentProvider as any,
       deliveryAddress: body.deliveryAddress,
-      deliveryCity: body.deliveryCity,
-      deliveryPhone: body.deliveryPhone,
-      notes: body.notes,
+      deliveryNotes: body.notes,
       scheduledPickupTime: body.scheduledPickupTime,
     });
 
