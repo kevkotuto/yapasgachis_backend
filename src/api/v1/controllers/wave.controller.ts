@@ -232,6 +232,7 @@ export class WaveController {
     // Get raw body for signature verification
     // Express should preserve rawBody via middleware
     const rawBody = (req as any).rawBody || JSON.stringify(req.body);
+    const hasRawBody = !!(req as any).rawBody;
 
     // Construct signed payload: timestamp.rawBody (Wave format)
     const signedPayload = `${timestamp}.${rawBody}`;
@@ -242,6 +243,8 @@ export class WaveController {
       signature: signature.substring(0, 20) + '...',
       rawBodyLength: rawBody.length,
       signedPayloadLength: signedPayload.length,
+      hasRawBody,
+      rawBodyPreview: rawBody.substring(0, 100) + '...',
     });
 
     // Vérifier la signature et parser le webhook
