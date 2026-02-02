@@ -78,8 +78,8 @@ export class EscrowService {
       const checkout = await waveService.createCheckout({
         amount: params.amount,
         orderId: params.orderId,
-        successUrl: `${config.app.url}/api/v1/payments/wave/success?orderId=${params.orderId}`,
-        errorUrl: `${config.app.url}/api/v1/payments/wave/error?orderId=${params.orderId}`,
+        successUrl: `${config.app.frontendUrl}/payment/success?orderId=${params.orderId}`,
+        errorUrl: `${config.app.frontendUrl}/payment/error?orderId=${params.orderId}`,
       });
 
       // Créer l'enregistrement escrow
