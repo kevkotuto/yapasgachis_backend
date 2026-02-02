@@ -69,8 +69,14 @@ app.use(helmet());
 // CORS
 app.use(corsMiddleware);
 
-// Body parser
-app.use(express.json({ limit: '10mb' }));
+// Body parser - Skip JSON parsing for Wave webhook to preserve raw body
+app.use((req, res, next) => {
+  if (req.path === '/api/v1/payments/wave/webhook') {
+    next();
+  } else {
+    express.json({ limit: '10mb' })(req, res, next);
+  }
+});
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Compression
