@@ -161,6 +161,15 @@ export type CalculateDeliveryFeeInput = z.infer<
   typeof calculateDeliveryFeeSchema
 >['body'];
 
+// Validate pickup code
+export const validatePickupSchema = z.object({
+  body: z.object({
+    pickupCode: z.string().min(1, 'Le code de retrait est requis'),
+  }),
+});
+
+export type ValidatePickupInput = z.infer<typeof validatePickupSchema>['body'];
+
 // Get supplier statistics
 export const getSupplierStatisticsSchema = z.object({
   query: z.object({

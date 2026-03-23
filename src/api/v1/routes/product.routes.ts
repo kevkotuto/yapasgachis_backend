@@ -14,6 +14,7 @@ import {
   deleteImageSchema,
   getSupplierProductsSchema,
   toggleProductStatusSchema,
+  updateProductSettingsSchema,
 } from '../validators/product.validator';
 
 import { authMiddleware } from '@/middleware/auth.middleware';
@@ -130,6 +131,19 @@ router.patch(
   supplierOnly,
   validate(updateStockSchema),
   productController.updateStock
+);
+
+/**
+ * Update product stock settings (minStock/maxStock)
+ * PUT /:id/settings
+ * Requires: Authentication + SUPPLIER role
+ */
+router.put(
+  '/:id/settings',
+  authMiddleware,
+  supplierOnly,
+  validate(updateProductSettingsSchema),
+  productController.updateProductSettings
 );
 
 /**

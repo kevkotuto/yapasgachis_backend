@@ -661,6 +661,8 @@ model Product {
   quantity          Int
   quantityAvailable Int
   unit              String @default("piece") // piece, kg, portion
+  minStock          Int?   @default(5)
+  maxStock          Int?   @default(20)
 
   // Food Safety
   expiryDate       DateTime? // DLC/DLUO

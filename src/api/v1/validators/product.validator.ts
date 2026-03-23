@@ -280,6 +280,29 @@ export type GetSupplierProductsInput = z.infer<
   typeof getSupplierProductsSchema
 >['query'];
 
+// Update product stock settings (minStock/maxStock)
+export const updateProductSettingsSchema = z.object({
+  params: z.object({
+    id: z.string().uuid('ID de produit invalide'),
+  }),
+  body: z.object({
+    minStock: z
+      .number()
+      .int()
+      .min(0, 'Le stock minimum doit être >= 0')
+      .optional(),
+    maxStock: z
+      .number()
+      .int()
+      .min(1, 'Le stock maximum doit être >= 1')
+      .optional(),
+  }),
+});
+
+export type UpdateProductSettingsInput = z.infer<
+  typeof updateProductSettingsSchema
+>;
+
 // Toggle product status
 export const toggleProductStatusSchema = z.object({
   params: z.object({

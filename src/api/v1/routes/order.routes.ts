@@ -10,6 +10,7 @@ import {
   checkPaymentStatusSchema,
   calculateDeliveryFeeSchema,
   getSupplierStatisticsSchema,
+  validatePickupSchema,
 } from '../validators/order.validator';
 
 import { authMiddleware } from '@/middleware/auth.middleware';
@@ -98,6 +99,19 @@ router.get(
   supplierOnly,
   validate(getSupplierStatisticsSchema),
   orderController.getSupplierStatistics
+);
+
+/**
+ * Validate pickup code (supplier scans customer's code)
+ * POST /validate-pickup
+ * Requires: Authentication + SUPPLIER role
+ */
+router.post(
+  '/validate-pickup',
+  authMiddleware,
+  supplierOnly,
+  validate(validatePickupSchema),
+  orderController.validatePickup
 );
 
 /**

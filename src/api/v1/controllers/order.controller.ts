@@ -9,6 +9,7 @@ import {
   CheckPaymentStatusInput,
   SearchOrdersInput,
   CalculateDeliveryFeeInput,
+  ValidatePickupInput,
 } from '../validators/order.validator';
 
 import orderRepository from '@/core/repositories/order.repository';
@@ -283,6 +284,41 @@ export class OrderController {
       });
     }
   );
+
+  /**
+   * Validate pickup code (supplier scans customer's code)
+   * POST /api/v1/orders/validate-pickup
+   */
+  validatePickup = asyncHandler(async (req: Request, res: Response) => {
+    const { pickupCode } = req.body as ValidatePickupInput;
+
+    // Get supplier profile
+    const supplier = await supplierRepository.findByUserId(req.user.id);
+    if (!supplier) {
+      return res.status(404).json({
+        success: false,
+        message: 'Profil fournisseur non trouvé',
+        code: 'SUPPLIER_NOT_FOUND',
+      });
+    }
+
+    const order = await orderService.validateAndCompletePickup(
+      supplier.id,
+      pickupCode
+    );
+
+    logger.info('Order pickup validated via API', {
+      userId: req.user.id,
+      orderId: order.id,
+      pickupCode,
+    });
+
+    return res.json({
+      success: true,
+      message: 'Commande validée avec succès',
+      data: { order },
+    });
+  });
 
   /**
    * Get supported payment providers

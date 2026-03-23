@@ -499,6 +499,66 @@ export class ProductService {
   }
 
   /**
+   * Update product stock settings (minStock/maxStock)
+   */
+  async updateSettings(
+    userId: string,
+    productId: string,
+    settings: { minStock?: number; maxStock?: number }
+  ): Promise<Product> {
+    try {
+      const product = await this.productRepo.findById(productId);
+      if (!product) {
+        throw new AppError(404, 'Produit non trouvé', 'PRODUCT_NOT_FOUND');
+      }
+
+      const supplier = await this.supplierRepo.findByUserId(userId);
+      if (!supplier || product.supplierId !== supplier.id) {
+        throw new AppError(
+          403,
+          'Vous ne pouvez pas modifier ce produit',
+          'FORBIDDEN'
+        );
+      }
+
+      // Valider cohérence min < max
+      const min = settings.minStock ?? (product as any).minStock ?? 5;
+      const max = settings.maxStock ?? (product as any).maxStock ?? 20;
+      if (min >= max) {
+        throw new AppError(
+          400,
+          'Le stock minimum doit être inférieur au maximum',
+          'INVALID_STOCK_SETTINGS'
+        );
+      }
+
+      const updated = await this.productRepo.update(productId, {
+        ...(settings.minStock !== undefined && { minStock: settings.minStock }),
+        ...(settings.maxStock !== undefined && { maxStock: settings.maxStock }),
+      });
+
+      logger.info('Product settings updated', {
+        userId,
+        productId,
+        settings,
+      });
+
+      return updated;
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      logger.error('Error updating product settings', {
+        userId,
+        productId,
+        error: (error as Error).message,
+      });
+      throw new AppError(
+        500,
+        'Erreur lors de la mise à jour des paramètres de stock'
+      );
+    }
+  }
+
+  /**
    * Toggle product status between ACTIVE and DRAFT
    */
   async toggleProductStatus(

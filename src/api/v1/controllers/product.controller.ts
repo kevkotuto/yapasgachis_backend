@@ -13,6 +13,7 @@ import {
   DeleteImageInput,
   GetSupplierProductsInput,
   ToggleProductStatusInput,
+  UpdateProductSettingsInput,
 } from '../validators/product.validator';
 
 import productService from '@/core/services/product.service';
@@ -303,6 +304,41 @@ export class ProductController {
       res.json({
         success: true,
         message: 'Image supprimée avec succès',
+      });
+    }
+  );
+
+  /**
+   * Update product stock settings (minStock/maxStock)
+   * PUT /api/v1/products/:id/settings
+   */
+  updateProductSettings = asyncHandler(
+    async (
+      req: Request<
+        UpdateProductSettingsInput['params'],
+        {},
+        UpdateProductSettingsInput['body']
+      >,
+      res: Response
+    ) => {
+      const userId = req.user.id;
+      const { id } = req.params;
+      const { minStock, maxStock } = req.body;
+
+      const product = await productService.updateSettings(userId, id, {
+        minStock,
+        maxStock,
+      });
+
+      logger.info('Product settings updated via API', {
+        userId,
+        productId: id,
+      });
+
+      res.json({
+        success: true,
+        message: 'Paramètres de stock mis à jour',
+        data: normalizeImages(product),
       });
     }
   );

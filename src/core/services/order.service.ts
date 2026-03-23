@@ -951,6 +951,77 @@ export class OrderService {
     return order as unknown as OrderWithDetails;
   }
 
+  /**
+   * Valider un code de pickup ET marquer la commande comme complétée
+   */
+  async validateAndCompletePickup(
+    supplierId: string,
+    pickupCode: string
+  ): Promise<OrderWithDetails> {
+    // 1. Trouver et valider la commande
+    const order = await this.validatePickupCode(supplierId, pickupCode);
+
+    // 2. Mettre à jour le statut vers COMPLETED
+    const updatedOrder = await prisma.order.update({
+      where: { id: order.id },
+      data: {
+        status: OrderStatus.COMPLETED,
+        completedAt: new Date(),
+      },
+      include: {
+        items: {
+          include: {
+            product: {
+              include: {
+                supplier: {
+                  select: {
+                    id: true,
+                    businessName: true,
+                    address: true,
+                    acceptCashPayment: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        client: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phoneNumber: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    // 3. Émettre l'événement de commande complétée
+    eventService.emit(AppEvent.ORDER_COMPLETED, {
+      orderId: updatedOrder.id,
+      orderNumber: updatedOrder.orderNumber,
+      userId: updatedOrder.clientId,
+      supplierId,
+    });
+
+    // 4. Notifier le client via WebSocket
+    if (updatedOrder.clientId) {
+      socketService.sendToUser(updatedOrder.clientId, 'order:completed', {
+        orderId: updatedOrder.id,
+        orderNumber: updatedOrder.orderNumber,
+      });
+    }
+
+    logger.info('Order pickup validated and completed', {
+      orderId: updatedOrder.id,
+      pickupCode,
+      supplierId,
+    });
+
+    return updatedOrder as unknown as OrderWithDetails;
+  }
+
   // ==================== HELPERS PRIVÉS ====================
 
   private async validateAndGetProducts(
