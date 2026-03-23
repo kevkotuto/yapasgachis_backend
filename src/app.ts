@@ -40,6 +40,7 @@ import supplierStoreRoutes from '@/api/v1/routes/supplier-store.routes';
 import supplierRoutes from '@/api/v1/routes/supplier.routes';
 import storeStaffRoutes from '@/api/v1/routes/store-staff.routes';
 import stockMovementRoutes from '@/api/v1/routes/stock-movement.routes';
+import teamMemberRoutes from '@/api/v1/routes/team-member.routes';
 import userRoutes from '@/api/v1/routes/user.routes';
 import waveRoutes from '@/api/v1/routes/wave.routes';
 import whatsappRoutes from '@/api/v1/routes/whatsapp.routes';
@@ -199,6 +200,9 @@ app.use(`/api/${config.app.apiVersion}/admin/kyc`, adminKycRoutes);
 
 // Phase 13: Store Staff Management
 app.use(`/api/${config.app.apiVersion}/staff`, storeStaffRoutes);
+
+// Team Members (supplier team management)
+app.use(`/api/${config.app.apiVersion}/team-members`, teamMemberRoutes);
 
 // Stock Movements
 app.use(
