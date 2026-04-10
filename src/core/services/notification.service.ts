@@ -276,6 +276,11 @@ class NotificationService {
       data: { read: true, readAt: new Date() },
     });
 
+    // Emit notification:read event via WebSocket
+    socketService.sendToUser(userId, 'notification:read', {
+      notificationId,
+    });
+
     // Update unread count via WebSocket
     const unreadCount = await this.getUnreadCount(userId);
     socketService.sendToUser(userId, 'notification:unread_count', {
@@ -327,6 +332,11 @@ class NotificationService {
 
     await prisma.notification.delete({
       where: { id: notificationId },
+    });
+
+    // Emit notification:deleted event via WebSocket
+    socketService.sendToUser(userId, 'notification:deleted', {
+      notificationId,
     });
   }
 

@@ -264,9 +264,21 @@ export class WaveService {
         name: params.supplierName,
       };
 
+      const idempotencyKey = `transfer_${params.orderId}_${Date.now()}`;
       const response = await this.client.post<WaveTransferResponse>(
-        '/payouts',
-        request
+        '/payout',
+        {
+          currency: request.currency,
+          receive_amount: request.amount,
+          mobile: request.recipient_mobile,
+          name: request.name,
+          client_reference: request.client_reference,
+        },
+        {
+          headers: {
+            'Idempotency-Key': idempotencyKey,
+          },
+        }
       );
 
       logger.info('Wave transfer initiated', {
@@ -332,6 +344,107 @@ export class WaveService {
         500,
         'Erreur lors du remboursement',
         'WAVE_REFUND_FAILED'
+      );
+    }
+  }
+
+  /**
+   * Effectuer un remboursement de checkout Wave
+   * Utilise POST /v1/checkout/sessions/:id/refund
+   * Le remboursement est gratuit dans les 72h
+   */
+  async refundCheckout(params: {
+    checkoutSessionId: string;
+    orderId: string;
+  }): Promise<void> {
+    try {
+      if (config.app.env !== 'production') {
+        this.simulateRefundCheckout(params);
+        return;
+      }
+
+      await this.client.post(
+        `/checkout/sessions/${params.checkoutSessionId}/refund`
+      );
+
+      logger.info('Wave checkout refund initiated', {
+        checkoutSessionId: params.checkoutSessionId,
+        orderId: params.orderId,
+      });
+    } catch (error: any) {
+      logger.error('Failed to process Wave checkout refund', {
+        checkoutSessionId: params.checkoutSessionId,
+        error: error.response?.data || error.message,
+      });
+
+      throw new AppError(
+        500,
+        'Erreur lors du remboursement Wave',
+        'WAVE_REFUND_FAILED'
+      );
+    }
+  }
+
+  /**
+   * Créer un payout Wave (transfert vers un compte mobile)
+   * Utilise POST /v1/payout avec idempotency key
+   * Frais: 1% du montant
+   */
+  async createPayout(params: {
+    amount: number;
+    currency?: 'XOF' | 'XAF';
+    recipientMobile: string;
+    recipientName?: string;
+    clientReference?: string;
+    idempotencyKey: string;
+  }): Promise<{
+    id: string;
+    status: 'processing' | 'succeeded' | 'failed';
+    amount: string;
+    fee: string;
+    currency: string;
+    mobile: string;
+    timestamp: string;
+  }> {
+    try {
+      if (config.app.env !== 'production') {
+        return this.simulatePayout(params);
+      }
+
+      const response = await this.client.post(
+        '/payout',
+        {
+          currency: params.currency || 'XOF',
+          receive_amount: params.amount.toString(),
+          mobile: params.recipientMobile,
+          name: params.recipientName,
+          client_reference: params.clientReference,
+          payment_reason: 'Retrait fournisseur YaPasGachis',
+        },
+        {
+          headers: {
+            'Idempotency-Key': params.idempotencyKey,
+          },
+        }
+      );
+
+      logger.info('Wave payout created', {
+        payoutId: response.data.id,
+        amount: params.amount,
+        recipient: params.recipientMobile,
+      });
+
+      return response.data;
+    } catch (error: any) {
+      logger.error('Failed to create Wave payout', {
+        error: error.response?.data || error.message,
+        recipient: params.recipientMobile,
+      });
+
+      throw new AppError(
+        500,
+        'Erreur lors du retrait Wave',
+        'WAVE_PAYOUT_FAILED'
       );
     }
   }
@@ -491,6 +604,53 @@ export class WaveService {
       currency: 'XOF',
       transaction_id: params.transactionId,
       when_created: new Date().toISOString(),
+    };
+  }
+
+  private simulateRefundCheckout(params: {
+    checkoutSessionId: string;
+    orderId: string;
+  }): void {
+    logger.info('Simulating Wave checkout refund', {
+      checkoutSessionId: params.checkoutSessionId,
+      orderId: params.orderId,
+    });
+  }
+
+  private simulatePayout(params: {
+    amount: number;
+    currency?: string;
+    recipientMobile: string;
+    recipientName?: string;
+    clientReference?: string;
+    idempotencyKey: string;
+  }): {
+    id: string;
+    status: 'processing' | 'succeeded' | 'failed';
+    amount: string;
+    fee: string;
+    currency: string;
+    mobile: string;
+    timestamp: string;
+  } {
+    const payoutId = `pt-${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const fee = Math.ceil(params.amount * 0.01);
+
+    logger.info('Simulating Wave payout', {
+      payoutId,
+      amount: params.amount,
+      fee,
+      recipient: params.recipientMobile,
+    });
+
+    return {
+      id: payoutId,
+      status: 'succeeded',
+      amount: params.amount.toString(),
+      fee: fee.toString(),
+      currency: params.currency || 'XOF',
+      mobile: params.recipientMobile,
+      timestamp: new Date().toISOString(),
     };
   }
 

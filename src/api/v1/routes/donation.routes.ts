@@ -46,6 +46,14 @@ router.get(
 // Get my donor statistics
 router.get('/my-stats', authenticate, donationController.getMyStats);
 
+// Get comprehensive donation stats (association)
+router.get(
+  '/stats',
+  authenticate,
+  requireRole(['ASSOCIATION']),
+  donationController.getStats
+);
+
 // Get donation by ID
 router.get(
   '/:donationId',

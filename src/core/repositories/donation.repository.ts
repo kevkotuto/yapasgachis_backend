@@ -556,6 +556,141 @@ export class DonationRepository {
   }
 
   /**
+   * Get comprehensive stats for an association (used by GET /donations/stats)
+   */
+  async getAssociationComprehensiveStats(associationId: string): Promise<{
+    totalDonations: number;
+    totalFoodDonations: number;
+    totalFinancialDonations: number;
+    totalAmount: number;
+    totalWeight: number;
+    donationsByMonth: { month: string; count: number; amount: number }[];
+    topDonors: { id: string; name: string; count: number }[];
+    pendingPickups: number;
+    completedThisMonth: number;
+  }> {
+    try {
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      const [
+        totalDonations,
+        totalFoodDonations,
+        totalFinancialDonations,
+        amountAgg,
+        weightAgg,
+        pendingPickups,
+        completedThisMonth,
+        allDonations,
+      ] = await Promise.all([
+        prisma.donation.count({ where: { associationId } }),
+        prisma.donation.count({
+          where: { associationId, type: DonationType.FOOD },
+        }),
+        prisma.donation.count({
+          where: { associationId, type: DonationType.FINANCIAL },
+        }),
+        prisma.donation.aggregate({
+          _sum: { amount: true },
+          where: {
+            associationId,
+            type: DonationType.FINANCIAL,
+            status: {
+              in: [DonationStatus.COMPLETED, DonationStatus.DISTRIBUTED],
+            },
+          },
+        }),
+        prisma.donation.aggregate({
+          _sum: { quantity: true },
+          where: {
+            associationId,
+            type: DonationType.FOOD,
+            status: {
+              in: [DonationStatus.COMPLETED, DonationStatus.DISTRIBUTED],
+            },
+          },
+        }),
+        prisma.donation.count({
+          where: {
+            associationId,
+            type: DonationType.FOOD,
+            status: { in: [DonationStatus.PENDING, DonationStatus.SCHEDULED] },
+          },
+        }),
+        prisma.donation.count({
+          where: {
+            associationId,
+            status: DonationStatus.COMPLETED,
+            updatedAt: { gte: startOfMonth },
+          },
+        }),
+        prisma.donation.findMany({
+          where: { associationId },
+          select: {
+            createdAt: true,
+            amount: true,
+            donorId: true,
+            donor: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        }),
+      ]);
+
+      // Aggregate donations by month
+      const monthMap = new Map<string, { count: number; amount: number }>();
+      const donorCountMap = new Map<string, { name: string; count: number }>();
+
+      for (const d of allDonations) {
+        const monthKey = `${d.createdAt.getFullYear()}-${String(d.createdAt.getMonth() + 1).padStart(2, '0')}`;
+        const existing = monthMap.get(monthKey) || { count: 0, amount: 0 };
+        existing.count++;
+        existing.amount += d.amount || 0;
+        monthMap.set(monthKey, existing);
+
+        const donorEntry = donorCountMap.get(d.donorId) || {
+          name: `${d.donor.firstName || ''} ${d.donor.lastName || ''}`.trim(),
+          count: 0,
+        };
+        donorEntry.count++;
+        donorCountMap.set(d.donorId, donorEntry);
+      }
+
+      const donationsByMonth = Array.from(monthMap.entries())
+        .map(([month, data]) => ({ month, ...data }))
+        .sort((a, b) => a.month.localeCompare(b.month));
+
+      const topDonors = Array.from(donorCountMap.entries())
+        .map(([id, data]) => ({ id, ...data }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+
+      return {
+        totalDonations,
+        totalFoodDonations,
+        totalFinancialDonations,
+        totalAmount: amountAgg._sum.amount || 0,
+        totalWeight: weightAgg._sum.quantity || 0,
+        donationsByMonth,
+        topDonors,
+        pendingPickups,
+        completedThisMonth,
+      };
+    } catch (error) {
+      logger.error('Error getting association comprehensive stats', {
+        associationId,
+        error: (error as Error).message,
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Search all donations with filters
    */
   async search(params: {

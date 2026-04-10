@@ -672,6 +672,23 @@ export class DonationService {
   }
 
   /**
+   * Get comprehensive association stats (for GET /donations/stats)
+   */
+  async getAssociationComprehensiveStats(userId: string) {
+    const profile = await this.associationRepo.findByUserId(userId);
+
+    if (!profile) {
+      throw new AppError(
+        404,
+        'Profil association non trouvé',
+        'PROFILE_NOT_FOUND'
+      );
+    }
+
+    return this.donationRepo.getAssociationComprehensiveStats(profile.id);
+  }
+
+  /**
    * Generate donation receipt
    */
   async generateReceipt(

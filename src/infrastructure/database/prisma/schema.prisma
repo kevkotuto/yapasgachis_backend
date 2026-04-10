@@ -505,6 +505,7 @@ model SupplierProfile {
   orders                  Order[]
   subscriptionPayments    SubscriptionPayment[]
   deals                   Deal[] // Bons plans
+  withdrawals                 Withdrawal[] // Retraits de fonds
   promoCodes              PromoCode[] // Codes promo créés par admin pour ce fournisseur
   kycVerificationAttempts KycVerificationAttempt[] // Tentatives de vérification KYC
 
@@ -1278,6 +1279,50 @@ model AdminPaymentAction {
   @@index([adminId])
   @@index([createdAt])
   @@map("admin_payment_actions")
+}
+
+// ==================== WITHDRAWALS ====================
+
+model Withdrawal {
+  id           String           @id @default(uuid())
+  supplierId   String
+  supplier     SupplierProfile  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  // Montants
+  amount       Float            // Montant brut demandé
+  fee          Float            // Frais Wave (1% payout fee)
+  netAmount    Float            // Montant net reçu (amount - fee)
+
+  // Méthode
+  method       PaymentMethod    @default(WAVE)
+  phoneNumber  String           // Numéro de destination
+
+  // Status
+  status       WithdrawalStatus @default(PENDING)
+
+  // Wave Payout Info
+  wavePayoutId String?          // ID du payout Wave
+  idempotencyKey String @unique // Pour éviter les doublons
+
+  // Résultat
+  processedAt  DateTime?
+  failedReason String?
+
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([supplierId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("withdrawals")
+}
+
+enum WithdrawalStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REVERSED
 }
 
 // ==================== PHASE 5: SUBSCRIPTIONS & DEALS MODELS ====================

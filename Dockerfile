@@ -50,6 +50,7 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/src/infrastructure/database/prisma ./src/infrastructure/database/prisma
 COPY bootstrap.js ./
+COPY public ./public
 
 # Create non-root user
 RUN groupadd -g 1001 nodejs && \

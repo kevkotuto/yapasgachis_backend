@@ -241,6 +241,21 @@ export class DonationController {
   });
 
   /**
+   * Get comprehensive donation stats for association
+   * GET /api/v1/donations/stats
+   */
+  getStats = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user.id;
+    const stats =
+      await donationService.getAssociationComprehensiveStats(userId);
+
+    res.json({
+      success: true,
+      data: stats,
+    });
+  });
+
+  /**
    * Schedule pickup for food donation
    * POST /api/v1/donations/:donationId/schedule-pickup
    */

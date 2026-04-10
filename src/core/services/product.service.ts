@@ -8,6 +8,7 @@ import supplierRepository, {
 } from '@/core/repositories/supplier.repository';
 import logger from '@/infrastructure/monitoring/logger';
 import mediaServerService from '@/infrastructure/storage/media-server.service';
+import socketService from '@/infrastructure/websocket/socket.service';
 import { AppError } from '@/middleware/error-handler.middleware';
 
 /**
@@ -97,6 +98,13 @@ export class ProductService {
         userId,
         productId: product.id,
         title: product.title,
+      });
+
+      // Emit product:new event via WebSocket
+      socketService.sendToUser(userId, 'product:new', {
+        productId: product.id,
+        type: 'created',
+        product,
       });
 
       return product;
@@ -197,6 +205,13 @@ export class ProductService {
       logger.info('Product updated', {
         userId,
         productId,
+      });
+
+      // Emit product:updated event via WebSocket
+      socketService.sendToUser(userId, 'product:updated', {
+        productId,
+        type: 'updated',
+        product: updated,
       });
 
       return updated;
@@ -377,6 +392,13 @@ export class ProductService {
         productId,
         quantityChange,
         newQuantity: updated.quantity,
+      });
+
+      // Emit product:updated event via WebSocket (stock change)
+      socketService.sendToUser(userId, 'product:updated', {
+        productId,
+        type: 'stock_updated',
+        product: updated,
       });
 
       return updated;
