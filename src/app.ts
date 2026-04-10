@@ -26,6 +26,7 @@ import notificationRoutes from '@/api/v1/routes/notification.routes';
 import orderRoutes from '@/api/v1/routes/order.routes';
 import paymentProviderRoutes from '@/api/v1/routes/payment-provider.routes';
 import payoutRoutes from '@/api/v1/routes/payout.routes';
+import supplierWalletRoutes from '@/api/v1/routes/supplier-wallet.routes';
 import productRoutes from '@/api/v1/routes/product.routes';
 import referralRoutes from '@/api/v1/routes/referral.routes';
 import rewardRoutes from '@/api/v1/routes/reward.routes';
@@ -42,6 +43,7 @@ import storeStaffRoutes from '@/api/v1/routes/store-staff.routes';
 import stockMovementRoutes from '@/api/v1/routes/stock-movement.routes';
 import teamMemberRoutes from '@/api/v1/routes/team-member.routes';
 import userRoutes from '@/api/v1/routes/user.routes';
+import paymentRoutes from '@/api/v1/routes/payment.routes';
 import waveRoutes from '@/api/v1/routes/wave.routes';
 import whatsappRoutes from '@/api/v1/routes/whatsapp.routes';
 import config from '@/config';
@@ -97,6 +99,11 @@ if (config.app.env !== 'production' || process.env.ENABLE_SWAGGER === 'true') {
   setupSwagger(app as unknown as import('express').Express);
   logger.info('Swagger documentation available at /api-docs');
 }
+
+// Privacy Policy page (for Play Store / App Store)
+app.get('/privacy-policy', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'privacy-policy.html'));
+});
 
 // Health check endpoint
 app.get('/health', async (_req, res) => {
@@ -225,9 +232,13 @@ app.use(
 
 // Wave Payment Integration
 app.use(`/api/${config.app.apiVersion}/payments/wave`, waveRoutes);
+app.use(`/api/${config.app.apiVersion}/payments`, paymentRoutes);
 
 // Payout Configuration (Supplier)
 app.use(`/api/${config.app.apiVersion}/supplier/payout`, payoutRoutes);
+
+// Supplier Wallet (balance, transactions, withdrawals)
+app.use(`/api/${config.app.apiVersion}/supplier/wallet`, supplierWalletRoutes);
 
 // Saved Locations
 app.use(`/api/${config.app.apiVersion}/saved-locations`, savedLocationRoutes);

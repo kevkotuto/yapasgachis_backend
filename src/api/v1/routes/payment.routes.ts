@@ -17,18 +17,21 @@ const router: Router = Router();
 router.post('/wave/webhook', paymentController.handleWaveWebhook);
 
 /**
- * @route GET /api/v1/payments/wave/success
- * @desc Callback de succès - Redirige après paiement réussi
+ * @route GET /api/v1/payments/wave/callback/success
+ * @desc Callback de succès Wave - Page HTML avec deep link vers l'app
  * @access Public
  */
-router.get('/wave/success', paymentController.handleWaveSuccess);
+router.get(
+  '/wave/callback/success',
+  paymentController.handleWaveCallbackSuccess
+);
 
 /**
- * @route GET /api/v1/payments/wave/error
- * @desc Callback d'erreur - Redirige après échec de paiement
+ * @route GET /api/v1/payments/wave/callback/error
+ * @desc Callback d'erreur Wave - Page HTML avec deep link vers l'app
  * @access Public
  */
-router.get('/wave/error', paymentController.handleWaveError);
+router.get('/wave/callback/error', paymentController.handleWaveCallbackError);
 
 /**
  * Routes authentifiées
@@ -51,5 +54,27 @@ router.get(
  * @access Private
  */
 router.post('/retry/:orderId', authenticate, paymentController.retryPayment);
+
+/**
+ * @route POST /api/v1/payments/refund/:orderId
+ * @desc Demander un remboursement client (72h max, commande non traitée)
+ * @access Private
+ */
+router.post(
+  '/refund/:orderId',
+  authenticate,
+  paymentController.requestClientRefund
+);
+
+/**
+ * @route POST /api/v1/payments/supplier-refund/:orderId
+ * @desc Remboursement initié par le vendeur
+ * @access Private (Supplier)
+ */
+router.post(
+  '/supplier-refund/:orderId',
+  authenticate,
+  paymentController.requestSupplierRefund
+);
 
 export default router;

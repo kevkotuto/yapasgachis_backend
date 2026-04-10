@@ -78,8 +78,8 @@ export class EscrowService {
       const checkout = await waveService.createCheckout({
         amount: params.amount,
         orderId: params.orderId,
-        successUrl: `${config.app.frontendUrl}/payment/success?orderId=${params.orderId}`,
-        errorUrl: `${config.app.frontendUrl}/payment/error?orderId=${params.orderId}`,
+        successUrl: `${config.app.url}/api/v1/payments/wave/callback/success?orderId=${params.orderId}`,
+        errorUrl: `${config.app.url}/api/v1/payments/wave/callback/error?orderId=${params.orderId}`,
       });
 
       // Créer l'enregistrement escrow
@@ -314,10 +314,9 @@ export class EscrowService {
 
       const refundAmount = amount || escrow.amount;
 
-      // Effectuer le remboursement via Wave
-      const refund = await waveService.refund({
-        transactionId: escrow.wavePaymentId,
-        amount: refundAmount,
+      // Utiliser le refund de checkout Wave (gratuit dans les 72h)
+      await waveService.refundCheckout({
+        checkoutSessionId: escrow.waveCheckoutId!,
         orderId,
       });
 
@@ -346,7 +345,8 @@ export class EscrowService {
           previousStatus,
           newStatus: EscrowStatus.REFUNDED,
           metadata: {
-            refundId: refund.id,
+            waveCheckoutId: escrow.waveCheckoutId,
+            refundType: 'checkout_refund',
           },
         },
       });
@@ -382,6 +382,285 @@ export class EscrowService {
       if (error instanceof AppError) throw error;
       logger.error('Failed to process refund', {
         orderId,
+        error: (error as Error).message,
+      });
+      throw new AppError(500, 'Erreur lors du remboursement');
+    }
+  }
+
+  /**
+   * Remboursement initié par le client (dans les 72h après paiement)
+   * Règles:
+   * - Seulement si paiement Wave (pas cash)
+   * - Seulement dans les 72h après paidAt
+   * - Seulement si status FUNDS_HELD (pas encore released)
+   * - Si commande en PAID (pas encore prise en charge par vendeur)
+   * - Si commande en PREPARING/READY_FOR_PICKUP/IN_DELIVERY → seul le vendeur peut rembourser
+   */
+  async clientRefund(
+    orderId: string,
+    userId: string,
+    reason: string
+  ): Promise<EscrowTransaction> {
+    try {
+      const escrow = await prisma.escrowTransaction.findUnique({
+        where: { orderId },
+        include: {
+          order: true,
+        },
+      });
+
+      if (!escrow) {
+        throw new AppError(404, 'Transaction escrow non trouvée');
+      }
+
+      // Vérifier que c'est bien le client de cette commande
+      if (escrow.order?.clientId !== userId) {
+        throw new AppError(
+          403,
+          "Vous n'êtes pas autorisé à demander ce remboursement"
+        );
+      }
+
+      // Vérifier le statut de l'escrow
+      if (escrow.status !== EscrowStatus.FUNDS_HELD) {
+        throw new AppError(
+          400,
+          `Le remboursement n'est pas possible (status escrow: ${escrow.status})`
+        );
+      }
+
+      // Vérifier que la commande est en PAID (pas encore prise en charge par le vendeur)
+      const orderStatus = escrow.order?.status;
+      if (orderStatus !== 'PAID') {
+        throw new AppError(
+          400,
+          "Le remboursement client n'est possible que si la commande n'a pas encore été prise en charge par le vendeur. Contactez le vendeur pour un remboursement."
+        );
+      }
+
+      // Vérifier la fenêtre de 72h
+      if (!escrow.paidAt) {
+        throw new AppError(400, 'Date de paiement introuvable');
+      }
+
+      const hoursSincePaid =
+        (Date.now() - new Date(escrow.paidAt).getTime()) / (1000 * 60 * 60);
+      if (hoursSincePaid > 72) {
+        throw new AppError(
+          400,
+          'Le délai de remboursement de 72h est dépassé. Contactez le support pour assistance.'
+        );
+      }
+
+      // Vérifier qu'il y a un checkout Wave associé
+      if (!escrow.waveCheckoutId) {
+        throw new AppError(
+          400,
+          'Aucun paiement Wave associé pour le remboursement'
+        );
+      }
+
+      // Effectuer le remboursement via Wave Checkout API (gratuit dans les 72h)
+      await waveService.refundCheckout({
+        checkoutSessionId: escrow.waveCheckoutId,
+        orderId,
+      });
+
+      const previousStatus = escrow.status;
+
+      // Mettre à jour l'escrow
+      const updated = await prisma.escrowTransaction.update({
+        where: { id: escrow.id },
+        data: {
+          status: EscrowStatus.REFUNDED,
+          refundedAt: new Date(),
+          disputeResolution: `Remboursement client: ${reason}`,
+        },
+      });
+
+      // Enregistrer l'action (comme action système, pas admin)
+      await prisma.adminPaymentAction.create({
+        data: {
+          escrowTransactionId: escrow.id,
+          adminId: userId, // L'ID du client qui a demandé
+          actionType: 'CLIENT_REFUND',
+          description: reason,
+          amount: escrow.amount,
+          previousStatus,
+          newStatus: EscrowStatus.REFUNDED,
+          metadata: {
+            waveCheckoutId: escrow.waveCheckoutId,
+            refundType: 'client_72h_refund',
+            hoursSincePaid: Math.round(hoursSincePaid),
+          },
+        },
+      });
+
+      // Mettre à jour la commande
+      await prisma.order.update({
+        where: { id: orderId },
+        data: {
+          status: 'REFUNDED',
+          cancelReason: `Remboursement client: ${reason}`,
+        },
+      });
+
+      logger.info('Client refund processed', {
+        escrowId: escrow.id,
+        orderId,
+        userId,
+        amount: escrow.amount,
+        hoursSincePaid: Math.round(hoursSincePaid),
+        reason,
+      });
+
+      // Émettre l'événement ESCROW_REFUNDED
+      eventService.emit(AppEvent.ESCROW_REFUNDED, {
+        orderId,
+        escrowId: escrow.id,
+        userId: escrow.order?.clientId || '',
+        amount: escrow.amount,
+        reason: `Remboursement client: ${reason}`,
+      });
+
+      return updated as EscrowTransaction;
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      logger.error('Failed to process client refund', {
+        orderId,
+        userId,
+        error: (error as Error).message,
+      });
+      throw new AppError(500, 'Erreur lors du remboursement');
+    }
+  }
+
+  /**
+   * Remboursement initié par le vendeur (quand la commande est en cours de traitement)
+   * Le vendeur peut rembourser si la commande est en PREPARING, READY_FOR_PICKUP, ou IN_DELIVERY
+   */
+  async supplierRefund(
+    orderId: string,
+    supplierId: string,
+    reason: string
+  ): Promise<EscrowTransaction> {
+    try {
+      const escrow = await prisma.escrowTransaction.findUnique({
+        where: { orderId },
+        include: {
+          order: true,
+        },
+      });
+
+      if (!escrow) {
+        throw new AppError(404, 'Transaction escrow non trouvée');
+      }
+
+      // Vérifier que c'est bien le vendeur de cette commande
+      if (escrow.supplierId !== supplierId) {
+        throw new AppError(
+          403,
+          "Vous n'êtes pas autorisé à rembourser cette commande"
+        );
+      }
+
+      // Vérifier le statut de l'escrow
+      if (escrow.status !== EscrowStatus.FUNDS_HELD) {
+        throw new AppError(
+          400,
+          `Le remboursement n'est pas possible (status escrow: ${escrow.status})`
+        );
+      }
+
+      // Vérifier la fenêtre de 72h Wave
+      if (!escrow.paidAt) {
+        throw new AppError(400, 'Date de paiement introuvable');
+      }
+
+      const hoursSincePaid =
+        (Date.now() - new Date(escrow.paidAt).getTime()) / (1000 * 60 * 60);
+      if (hoursSincePaid > 72) {
+        throw new AppError(
+          400,
+          'Le délai de remboursement Wave de 72h est dépassé. Contactez le support.'
+        );
+      }
+
+      if (!escrow.waveCheckoutId) {
+        throw new AppError(
+          400,
+          'Aucun paiement Wave associé pour le remboursement'
+        );
+      }
+
+      // Effectuer le remboursement via Wave
+      await waveService.refundCheckout({
+        checkoutSessionId: escrow.waveCheckoutId,
+        orderId,
+      });
+
+      const previousStatus = escrow.status;
+
+      // Mettre à jour l'escrow
+      const updated = await prisma.escrowTransaction.update({
+        where: { id: escrow.id },
+        data: {
+          status: EscrowStatus.REFUNDED,
+          refundedAt: new Date(),
+          disputeResolution: `Remboursement vendeur: ${reason}`,
+        },
+      });
+
+      // Enregistrer l'action
+      await prisma.adminPaymentAction.create({
+        data: {
+          escrowTransactionId: escrow.id,
+          adminId: supplierId,
+          actionType: 'SUPPLIER_REFUND',
+          description: reason,
+          amount: escrow.amount,
+          previousStatus,
+          newStatus: EscrowStatus.REFUNDED,
+          metadata: {
+            waveCheckoutId: escrow.waveCheckoutId,
+            refundType: 'supplier_refund',
+            hoursSincePaid: Math.round(hoursSincePaid),
+          },
+        },
+      });
+
+      // Mettre à jour la commande
+      await prisma.order.update({
+        where: { id: orderId },
+        data: {
+          status: 'REFUNDED',
+          cancelReason: `Remboursement vendeur: ${reason}`,
+        },
+      });
+
+      logger.info('Supplier refund processed', {
+        escrowId: escrow.id,
+        orderId,
+        supplierId,
+        amount: escrow.amount,
+        reason,
+      });
+
+      eventService.emit(AppEvent.ESCROW_REFUNDED, {
+        orderId,
+        escrowId: escrow.id,
+        userId: escrow.order?.clientId || '',
+        amount: escrow.amount,
+        reason: `Remboursement vendeur: ${reason}`,
+      });
+
+      return updated as EscrowTransaction;
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      logger.error('Failed to process supplier refund', {
+        orderId,
+        supplierId,
         error: (error as Error).message,
       });
       throw new AppError(500, 'Erreur lors du remboursement');

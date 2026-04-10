@@ -158,11 +158,11 @@ async function handlePayoutFailed(data: WaveWebhookData): Promise<void> {
 }
 
 /**
- * @route GET /api/v1/payments/wave/success
- * @desc Callback de succès Wave - Redirige le client après paiement réussi
+ * @route GET /api/v1/payments/wave/callback/success
+ * @desc Callback de succès Wave - Sert une page HTML qui redirige vers l'app via deep link
  * @access Public
  */
-export const handleWaveSuccess = asyncHandler(
+export const handleWaveCallbackSuccess = asyncHandler(
   async (req: Request, res: Response) => {
     const { orderId } = req.query;
 
@@ -170,55 +170,220 @@ export const handleWaveSuccess = asyncHandler(
       throw new AppError(400, 'Order ID manquant');
     }
 
-    // Vérifier le statut du checkout
+    logger.info('Wave payment success callback', { orderId });
+
+    // Vérifier le statut du checkout et confirmer si nécessaire
     const escrow = await escrowService.getByOrderId(orderId as string);
 
-    if (!escrow) {
-      throw new AppError(404, 'Transaction non trouvée');
-    }
-
-    // Si le webhook n'a pas encore été traité, vérifier manuellement
-    if (escrow.status === 'PENDING' && escrow.waveCheckoutId) {
-      const checkout = await waveService.getCheckoutStatus(
-        escrow.waveCheckoutId
-      );
-
-      if (
-        checkout.checkout_status === 'complete' &&
-        checkout.payment_status === 'succeeded' &&
-        checkout.transaction_id
-      ) {
-        await escrowService.confirmPayment(
-          orderId as string,
-          checkout.transaction_id
+    if (escrow && escrow.status === 'PENDING' && escrow.waveCheckoutId) {
+      try {
+        const checkout = await waveService.getCheckoutStatus(
+          escrow.waveCheckoutId
         );
+        if (
+          checkout.checkout_status === 'complete' &&
+          checkout.payment_status === 'succeeded' &&
+          checkout.transaction_id
+        ) {
+          await escrowService.confirmPayment(
+            orderId as string,
+            checkout.transaction_id
+          );
+        }
+      } catch (error) {
+        logger.error('Failed to verify payment in callback', {
+          orderId,
+          error: (error as Error).message,
+        });
       }
     }
 
-    // Rediriger vers l'app mobile ou la page de confirmation
-    const redirectUrl = `${process.env.MOBILE_APP_SCHEME || 'yapasgachis'}://order/${orderId}?status=success`;
+    const deepLink = `yapasgachis://payment-result?orderId=${orderId}&status=success`;
 
-    logger.info('Wave payment success callback', { orderId });
-
-    res.redirect(redirectUrl);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(`<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paiement réussi - YaPasGachis</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 24px;
+      padding: 40px 32px;
+      text-align: center;
+      max-width: 400px;
+      width: 100%;
+    }
+    .icon {
+      width: 80px; height: 80px;
+      background: #F0FDF4;
+      border: 4px solid #DCFCE7;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+      font-size: 36px;
+    }
+    h1 { color: #166534; font-size: 22px; margin-bottom: 12px; }
+    p { color: #6B7280; font-size: 15px; line-height: 1.5; margin-bottom: 24px; }
+    .btn {
+      display: inline-block;
+      background: #22C55E;
+      color: white;
+      text-decoration: none;
+      padding: 16px 32px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      width: 100%;
+    }
+    .spinner {
+      width: 24px; height: 24px;
+      border: 3px solid #E5E7EB;
+      border-top: 3px solid #22C55E;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .redirect-text { color: #9CA3AF; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">✅</div>
+    <h1>Paiement réussi !</h1>
+    <p>Votre paiement a été confirmé avec succès. Vous allez être redirigé vers l'application.</p>
+    <div class="spinner" id="spinner"></div>
+    <p class="redirect-text" id="redirect-text">Redirection en cours...</p>
+    <a href="${deepLink}" class="btn" id="open-btn" style="display:none;">Ouvrir l'application</a>
+  </div>
+  <script>
+    // Tenter le deep link automatiquement
+    setTimeout(function() {
+      window.location.href = '${deepLink}';
+      // Si le deep link ne marche pas après 2s, afficher le bouton
+      setTimeout(function() {
+        document.getElementById('spinner').style.display = 'none';
+        document.getElementById('redirect-text').style.display = 'none';
+        document.getElementById('open-btn').style.display = 'inline-block';
+      }, 2000);
+    }, 500);
+  </script>
+</body>
+</html>`);
   }
 );
 
 /**
- * @route GET /api/v1/payments/wave/error
- * @desc Callback d'erreur Wave - Redirige le client après échec de paiement
+ * @route GET /api/v1/payments/wave/callback/error
+ * @desc Callback d'erreur Wave - Sert une page HTML qui redirige vers l'app
  * @access Public
  */
-export const handleWaveError = asyncHandler(
+export const handleWaveCallbackError = asyncHandler(
   async (req: Request, res: Response) => {
     const { orderId } = req.query;
 
     logger.info('Wave payment error callback', { orderId });
 
-    // Rediriger vers l'app mobile ou la page d'erreur
-    const redirectUrl = `${process.env.MOBILE_APP_SCHEME || 'yapasgachis'}://order/${orderId}?status=error`;
+    const deepLink = `yapasgachis://payment-result?orderId=${orderId || ''}&status=error`;
 
-    res.redirect(redirectUrl);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(`<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Erreur de paiement - YaPasGachis</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 24px;
+      padding: 40px 32px;
+      text-align: center;
+      max-width: 400px;
+      width: 100%;
+    }
+    .icon {
+      width: 80px; height: 80px;
+      background: #FEF2F2;
+      border: 4px solid #FEE2E2;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+      font-size: 36px;
+    }
+    h1 { color: #991B1B; font-size: 22px; margin-bottom: 12px; }
+    p { color: #6B7280; font-size: 15px; line-height: 1.5; margin-bottom: 24px; }
+    .btn {
+      display: inline-block;
+      background: #EF4444;
+      color: white;
+      text-decoration: none;
+      padding: 16px 32px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      width: 100%;
+    }
+    .spinner {
+      width: 24px; height: 24px;
+      border: 3px solid #E5E7EB;
+      border-top: 3px solid #EF4444;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .redirect-text { color: #9CA3AF; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">❌</div>
+    <h1>Erreur de paiement</h1>
+    <p>Le paiement n'a pas pu être effectué. Vous pouvez réessayer depuis l'application.</p>
+    <div class="spinner" id="spinner"></div>
+    <p class="redirect-text" id="redirect-text">Redirection en cours...</p>
+    <a href="${deepLink}" class="btn" id="open-btn" style="display:none;">Retourner à l'application</a>
+  </div>
+  <script>
+    setTimeout(function() {
+      window.location.href = '${deepLink}';
+      setTimeout(function() {
+        document.getElementById('spinner').style.display = 'none';
+        document.getElementById('redirect-text').style.display = 'none';
+        document.getElementById('open-btn').style.display = 'inline-block';
+      }, 2000);
+    }, 500);
+  </script>
+</body>
+</html>`);
   }
 );
 
@@ -300,10 +465,95 @@ export const retryPayment = asyncHandler(
   }
 );
 
+/**
+ * @route POST /api/v1/payments/refund/:orderId
+ * @desc Demander un remboursement client (dans les 72h, si commande pas encore traitée)
+ * @access Private
+ */
+export const requestClientRefund = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { orderId } = req.params;
+    const userId = req.user.id;
+    const { reason } = req.body;
+
+    if (!reason || typeof reason !== 'string' || reason.trim().length < 5) {
+      throw new AppError(
+        400,
+        'Veuillez fournir une raison valide (minimum 5 caractères)'
+      );
+    }
+
+    const result = await escrowService.clientRefund(
+      orderId,
+      userId,
+      reason.trim()
+    );
+
+    res.json({
+      success: true,
+      message: 'Remboursement effectué avec succès',
+      data: {
+        orderId,
+        status: result.status,
+        amount: result.amount,
+        refundedAt: result.refundedAt,
+      },
+    });
+  }
+);
+
+/**
+ * @route POST /api/v1/payments/supplier-refund/:orderId
+ * @desc Remboursement initié par le vendeur
+ * @access Private (Supplier only)
+ */
+export const requestSupplierRefund = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { orderId } = req.params;
+    const userId = req.user.id;
+    const { reason } = req.body;
+
+    if (!reason || typeof reason !== 'string' || reason.trim().length < 5) {
+      throw new AppError(
+        400,
+        'Veuillez fournir une raison valide (minimum 5 caractères)'
+      );
+    }
+
+    // Récupérer le profil fournisseur
+    const supplier = await prisma.supplierProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!supplier) {
+      throw new AppError(403, 'Profil fournisseur non trouvé');
+    }
+
+    const result = await escrowService.supplierRefund(
+      orderId,
+      supplier.id,
+      reason.trim()
+    );
+
+    res.json({
+      success: true,
+      message: 'Remboursement effectué avec succès',
+      data: {
+        orderId,
+        status: result.status,
+        amount: result.amount,
+        refundedAt: result.refundedAt,
+      },
+    });
+  }
+);
+
 export default {
   handleWaveWebhook,
-  handleWaveSuccess,
-  handleWaveError,
+  handleWaveCallbackSuccess,
+  handleWaveCallbackError,
   checkPaymentStatus,
   retryPayment,
+  requestClientRefund,
+  requestSupplierRefund,
 };
