@@ -333,7 +333,8 @@ model User {
 
   // OAuth providers
   googleId     String? @unique
-  authProvider String  @default("local") // "local", "google"
+  appleId      String? @unique
+  authProvider String  @default("local") // "local", "google", "apple"
 
   // Location
   city         String?
@@ -411,6 +412,7 @@ model User {
   @@index([latitude, longitude])
   @@index([role, status])
   @@index([googleId])
+  @@index([appleId])
   @@map("users")
 }
 

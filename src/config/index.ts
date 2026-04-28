@@ -147,6 +147,10 @@ interface Config {
     iosClientId: string;
     androidClientId: string;
   };
+  apple: {
+    bundleId: string;
+    serviceId: string;
+  };
   sentry: {
     dsn: string;
   };
@@ -367,6 +371,10 @@ const config: Config = {
     clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     iosClientId: process.env.GOOGLE_IOS_CLIENT_ID || '',
     androidClientId: process.env.GOOGLE_ANDROID_CLIENT_ID || '',
+  },
+  apple: {
+    bundleId: process.env.APPLE_BUNDLE_ID || 'com.yapasgachis.app',
+    serviceId: process.env.APPLE_SERVICE_ID || '',
   },
   sentry: {
     dsn: process.env.SENTRY_DSN || '',

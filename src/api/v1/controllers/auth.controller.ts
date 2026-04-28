@@ -292,6 +292,26 @@ export class AuthController {
       message: result.message,
     });
   });
+
+  /**
+   * Login or Register with Apple (Sign in with Apple)
+   * POST /api/v1/auth/apple
+   */
+  appleAuth = asyncHandler(async (req: Request, res: Response) => {
+    const result = await this.authService.appleAuth(req.body);
+
+    res.status(APP_CONSTANTS.HTTP_STATUS.OK).json({
+      success: true,
+      message: result.isNewUser
+        ? 'Inscription via Apple réussie'
+        : 'Connexion via Apple réussie',
+      data: {
+        user: result.user,
+        tokens: result.tokens,
+        isNewUser: result.isNewUser,
+      },
+    });
+  });
 }
 
 export default new AuthController();

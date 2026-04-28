@@ -15,6 +15,7 @@ import {
   refreshTokenSchema,
   googleAuthSchema,
   linkGoogleSchema,
+  appleAuthSchema,
 } from '../validators/auth.validator';
 
 import { authMiddleware } from '@/middleware/auth.middleware';
@@ -521,5 +522,51 @@ router.post(
  *         $ref: '#/components/responses/Unauthorized'
  */
 router.post('/google/unlink', authMiddleware, authController.unlinkGoogle);
+
+// ==================== APPLE SIGN-IN ROUTE ====================
+
+/**
+ * @swagger
+ * /auth/apple:
+ *   post:
+ *     summary: Connexion ou inscription avec Apple (Sign in with Apple)
+ *     description: |
+ *       Vérifie le `identityToken` Apple (JWT RS256 signé par Apple), retrouve
+ *       ou crée un compte par `apple_user_id` (= `sub` du JWT). Apple n'envoie
+ *       `email`, `firstName`, `lastName` qu'au PREMIER sign-in.
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [identityToken, user]
+ *             properties:
+ *               identityToken: { type: string, description: 'JWT signé par Apple' }
+ *               authorizationCode: { type: string, description: 'Code court (5 min) pour révocation server-to-server' }
+ *               user: { type: string, description: 'Identifiant stable Apple (= sub du JWT)' }
+ *               email: { type: string, nullable: true, description: 'Premier sign-in seulement' }
+ *               firstName: { type: string, nullable: true }
+ *               lastName: { type: string, nullable: true }
+ *               role: { type: string, enum: [CLIENT, SUPPLIER_FOOD, ASSOCIATION] }
+ *               language: { type: string, enum: [fr, en, ar, es, bm] }
+ *     responses:
+ *       200:
+ *         description: Connexion réussie
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/LoginResponse'
+ *       401:
+ *         description: Token Apple invalide ou identifiant incohérent
+ */
+router.post(
+  '/apple',
+  authLimiter,
+  validate(appleAuthSchema),
+  authController.appleAuth
+);
 
 export default router;

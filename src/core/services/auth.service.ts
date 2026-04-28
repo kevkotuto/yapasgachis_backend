@@ -1,5 +1,6 @@
 import { User, UserRole, UserStatus } from '@prisma/client';
 
+import AppleAuthService from './apple-auth.service';
 import GoogleAuthService from './google-auth.service';
 import JWTService from './jwt.service';
 import notificationService from './notification.service';
@@ -62,6 +63,17 @@ interface ResetPasswordDTO {
 interface GoogleAuthDTO {
   idToken?: string;
   accessToken?: string;
+  role?: UserRole;
+  language?: string;
+}
+
+interface AppleAuthDTO {
+  identityToken: string;
+  authorizationCode?: string;
+  user: string;
+  email?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
   role?: UserRole;
   language?: string;
 }
@@ -1224,6 +1236,154 @@ export class AuthService {
 
     return {
       message: 'Compte Google délié avec succès',
+    };
+  }
+
+  /**
+   * Login or Register with Apple (Sign in with Apple)
+   *
+   * Apple sends email/firstName/lastName ONLY on the first sign-in. Subsequent
+   * sign-ins return null for these fields, so the first-sign-in payload must
+   * be persisted. The stable account key is the JWT `sub` (= `user` in body).
+   */
+  async appleAuth(data: AppleAuthDTO): Promise<{
+    user: Partial<User>;
+    tokens: {
+      accessToken: string;
+      refreshToken: string;
+      expiresIn: number;
+    };
+    isNewUser: boolean;
+  }> {
+    // 1. Verify the identity token (signature, iss, aud, exp)
+    const appleUser = await AppleAuthService.verifyIdentityToken(
+      data.identityToken
+    );
+
+    // 2. Cohérence: the JWT `sub` must match the `user` field from the body
+    if (appleUser.appleId !== data.user) {
+      logger.warn('Apple sub/user mismatch', {
+        sub: appleUser.appleId,
+        user: data.user,
+      });
+      throw new AppError(
+        APP_CONSTANTS.HTTP_STATUS.UNAUTHORIZED,
+        'Identifiant Apple incohérent',
+        'APPLE_USER_MISMATCH'
+      );
+    }
+
+    // 3. Find existing user by appleId
+    let user = await this.userRepository.findByAppleId(appleUser.appleId);
+    let isNewUser = false;
+
+    if (!user) {
+      // 4a. PREMIER SIGN-IN — Apple n'enverra plus jamais email/firstName/lastName
+      const finalEmail = data.email || appleUser.email || null;
+
+      // Link to existing account (e.g. created via Google) when emails match
+      if (finalEmail) {
+        const existingByEmail =
+          await this.userRepository.findByEmail(finalEmail);
+        if (existingByEmail) {
+          user = await this.userRepository.update(existingByEmail.id, {
+            appleId: appleUser.appleId,
+            emailVerified: true,
+          });
+          logger.info('Apple account linked to existing user', {
+            userId: user.id,
+            appleId: appleUser.appleId,
+          });
+        }
+      }
+
+      if (!user) {
+        user = await this.userRepository.create({
+          appleId: appleUser.appleId,
+          email: finalEmail,
+          firstName: data.firstName || 'Utilisateur',
+          lastName: data.lastName || null,
+          authProvider: 'apple',
+          role: data.role || UserRole.CLIENT,
+          language: data.language || 'fr',
+          emailVerified: appleUser.emailVerified,
+          status: UserStatus.ACTIVE,
+        });
+        isNewUser = true;
+
+        // Create referral code
+        try {
+          await referralService.createReferralCode(user.id);
+        } catch (error) {
+          logger.error('Failed to create referral code for Apple user', {
+            userId: user.id,
+            error: (error as Error).message,
+          });
+        }
+
+        // Welcome notification
+        try {
+          await notificationService.create({
+            userId: user.id,
+            type: 'WELCOME' as any,
+            title: `Bienvenue ${user.firstName} ! 🎉`,
+            message: `Merci de rejoindre YaPasGachis ! Découvrez des produits à prix réduits près de chez vous et contribuez à réduire le gaspillage alimentaire.`,
+            priority: 'NORMAL' as any,
+            data: {
+              action: 'open_home',
+              timestamp: new Date().toISOString(),
+            },
+            sendPush: true,
+            sendRealtime: true,
+            sendEmail: false,
+          });
+        } catch (error) {
+          logger.error('Failed to send welcome notification to Apple user', {
+            userId: user.id,
+            error: (error as Error).message,
+          });
+        }
+
+        logger.info('New user registered via Apple', {
+          userId: user.id,
+          appleId: appleUser.appleId,
+          hasEmail: !!finalEmail,
+          isPrivateEmail: appleUser.isPrivateEmail,
+        });
+      }
+    }
+
+    // Status checks
+    if (user.status === 'SUSPENDED') {
+      throw new AppError(
+        APP_CONSTANTS.HTTP_STATUS.FORBIDDEN,
+        'Votre compte a été suspendu. Veuillez contacter le support.',
+        'ACCOUNT_SUSPENDED'
+      );
+    }
+
+    if (user.status === 'DEACTIVATED') {
+      throw new AppError(
+        APP_CONSTANTS.HTTP_STATUS.FORBIDDEN,
+        'Votre compte a été désactivé.',
+        'ACCOUNT_DEACTIVATED'
+      );
+    }
+
+    // Generate tokens
+    const tokens = await JWTService.generateTokenPair(user.id, user.role);
+
+    logger.info('User authenticated via Apple', {
+      userId: user.id,
+      isNewUser,
+    });
+
+    const { passwordHash: _, ...userWithoutPassword } = user;
+
+    return {
+      user: userWithoutPassword,
+      tokens,
+      isNewUser,
     };
   }
 

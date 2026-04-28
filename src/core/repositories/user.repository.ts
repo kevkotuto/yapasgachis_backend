@@ -75,6 +75,15 @@ export class UserRepository {
   }
 
   /**
+   * Find user by Apple ID
+   */
+  async findByAppleId(appleId: string): Promise<User | null> {
+    return prisma.user.findUnique({
+      where: { appleId },
+    });
+  }
+
+  /**
    * Update user
    */
   async update(id: string, data: Prisma.UserUpdateInput): Promise<User> {

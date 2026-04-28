@@ -197,3 +197,24 @@ export type ChangePasswordInput = z.infer<typeof changePasswordSchema>['body'];
 export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>['body'];
 export type GoogleAuthInput = z.infer<typeof googleAuthSchema>['body'];
 export type LinkGoogleInput = z.infer<typeof linkGoogleSchema>['body'];
+
+/**
+ * Apple auth validation schema
+ * - identityToken: required (JWT signed by Apple)
+ * - user: required (stable Apple user identifier, == JWT `sub`)
+ * - email/firstName/lastName: only sent on FIRST sign-in (null after)
+ */
+export const appleAuthSchema = z.object({
+  body: z.object({
+    identityToken: z.string().min(1, 'identityToken est requis'),
+    authorizationCode: z.string().optional(),
+    user: z.string().min(1, 'user est requis'),
+    email: z.string().email().nullable().optional(),
+    firstName: z.string().nullable().optional(),
+    lastName: z.string().nullable().optional(),
+    role: z.nativeEnum(UserRole).optional().default(UserRole.CLIENT),
+    language: z.enum(['fr', 'en', 'ar', 'es', 'bm']).optional().default('fr'),
+  }),
+});
+
+export type AppleAuthInput = z.infer<typeof appleAuthSchema>['body'];
