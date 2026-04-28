@@ -150,6 +150,9 @@ interface Config {
   apple: {
     bundleId: string;
     serviceId: string;
+    teamId: string;
+    keyId: string;
+    privateKeyPath: string;
   };
   sentry: {
     dsn: string;
@@ -375,6 +378,9 @@ const config: Config = {
   apple: {
     bundleId: process.env.APPLE_BUNDLE_ID || 'com.yapasgachis.app',
     serviceId: process.env.APPLE_SERVICE_ID || '',
+    teamId: process.env.APPLE_TEAM_ID || '',
+    keyId: process.env.APPLE_KEY_ID || '',
+    privateKeyPath: process.env.APPLE_PRIVATE_KEY_PATH || '',
   },
   sentry: {
     dsn: process.env.SENTRY_DSN || '',

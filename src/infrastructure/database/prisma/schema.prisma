@@ -332,9 +332,10 @@ model User {
   language     String     @default("fr")
 
   // OAuth providers
-  googleId     String? @unique
-  appleId      String? @unique
-  authProvider String  @default("local") // "local", "google", "apple"
+  googleId           String? @unique
+  appleId            String? @unique
+  appleRefreshToken  String? // Apple OAuth refresh token, used for server-to-server token revocation on account deletion
+  authProvider       String  @default("local") // "local", "google", "apple"
 
   // Location
   city         String?

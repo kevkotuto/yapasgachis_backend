@@ -1,6 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
+import AppleAuthService from './apple-auth.service';
+
 import {
   ContactCheckResult,
   UserPaymentMethodDTO,
@@ -451,6 +453,7 @@ export class UserService {
           passwordHash: true,
           authProvider: true,
           status: true,
+          appleRefreshToken: true,
         },
       });
 
@@ -491,12 +494,29 @@ export class UserService {
         where: { userId },
       });
 
+      // Apple compliance: revoke the Apple refresh_token before deactivating.
+      // Best-effort — never block deletion on Apple-side failures.
+      if (user.appleRefreshToken) {
+        try {
+          await AppleAuthService.revokeToken(
+            user.appleRefreshToken,
+            'refresh_token'
+          );
+        } catch (error) {
+          logger.warn('Apple token revocation failed during account deletion', {
+            userId,
+            error: (error as Error).message,
+          });
+        }
+      }
+
       // Soft delete: update user status to DEACTIVATED and set deletedAt
       await this.prisma.user.update({
         where: { id: userId },
         data: {
           status: 'DEACTIVATED',
           deletedAt: new Date(),
+          appleRefreshToken: null,
         },
       });
 

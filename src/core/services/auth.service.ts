@@ -1260,6 +1260,25 @@ export class AuthService {
       data.identityToken
     );
 
+    // 1b. Exchange the short-lived authorizationCode for a refresh_token so we
+    //     can revoke server-to-server when the user deletes their account.
+    //     Best-effort: any failure (network, missing config) must not block login.
+    let appleRefreshToken: string | null = null;
+    if (data.authorizationCode) {
+      try {
+        const tokenResponse = await AppleAuthService.exchangeAuthorizationCode(
+          data.authorizationCode
+        );
+        if (tokenResponse?.refresh_token) {
+          appleRefreshToken = tokenResponse.refresh_token;
+        }
+      } catch (error) {
+        logger.warn('Apple authorizationCode exchange threw', {
+          error: (error as Error).message,
+        });
+      }
+    }
+
     // 2. Cohérence: the JWT `sub` must match the `user` field from the body
     if (appleUser.appleId !== data.user) {
       logger.warn('Apple sub/user mismatch', {
@@ -1289,6 +1308,7 @@ export class AuthService {
           user = await this.userRepository.update(existingByEmail.id, {
             appleId: appleUser.appleId,
             emailVerified: true,
+            ...(appleRefreshToken ? { appleRefreshToken } : {}),
           });
           logger.info('Apple account linked to existing user', {
             userId: user.id,
@@ -1308,6 +1328,7 @@ export class AuthService {
           language: data.language || 'fr',
           emailVerified: appleUser.emailVerified,
           status: UserStatus.ACTIVE,
+          ...(appleRefreshToken ? { appleRefreshToken } : {}),
         });
         isNewUser = true;
 
@@ -1349,6 +1370,22 @@ export class AuthService {
           appleId: appleUser.appleId,
           hasEmail: !!finalEmail,
           isPrivateEmail: appleUser.isPrivateEmail,
+        });
+      }
+    }
+
+    // Refresh stored Apple refresh_token on subsequent sign-ins when a new one is issued
+    if (
+      !isNewUser &&
+      appleRefreshToken &&
+      user.appleRefreshToken !== appleRefreshToken
+    ) {
+      try {
+        user = await this.userRepository.update(user.id, { appleRefreshToken });
+      } catch (error) {
+        logger.warn('Failed to update Apple refresh token', {
+          userId: user.id,
+          error: (error as Error).message,
         });
       }
     }
