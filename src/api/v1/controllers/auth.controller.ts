@@ -312,6 +312,35 @@ export class AuthController {
       },
     });
   });
+
+  /**
+   * Apple Sign in server-to-server notifications
+   * POST /api/v1/auth/apple/notifications
+   *
+   * Apple sends a signed JWT in body.payload describing user-side changes
+   * (email forwarding toggled, consent revoked, Apple Account deleted).
+   * We always return 200 — Apple retries aggressively on non-2xx and
+   * delivery failures must never block account-deletion on Apple's side.
+   */
+  appleNotifications = asyncHandler(async (req: Request, res: Response) => {
+    const signedPayload =
+      typeof req.body?.payload === 'string' ? req.body.payload : null;
+
+    if (!signedPayload) {
+      // Acknowledge to avoid retries; log for observability.
+      res.status(APP_CONSTANTS.HTTP_STATUS.OK).json({ received: true });
+      return;
+    }
+
+    try {
+      await this.authService.handleAppleNotification(signedPayload);
+    } catch (error) {
+      // Log but still 200 — Apple retries aggressively on non-2xx.
+      // Internal alerting should pick this up via logger.error in the service.
+    }
+
+    res.status(APP_CONSTANTS.HTTP_STATUS.OK).json({ received: true });
+  });
 }
 
 export default new AuthController();

@@ -569,4 +569,32 @@ router.post(
   authController.appleAuth
 );
 
+/**
+ * @swagger
+ * /auth/apple/notifications:
+ *   post:
+ *     summary: Apple Sign in server-to-server notifications webhook
+ *     description: |
+ *       Receives signed JWT notifications from Apple when users change email
+ *       forwarding preferences, revoke consent, or delete their Apple Account.
+ *       Always returns 200 — Apple retries aggressively on non-2xx responses.
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [payload]
+ *             properties:
+ *               payload:
+ *                 type: string
+ *                 description: JWT signed by Apple containing the event payload
+ *     responses:
+ *       200:
+ *         description: Notification acknowledged
+ */
+router.post('/apple/notifications', authController.appleNotifications);
+
 export default router;

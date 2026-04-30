@@ -1425,6 +1425,66 @@ export class AuthService {
   }
 
   /**
+   * Handle an Apple server-to-server notification.
+   *
+   * Verifies the signed payload, then acts on the event:
+   *   - account-delete   → soft-delete the user, revoke sessions
+   *   - consent-revoked  → soft-delete the user, revoke sessions
+   *   - email-disabled   → log only (relay disabled by user, no action)
+   *   - email-enabled    → log only
+   *
+   * Always returns 200 to Apple — they retry aggressively on non-2xx.
+   */
+  async handleAppleNotification(signedPayload: string): Promise<void> {
+    const event =
+      await AppleAuthService.verifyServerNotification(signedPayload);
+
+    logger.info('Apple S2S notification received', {
+      type: event.type,
+      sub: event.sub,
+      eventTime: event.eventTime,
+    });
+
+    const user = await this.userRepository.findByAppleId(event.sub);
+    if (!user) {
+      logger.warn('Apple S2S notification: no matching user', {
+        sub: event.sub,
+        type: event.type,
+      });
+      return;
+    }
+
+    switch (event.type) {
+      case 'account-delete':
+      case 'consent-revoked':
+        await this.userRepository.update(user.id, {
+          status: UserStatus.DEACTIVATED,
+          deletedAt: new Date(),
+          appleRefreshToken: null,
+        });
+        logger.info('User soft-deleted via Apple S2S notification', {
+          userId: user.id,
+          type: event.type,
+        });
+        break;
+
+      case 'email-disabled':
+      case 'email-enabled':
+        logger.info('Apple email-relay state changed (no action required)', {
+          userId: user.id,
+          type: event.type,
+        });
+        break;
+
+      default:
+        logger.warn('Unknown Apple S2S notification type', {
+          userId: user.id,
+          type: event.type,
+        });
+    }
+  }
+
+  /**
    * Change password (authenticated user)
    */
   async changePassword(

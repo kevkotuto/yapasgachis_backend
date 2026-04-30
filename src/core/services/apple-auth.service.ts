@@ -22,6 +22,20 @@ interface AppleUserInfo {
   isPrivateEmail: boolean;
 }
 
+export type AppleNotificationType =
+  | 'email-disabled'
+  | 'email-enabled'
+  | 'consent-revoked'
+  | 'account-delete';
+
+export interface AppleNotificationEvent {
+  type: AppleNotificationType;
+  sub: string; // Apple user identifier
+  email?: string;
+  isPrivateEmail?: boolean;
+  eventTime: number;
+}
+
 interface AppleTokenResponse {
   access_token?: string;
   refresh_token?: string;
@@ -95,6 +109,80 @@ export class AppleAuthService {
       email,
       emailVerified,
       isPrivateEmail,
+    };
+  }
+
+  /**
+   * Verify and decode an Apple server-to-server notification payload.
+   *
+   * Apple sends a single field `payload` containing a JWT signed with the same
+   * Apple keys as identity tokens. The JWT contains a stringified JSON `events`
+   * field describing the user-side change (email forwarding toggled, consent
+   * revoked, Apple Account deleted).
+   *
+   * https://developer.apple.com/documentation/sign_in_with_apple/processing_changes_for_sign_in_with_apple_accounts
+   */
+  async verifyServerNotification(
+    signedPayload: string
+  ): Promise<AppleNotificationEvent> {
+    let payload: JWTPayload;
+    try {
+      const result = await jwtVerify(signedPayload, this.jwks, {
+        issuer: APPLE_ISSUER,
+        audience: config.apple.bundleId,
+      });
+      payload = result.payload;
+    } catch (error) {
+      logger.error('Apple S2S notification verification failed', {
+        error: (error as Error).message,
+      });
+      throw new AppError(
+        APP_CONSTANTS.HTTP_STATUS.UNAUTHORIZED,
+        'Notification Apple invalide',
+        'INVALID_APPLE_NOTIFICATION'
+      );
+    }
+
+    const rawEvents = payload.events;
+    if (typeof rawEvents !== 'string') {
+      throw new AppError(
+        APP_CONSTANTS.HTTP_STATUS.BAD_REQUEST,
+        'Champ `events` manquant ou mal formé',
+        'INVALID_APPLE_NOTIFICATION'
+      );
+    }
+
+    let parsed: {
+      type: AppleNotificationType;
+      sub: string;
+      email?: string;
+      is_private_email?: unknown;
+      event_time: number;
+    };
+    try {
+      parsed = JSON.parse(rawEvents);
+    } catch {
+      throw new AppError(
+        APP_CONSTANTS.HTTP_STATUS.BAD_REQUEST,
+        'Champ `events` non parseable',
+        'INVALID_APPLE_NOTIFICATION'
+      );
+    }
+
+    if (!parsed.type || !parsed.sub) {
+      throw new AppError(
+        APP_CONSTANTS.HTTP_STATUS.BAD_REQUEST,
+        'Champs `type` ou `sub` manquants dans events',
+        'INVALID_APPLE_NOTIFICATION'
+      );
+    }
+
+    return {
+      type: parsed.type,
+      sub: parsed.sub,
+      email: parsed.email,
+      isPrivateEmail: this.parseAppleBoolean(parsed.is_private_email),
+      eventTime: parsed.event_time,
     };
   }
 
