@@ -47,4 +47,14 @@ router.get(
   supplierWalletController.getWithdrawals
 );
 
+/**
+ * @route GET /api/v1/supplier/wallet/analytics
+ * @desc Récupérer le revenu par jour (semaine/mois/année)
+ */
+router.get(
+  '/analytics',
+  authenticate,
+  supplierWalletController.getWalletAnalytics
+);
+
 export default router;

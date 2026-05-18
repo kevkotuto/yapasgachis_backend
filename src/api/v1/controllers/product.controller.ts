@@ -208,6 +208,32 @@ export class ProductController {
   );
 
   /**
+   * Get supplier's low stock products
+   * GET /api/v1/products/low-stock?threshold=10&storeId=...
+   */
+  getLowStock = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user.id;
+    const threshold = req.query.threshold
+      ? parseInt(req.query.threshold as string, 10)
+      : 10;
+    const storeId = (req.query.storeId as string | undefined) || undefined;
+    const limit = req.query.limit
+      ? parseInt(req.query.limit as string, 10)
+      : undefined;
+
+    const products = await productService.getLowStockProducts(userId, {
+      threshold: Number.isFinite(threshold) ? threshold : 10,
+      storeId,
+      limit: Number.isFinite(limit as number) ? (limit as number) : undefined,
+    });
+
+    res.json({
+      success: true,
+      data: normalizeImagesList(products),
+    });
+  });
+
+  /**
    * Update product stock
    * PATCH /api/v1/products/:id/stock
    */

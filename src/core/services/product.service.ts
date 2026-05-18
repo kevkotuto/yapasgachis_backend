@@ -356,6 +356,40 @@ export class ProductService {
   }
 
   /**
+   * Get supplier products with low stock (quantity <= threshold).
+   * Returns at most `limit` products sorted by quantity ascending.
+   */
+  async getLowStockProducts(
+    userId: string,
+    options: { threshold?: number; storeId?: string; limit?: number } = {}
+  ): Promise<Product[]> {
+    const supplier = await this.supplierRepo.findByUserId(userId);
+    if (!supplier) {
+      throw new AppError(
+        404,
+        'Profil fournisseur non trouvé',
+        'SUPPLIER_NOT_FOUND'
+      );
+    }
+
+    const threshold = Math.max(0, options.threshold ?? 10);
+    const limit = Math.min(Math.max(1, options.limit ?? 50), 200);
+
+    // Fetch a generous slice of the supplier's products, then filter in memory.
+    // Pagination uses skip/take so we cap at `limit * 4` rows to stay cheap.
+    const { products } = await this.productRepo.findBySupplierId(supplier.id, {
+      storeId: options.storeId,
+      page: 1,
+      limit: Math.min(limit * 4, 200),
+    });
+
+    return products
+      .filter((p) => (p.quantity ?? 0) <= threshold)
+      .sort((a, b) => (a.quantity ?? 0) - (b.quantity ?? 0))
+      .slice(0, limit);
+  }
+
+  /**
    * Update product stock
    */
   async updateStock(

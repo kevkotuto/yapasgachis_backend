@@ -84,6 +84,63 @@ export class SupplierWalletService {
   }
 
   /**
+   * Analytics: revenu par jour sur une fenêtre temporelle (par défaut 7 jours).
+   * Agrège les escrowTransaction RELEASED.
+   */
+  async getRevenueAnalytics(
+    supplierId: string,
+    period: 'week' | 'month' | 'year' = 'week'
+  ): Promise<{
+    period: 'week' | 'month' | 'year';
+    revenueByDay: Array<{ date: string; revenue: number }>;
+    totalRevenue: number;
+  }> {
+    const now = new Date();
+    const days = period === 'year' ? 365 : period === 'month' ? 30 : 7;
+
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - (days - 1));
+
+    const escrows = await prisma.escrowTransaction.findMany({
+      where: {
+        supplierId,
+        status: 'RELEASED',
+        releasedAt: { gte: start },
+      },
+      select: {
+        supplierAmount: true,
+        releasedAt: true,
+      },
+    });
+
+    const buckets: Array<{ date: string; revenue: number }> = [];
+    const indexByDate = new Map<string, number>();
+    for (let i = 0; i < days; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const key = d.toISOString().slice(0, 10);
+      indexByDate.set(key, buckets.length);
+      buckets.push({ date: key, revenue: 0 });
+    }
+
+    let totalRevenue = 0;
+    for (const e of escrows) {
+      const ts = e.releasedAt;
+      if (!ts) continue;
+      const key = new Date(ts).toISOString().slice(0, 10);
+      const idx = indexByDate.get(key);
+      const amount = Math.round(Number(e.supplierAmount) || 0);
+      if (idx !== undefined) {
+        buckets[idx].revenue += amount;
+      }
+      totalRevenue += amount;
+    }
+
+    return { period, revenueByDay: buckets, totalRevenue };
+  }
+
+  /**
    * Récupérer les transactions d'un fournisseur
    */
   async getTransactions(

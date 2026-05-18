@@ -137,9 +137,38 @@ export const getWithdrawals = asyncHandler(
   }
 );
 
+/**
+ * @route GET /api/v1/supplier/wallet/analytics
+ * @desc Revenue by day for a given period (week/month/year), defaults to week
+ * @access Private (Supplier)
+ */
+export const getWalletAnalytics = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.user.id;
+    const supplier = await getSupplierProfile(userId);
+
+    const rawPeriod = (req.query.period as string | undefined) || 'week';
+    const period: 'week' | 'month' | 'year' = [
+      'week',
+      'month',
+      'year',
+    ].includes(rawPeriod)
+      ? (rawPeriod as 'week' | 'month' | 'year')
+      : 'week';
+
+    const result = await supplierWalletService.getRevenueAnalytics(
+      supplier.id,
+      period
+    );
+
+    res.json({ success: true, data: result });
+  }
+);
+
 export default {
   getWalletBalance,
   getWalletTransactions,
   requestWithdrawal,
   getWithdrawals,
+  getWalletAnalytics,
 };

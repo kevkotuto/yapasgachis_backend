@@ -82,6 +82,19 @@ router.get(
 );
 
 /**
+ * Get supplier's low-stock products
+ * GET /low-stock?threshold=10&storeId=...
+ * Requires: Authentication + SUPPLIER role
+ * NOTE: Must be before /:id to avoid route conflict
+ */
+router.get(
+  '/low-stock',
+  authMiddleware,
+  supplierOnly,
+  productController.getLowStock
+);
+
+/**
  * Create product
  * POST /
  * Requires: Authentication + SUPPLIER role
