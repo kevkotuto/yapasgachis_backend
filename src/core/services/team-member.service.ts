@@ -177,7 +177,8 @@ export class TeamMemberService {
     return member;
   }
 
-  async getTeamMembers(supplierId: string, filters: any) {
+  async getTeamMembers(userId: string, filters: any) {
+    const supplierId = await this.resolveSupplierId(userId);
     const result = await teamMemberRepository.findBySupplier(
       supplierId,
       filters
@@ -192,7 +193,8 @@ export class TeamMemberService {
     };
   }
 
-  async updateTeamMember(supplierId: string, memberId: string, data: any) {
+  async updateTeamMember(userId: string, memberId: string, data: any) {
+    const supplierId = await this.resolveSupplierId(userId);
     const member = (await teamMemberRepository.findById(memberId)) as any;
     if (!member) throw new AppError(404, 'Membre non trouvé');
     if (member.store?.supplierId !== supplierId)
@@ -203,7 +205,8 @@ export class TeamMemberService {
     return updated;
   }
 
-  async deleteTeamMember(supplierId: string, memberId: string) {
+  async deleteTeamMember(userId: string, memberId: string) {
+    const supplierId = await this.resolveSupplierId(userId);
     const member = (await teamMemberRepository.findById(memberId)) as any;
     if (!member) throw new AppError(404, 'Membre non trouvé');
     if (member.store?.supplierId !== supplierId)
@@ -234,7 +237,8 @@ export class TeamMemberService {
     return updated;
   }
 
-  async getTeamStats(supplierId: string) {
+  async getTeamStats(userId: string) {
+    const supplierId = await this.resolveSupplierId(userId);
     return await teamMemberRepository.getStats(supplierId);
   }
 }
