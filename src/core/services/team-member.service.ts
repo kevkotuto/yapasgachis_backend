@@ -4,41 +4,171 @@ import logger from '@/infrastructure/monitoring/logger';
 import { AppError } from '@/utils/helpers';
 import crypto from 'crypto';
 
-export class TeamMemberService {
-  async inviteTeamMember(supplierId: string, data: any) {
-    // Verify store belongs to supplier if provided
-    if (data.storeId) {
-      const store = await prisma.supplierStore.findUnique({
-        where: { id: data.storeId },
-        select: { supplierId: true },
-      });
+const normalizePhone = (raw?: string | null): string | null => {
+  if (!raw) return null;
+  const digits = raw.replace(/[\s\-().]/g, '').trim();
+  if (!digits) return null;
+  return digits.startsWith('+') ? digits : digits;
+};
 
-      if (!store || store.supplierId !== supplierId) {
-        throw new AppError(403, 'Magasin invalide');
-      }
+export class TeamMemberService {
+  /**
+   * Resolve `req.user.id` (User.id) to the SupplierProfile.id needed for FK
+   * checks. Throws if the caller is not a supplier.
+   */
+  private async resolveSupplierId(userId: string): Promise<string> {
+    const supplier = await prisma.supplierProfile.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+    if (!supplier) {
+      throw new AppError(403, 'Profil fournisseur introuvable');
+    }
+    return supplier.id;
+  }
+
+  async inviteTeamMember(userId: string, data: any) {
+    const supplierId = await this.resolveSupplierId(userId);
+
+    if (!data?.storeId) {
+      throw new AppError(400, 'storeId requis pour inviter un gérant');
     }
 
-    // Generate invitation token
+    // Verify store belongs to supplier
+    const store = await prisma.supplierStore.findUnique({
+      where: { id: data.storeId },
+      select: { supplierId: true },
+    });
+    if (!store || store.supplierId !== supplierId) {
+      throw new AppError(403, 'Magasin invalide');
+    }
+
+    const phoneNumber = normalizePhone(data.phoneNumber);
+    const email = data.email ? String(data.email).toLowerCase().trim() : null;
+
+    // Try to match an existing user. If one exists, the staff row is created
+    // directly with userId, ACCEPTED status and no invite token.
+    let matchedUser: { id: string } | null = null;
+    if (phoneNumber || email) {
+      matchedUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            phoneNumber ? { phoneNumber } : undefined,
+            email ? { email } : undefined,
+          ].filter(Boolean) as any,
+        },
+        select: { id: true },
+      });
+    }
+
+    if (matchedUser) {
+      // Reject duplicates within the same store.
+      const existing = await prisma.storeStaff.findFirst({
+        where: { storeId: data.storeId, userId: matchedUser.id },
+        select: { id: true },
+      });
+      if (existing) {
+        throw new AppError(
+          409,
+          'Cette personne fait déjà partie de ce magasin'
+        );
+      }
+
+      const member = await teamMemberRepository.create({
+        storeId: data.storeId,
+        userId: matchedUser.id,
+        role: data.role || 'MANAGER',
+        invitedById: userId,
+        inviteStatus: 'ACCEPTED',
+        acceptedAt: new Date(),
+        invitePhoneNumber: phoneNumber,
+        inviteEmail: email,
+        inviteFirstName: data.firstName ?? data.name ?? null,
+        inviteLastName: data.lastName ?? null,
+      });
+      logger.info('Team member added (existing user)', {
+        supplierId,
+        memberId: member.id,
+        userId: matchedUser.id,
+      });
+      return member;
+    }
+
+    // Otherwise persist a pending invite with the contact info; auth.register
+    // will pick it up at signup.
     const inviteToken = crypto.randomBytes(32).toString('hex');
+    const inviteExpiresAt = new Date();
+    inviteExpiresAt.setDate(inviteExpiresAt.getDate() + 30);
 
     const member = await teamMemberRepository.create({
-      supplierId,
       storeId: data.storeId,
-      email: data.email,
-      phoneNumber: data.phoneNumber,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      role: data.role,
-      permissions: data.permissions || [],
+      role: data.role || 'MANAGER',
+      invitedById: userId,
       inviteToken,
       inviteStatus: 'PENDING',
-      isActive: true,
+      inviteExpiresAt,
+      invitePhoneNumber: phoneNumber,
+      inviteEmail: email,
+      inviteFirstName: data.firstName ?? data.name ?? null,
+      inviteLastName: data.lastName ?? null,
     });
 
-    // TODO: Send invitation email/SMS
+    // TODO: send invitation SMS / email via notification queue.
 
-    logger.info('Team member invited', { supplierId, memberId: member.id });
+    logger.info('Team member invited (pending)', {
+      supplierId,
+      memberId: member.id,
+      phoneNumber,
+      email,
+    });
     return member;
+  }
+
+  /**
+   * Called from auth.register after a new User is persisted.
+   * Links every PENDING StoreStaff row whose invite metadata matches the
+   * new user's phone or email.
+   */
+  async claimPendingInvitesForUser(user: {
+    id: string;
+    phoneNumber?: string | null;
+    email?: string | null;
+  }): Promise<number> {
+    const phoneNumber = normalizePhone(user.phoneNumber);
+    const email = user.email ? user.email.toLowerCase().trim() : null;
+    if (!phoneNumber && !email) return 0;
+
+    const pending = await prisma.storeStaff.findMany({
+      where: {
+        userId: null,
+        inviteStatus: 'PENDING',
+        OR: [
+          phoneNumber ? { invitePhoneNumber: phoneNumber } : undefined,
+          email ? { inviteEmail: email } : undefined,
+        ].filter(Boolean) as any,
+      },
+      select: { id: true, storeId: true },
+    });
+
+    if (pending.length === 0) return 0;
+
+    // Drop any pending row that would clash with an existing accepted staff
+    // for the same store (defensive: shouldn't happen since user is brand new).
+    const ids = pending.map((p) => p.id);
+    await prisma.storeStaff.updateMany({
+      where: { id: { in: ids } },
+      data: {
+        userId: user.id,
+        inviteStatus: 'ACCEPTED',
+        acceptedAt: new Date(),
+      },
+    });
+
+    logger.info('Pending team invites claimed', {
+      userId: user.id,
+      claimedCount: pending.length,
+    });
+    return pending.length;
   }
 
   async getTeamMember(id: string) {

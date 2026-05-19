@@ -6,6 +6,7 @@ import JWTService from './jwt.service';
 import notificationService from './notification.service';
 import OTPService, { OTPPurpose } from './otp.service';
 import referralService from './referral.service';
+import teamMemberService from './team-member.service';
 
 import config from '@/config';
 import UserRepository from '@/core/repositories/user.repository';
@@ -385,6 +386,27 @@ export class AuthService {
         error: (error as Error).message,
       });
       // Don't fail registration if referral code creation fails
+    }
+
+    // Claim any pending store-staff invites matching this user's phone/email.
+    try {
+      const claimed = await teamMemberService.claimPendingInvitesForUser({
+        id: user.id,
+        phoneNumber: user.phoneNumber,
+        email: user.email,
+      });
+      if (claimed > 0) {
+        logger.info('Pending team invites linked to new user', {
+          userId: user.id,
+          claimed,
+        });
+      }
+    } catch (error) {
+      logger.error('Failed to claim pending team invites', {
+        userId: user.id,
+        error: (error as Error).message,
+      });
+      // Non-blocking: registration still succeeds.
     }
 
     // Send welcome notification (push + in-app)
@@ -1075,6 +1097,26 @@ export class AuthService {
           });
         }
 
+        // Claim pending store-staff invites by phone/email
+        try {
+          const claimed = await teamMemberService.claimPendingInvitesForUser({
+            id: user.id,
+            phoneNumber: user.phoneNumber,
+            email: user.email,
+          });
+          if (claimed > 0) {
+            logger.info('Pending team invites linked to Google user', {
+              userId: user.id,
+              claimed,
+            });
+          }
+        } catch (error) {
+          logger.error('Failed to claim invites for Google user', {
+            userId: user.id,
+            error: (error as Error).message,
+          });
+        }
+
         // Send welcome notification (push + in-app)
         try {
           await notificationService.create({
@@ -1267,7 +1309,8 @@ export class AuthService {
     if (data.authorizationCode) {
       try {
         const tokenResponse = await AppleAuthService.exchangeAuthorizationCode(
-          data.authorizationCode
+          data.authorizationCode,
+          appleUser.platform
         );
         if (tokenResponse?.refresh_token) {
           appleRefreshToken = tokenResponse.refresh_token;
@@ -1337,6 +1380,20 @@ export class AuthService {
           await referralService.createReferralCode(user.id);
         } catch (error) {
           logger.error('Failed to create referral code for Apple user', {
+            userId: user.id,
+            error: (error as Error).message,
+          });
+        }
+
+        // Claim pending store-staff invites
+        try {
+          await teamMemberService.claimPendingInvitesForUser({
+            id: user.id,
+            phoneNumber: user.phoneNumber,
+            email: user.email,
+          });
+        } catch (error) {
+          logger.error('Failed to claim invites for Apple user', {
             userId: user.id,
             error: (error as Error).message,
           });

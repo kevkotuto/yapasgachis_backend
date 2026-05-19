@@ -602,8 +602,12 @@ model StoreStaff {
   id      String        @id @default(uuid())
   storeId String
   store   SupplierStore @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  userId  String
-  user    User          @relation("StoreStaffUser", fields: [userId], references: [id], onDelete: Cascade)
+  // Nullable: une invitation peut être créée AVANT que la personne ait un compte.
+  // Le `userId` sera renseigné à l'acceptation (token) ou automatiquement à
+  // l'inscription si le numéro/email correspond à `invitePhoneNumber` /
+  // `inviteEmail`.
+  userId  String?
+  user    User?         @relation("StoreStaffUser", fields: [userId], references: [id], onDelete: Cascade)
 
   // Rôle et statut
   role     StoreStaffRole
@@ -625,6 +629,12 @@ model StoreStaff {
   inviteStatus    StoreStaffInviteStatus @default(PENDING)
   inviteToken     String?                @unique // Token pour accepter l'invitation
   inviteExpiresAt DateTime? // Expiration de l'invitation
+  // Métadonnées de l'invité avant qu'il n'existe sur la plateforme. Utilisées
+  // pour relier automatiquement le compte lorsqu'il s'inscrit avec ces données.
+  invitePhoneNumber String?
+  inviteEmail       String?
+  inviteFirstName   String?
+  inviteLastName    String?
 
   // Métadonnées
   notes        String? // Notes sur l'employé
@@ -638,6 +648,8 @@ model StoreStaff {
   @@index([userId])
   @@index([inviteStatus])
   @@index([role])
+  @@index([invitePhoneNumber])
+  @@index([inviteEmail])
   @@map("store_staff")
 }
 
