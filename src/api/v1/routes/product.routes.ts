@@ -15,6 +15,7 @@ import {
   getSupplierProductsSchema,
   toggleProductStatusSchema,
   updateProductSettingsSchema,
+  publishProductSchema,
 } from '../validators/product.validator';
 
 import { authMiddleware } from '@/middleware/auth.middleware';
@@ -105,6 +106,23 @@ router.post(
   supplierOnly,
   validate(createProductSchema),
   productController.createProduct
+);
+
+/**
+ * Publish product (assign to one/several/no store, set ACTIVE)
+ * POST /:id/publish
+ * Body: { storeIds?: string[] }
+ *  - undefined/empty: publish without store (visible across all supplier stores)
+ *  - 1 id: assign to that store
+ *  - many ids: assigns first to original, clones product for each other store
+ * Requires: Authentication + SUPPLIER role
+ */
+router.post(
+  '/:id/publish',
+  authMiddleware,
+  supplierOnly,
+  validate(publishProductSchema),
+  productController.publishProduct
 );
 
 /**

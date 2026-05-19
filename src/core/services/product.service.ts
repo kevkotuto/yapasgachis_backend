@@ -1,5 +1,6 @@
 import { Product, ProductStatus, ProductCategory } from '@prisma/client';
 
+import { prisma } from '@/infrastructure/database/prisma';
 import productRepository, {
   ProductRepository,
 } from '@/core/repositories/product.repository';
@@ -34,7 +35,8 @@ export class ProductService {
       price: number;
       quantity: number;
       unit?: string;
-      expiresAt: Date;
+      expiresAt?: Date;
+      storeId?: string;
       images?: string[];
       tags?: string[];
       pickupLocation?: string;
@@ -69,8 +71,8 @@ export class ProductService {
         );
       }
 
-      // Validate expiration date
-      if (new Date(data.expiresAt) <= new Date()) {
+      // Validate expiration date if provided
+      if (data.expiresAt && new Date(data.expiresAt) <= new Date()) {
         throw new AppError(
           400,
           "La date d'expiration doit être dans le futur",
@@ -78,10 +80,28 @@ export class ProductService {
         );
       }
 
+      // Validate store ownership if provided
+      if (data.storeId) {
+        const store = await prisma.supplierStore.findUnique({
+          where: { id: data.storeId },
+          select: { supplierId: true },
+        });
+        if (!store || store.supplierId !== supplier.id) {
+          throw new AppError(
+            403,
+            "Ce magasin n'appartient pas à votre compte",
+            'STORE_FORBIDDEN'
+          );
+        }
+      }
+
+      // Status: DRAFT if no store assigned, ACTIVE otherwise
+      const status = data.storeId ? ProductStatus.ACTIVE : ProductStatus.DRAFT;
+
       // Create product
       const product = await this.productRepo.create({
         title: data.name,
-        description: data.description,
+        description: data.description ?? '',
         category: data.category,
         originalPrice: data.originalPrice,
         discountedPrice: data.price,
@@ -89,9 +109,10 @@ export class ProductService {
         quantityAvailable: data.quantity,
         unit: data.unit || 'piece',
         expiryDate: data.expiresAt,
-        status: ProductStatus.ACTIVE,
+        status,
         images: data.images || [],
         supplier: { connect: { id: supplier.id } },
+        ...(data.storeId ? { store: { connect: { id: data.storeId } } } : {}),
       });
 
       logger.info('Product created', {
@@ -146,6 +167,7 @@ export class ProductService {
       quantity?: number;
       unit?: string;
       expiresAt?: Date;
+      storeId?: string | null;
       status?: ProductStatus;
       images?: string[];
       tags?: string[];
@@ -184,6 +206,21 @@ export class ProductService {
         }
       }
 
+      // Validate store ownership if provided
+      if (data.storeId) {
+        const store = await prisma.supplierStore.findUnique({
+          where: { id: data.storeId },
+          select: { supplierId: true },
+        });
+        if (!store || store.supplierId !== supplier.id) {
+          throw new AppError(
+            403,
+            "Ce magasin n'appartient pas à votre compte",
+            'STORE_FORBIDDEN'
+          );
+        }
+      }
+
       // Prepare update data
       const updateData: any = { ...data };
       if (data.price) {
@@ -197,6 +234,13 @@ export class ProductService {
       if (data.expiresAt) {
         updateData.expiryDate = data.expiresAt;
         delete updateData.expiresAt;
+      }
+      if (data.storeId === null) {
+        updateData.store = { disconnect: true };
+        delete updateData.storeId;
+      } else if (data.storeId) {
+        updateData.store = { connect: { id: data.storeId } };
+        delete updateData.storeId;
       }
 
       // Update product
@@ -223,6 +267,112 @@ export class ProductService {
         error: (error as Error).message,
       });
       throw new AppError(500, 'Erreur lors de la mise à jour du produit');
+    }
+  }
+
+  /**
+   * Publish a DRAFT product to one, several, or all supplier stores.
+   * - storeIds empty/undefined  -> activate without store (visible across all supplier stores)
+   * - storeIds.length === 1     -> assign to that store and activate
+   * - storeIds.length > 1       -> clone the product per extra store, all ACTIVE
+   * Returns the list of products that resulted (original + clones).
+   */
+  async publishProduct(
+    userId: string,
+    productId: string,
+    storeIds: string[] = []
+  ): Promise<Product[]> {
+    try {
+      const product = await this.productRepo.findById(productId);
+      if (!product) {
+        throw new AppError(404, 'Produit non trouvé', 'PRODUCT_NOT_FOUND');
+      }
+
+      const supplier = await this.supplierRepo.findByUserId(userId);
+      if (!supplier || product.supplierId !== supplier.id) {
+        throw new AppError(
+          403,
+          'Vous ne pouvez pas publier ce produit',
+          'FORBIDDEN'
+        );
+      }
+
+      // Validate store ownership
+      if (storeIds.length > 0) {
+        const stores = await prisma.supplierStore.findMany({
+          where: { id: { in: storeIds }, supplierId: supplier.id },
+          select: { id: true },
+        });
+        if (stores.length !== storeIds.length) {
+          throw new AppError(
+            403,
+            "Un ou plusieurs magasins n'appartiennent pas à votre compte",
+            'STORE_FORBIDDEN'
+          );
+        }
+      }
+
+      const results: Product[] = [];
+
+      if (storeIds.length === 0) {
+        // No store: activate as-is (visible across all stores)
+        const updated = await this.productRepo.update(productId, {
+          status: ProductStatus.ACTIVE,
+          store: { disconnect: true },
+        } as any);
+        results.push(updated);
+      } else {
+        // First store updates the original product
+        const [firstStoreId, ...otherStoreIds] = storeIds;
+        const updated = await this.productRepo.update(productId, {
+          status: ProductStatus.ACTIVE,
+          store: { connect: { id: firstStoreId } },
+        } as any);
+        results.push(updated);
+
+        // Other stores: clone the product
+        for (const storeId of otherStoreIds) {
+          const cloned = await this.productRepo.create({
+            title: product.title,
+            description: product.description,
+            category: product.category,
+            originalPrice: Number(product.originalPrice),
+            discountedPrice: Number(product.discountedPrice),
+            quantity: product.quantity,
+            quantityAvailable: product.quantity,
+            unit: product.unit,
+            expiryDate: product.expiryDate ?? undefined,
+            status: ProductStatus.ACTIVE,
+            images: (product.images as any) || [],
+            supplier: { connect: { id: supplier.id } },
+            store: { connect: { id: storeId } },
+          });
+          results.push(cloned);
+        }
+      }
+
+      logger.info('Product published', {
+        userId,
+        productId,
+        storeIds,
+        clonedCount: Math.max(0, storeIds.length - 1),
+      });
+
+      socketService.sendToUser(userId, 'product:updated', {
+        productId,
+        type: 'published',
+        products: results,
+      });
+
+      return results;
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      logger.error('Error publishing product', {
+        userId,
+        productId,
+        error: (error as Error).message,
+      });
+      throw new AppError(500, 'Erreur lors de la publication du produit');
     }
   }
 

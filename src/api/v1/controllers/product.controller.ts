@@ -14,6 +14,7 @@ import {
   GetSupplierProductsInput,
   ToggleProductStatusInput,
   UpdateProductSettingsInput,
+  PublishProductInput,
 } from '../validators/product.validator';
 
 import productService from '@/core/services/product.service';
@@ -65,6 +66,43 @@ export class ProductController {
       res.json({
         success: true,
         data: normalizeImages(product),
+      });
+    }
+  );
+
+  /**
+   * Publish product (assign to one/several/no store and set ACTIVE)
+   * POST /api/v1/products/:id/publish
+   */
+  publishProduct = asyncHandler(
+    async (
+      req: Request<
+        PublishProductInput['params'],
+        {},
+        PublishProductInput['body']
+      >,
+      res: Response
+    ) => {
+      const userId = req.user.id;
+      const { id } = req.params;
+      const storeIds = req.body?.storeIds ?? [];
+
+      const products = await productService.publishProduct(
+        userId,
+        id,
+        storeIds
+      );
+
+      logger.info('Product published via API', {
+        userId,
+        productId: id,
+        storeIdsCount: storeIds.length,
+      });
+
+      res.json({
+        success: true,
+        message: 'Produit publié avec succès',
+        data: normalizeImagesList(products),
       });
     }
   );

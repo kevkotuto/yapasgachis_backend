@@ -42,7 +42,9 @@ export const createProductSchema = z.object({
         .transform((val) => new Date(val))
         .refine((date) => date > new Date(), {
           message: "La date d'expiration doit être dans le futur",
-        }),
+        })
+        .optional(),
+      storeId: z.string().uuid('ID de magasin invalide').optional(),
       images: z.array(z.string().url()).optional(),
       tags: z.array(z.string().max(50)).max(10).optional(),
       pickupLocation: z.string().max(500).optional(),
@@ -75,6 +77,7 @@ export const updateProductSchema = z.object({
         .datetime()
         .transform((val) => new Date(val))
         .optional(),
+      storeId: z.string().uuid('ID de magasin invalide').nullable().optional(),
       status: z.nativeEnum(ProductStatus).optional(),
       images: z.array(z.string().url()).optional(),
       tags: z.array(z.string().max(50)).max(10).optional(),
@@ -97,6 +100,18 @@ export const updateProductSchema = z.object({
 });
 
 export type UpdateProductInput = z.infer<typeof updateProductSchema>;
+
+// Publish product (assign to one, many, or all stores)
+export const publishProductSchema = z.object({
+  params: z.object({
+    id: z.string().uuid('ID de produit invalide'),
+  }),
+  body: z.object({
+    storeIds: z.array(z.string().uuid('ID de magasin invalide')).optional(),
+  }),
+});
+
+export type PublishProductInput = z.infer<typeof publishProductSchema>;
 
 // Get product by ID
 export const getProductByIdSchema = z.object({
