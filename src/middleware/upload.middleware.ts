@@ -297,3 +297,21 @@ export const uploadKycDocuments = kycUploadMulter.fields([
   { name: 'idCardBack', maxCount: 1 },
   { name: 'selfie', maxCount: 1 },
 ]);
+
+/**
+ * Business Documents Upload (RCCM / DFE / business license).
+ * Independent from the AI identity flow — these are stored as supplier metadata
+ * for manual admin review.
+ */
+const businessDocUploadMulter = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB per file (PDFs/photos)
+    files: 4,
+  },
+  fileFilter: fileFilter([...ALLOWED_IMAGE_TYPES, 'application/pdf']),
+});
+
+export const uploadBusinessDocuments = businessDocUploadMulter.fields([
+  { name: 'documents', maxCount: 4 },
+]);

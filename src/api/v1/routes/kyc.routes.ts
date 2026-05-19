@@ -11,7 +11,10 @@ import * as kycController from '@api/v1/controllers/kyc.controller';
 import { validate } from '@middleware/validation.middleware';
 import { authenticate } from '@middleware/auth.middleware';
 import { requireRole } from '@middleware/role-guard.middleware';
-import { uploadKycDocuments } from '@middleware/upload.middleware';
+import {
+  uploadKycDocuments,
+  uploadBusinessDocuments,
+} from '@middleware/upload.middleware';
 import {
   submitKycSchema,
   getKycStatusSchema,
@@ -41,5 +44,16 @@ router.post(
  * @access  Supplier only
  */
 router.get('/status', validate(getKycStatusSchema), kycController.getKycStatus);
+
+/**
+ * @route   POST /api/v1/kyc/business-documents
+ * @desc    Upload business documents (RCCM, DFE, business license)
+ * @access  Supplier only
+ */
+router.post(
+  '/business-documents',
+  uploadBusinessDocuments,
+  kycController.submitBusinessDocuments
+);
 
 export default router;

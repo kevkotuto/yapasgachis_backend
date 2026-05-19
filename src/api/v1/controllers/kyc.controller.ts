@@ -11,6 +11,7 @@ import { kycService } from '@core/services/kyc.service';
 import { prisma } from '@infrastructure/database';
 import logger from '@infrastructure/monitoring/logger';
 import { getKycQueueStats } from '@infrastructure/queue/queues/kyc.queue';
+import mediaServerService from '@infrastructure/storage/media-server.service';
 import { AppError } from '@middleware/error-handler.middleware';
 import { asyncHandler } from '@utils/helpers';
 import { IdCardType } from '@prisma/client';
@@ -119,6 +120,85 @@ export const submitKyc = asyncHandler(async (req: Request, res: Response) => {
     },
   });
 });
+
+/**
+ * Submit supplier business documents (RCCM, DFE, business license).
+ * Independent from the AI identity flow — files are stored on the media server
+ * and their URLs pushed onto `SupplierProfile.legalDocuments` for manual admin review.
+ *
+ * POST /api/v1/kyc/business-documents
+ * multipart/form-data, field `documents` (1..4 files, images or PDF), plus optional
+ * body field `documentType` ('RCCM' | 'DFE' | 'BUSINESS_LICENSE' | 'OTHER').
+ */
+export const submitBusinessDocuments = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) throw new AppError(401, 'Non autorisé');
+
+    const supplier = await prisma.supplierProfile.findUnique({
+      where: { userId },
+    });
+    if (!supplier) throw new AppError(404, 'Profil fournisseur non trouvé');
+
+    const files = req.files as
+      | { documents?: Express.Multer.File[] }
+      | Express.Multer.File[]
+      | undefined;
+    const list: Express.Multer.File[] = Array.isArray(files)
+      ? files
+      : (files?.documents ?? []);
+
+    if (!list || list.length === 0) {
+      throw new AppError(400, 'Aucun document fourni');
+    }
+
+    const documentType: string =
+      (typeof req.body?.documentType === 'string'
+        ? req.body.documentType
+        : 'OTHER') || 'OTHER';
+
+    const uploaded: Array<{ url: string; type: string; uploadedAt: string }> =
+      [];
+    for (const file of list) {
+      const result = await mediaServerService.uploadFile(file.buffer, {
+        folder: 'suppliers',
+        filename: file.originalname,
+        mimetype: file.mimetype,
+      });
+      uploaded.push({
+        url: result.url,
+        type: documentType,
+        uploadedAt: new Date().toISOString(),
+      });
+    }
+
+    const previous = Array.isArray(supplier.legalDocuments)
+      ? (supplier.legalDocuments as any[])
+      : [];
+    const merged = [...previous, ...uploaded];
+
+    const updated = await prisma.supplierProfile.update({
+      where: { id: supplier.id },
+      data: { legalDocuments: merged as any },
+      select: { legalDocuments: true },
+    });
+
+    logger.info('Business documents submitted', {
+      supplierId: supplier.id,
+      documentType,
+      count: uploaded.length,
+    });
+
+    res.json({
+      success: true,
+      message: 'Documents envoyés avec succès',
+      data: {
+        documents: updated.legalDocuments,
+        uploaded,
+      },
+    });
+  }
+);
 
 /**
  * @swagger
