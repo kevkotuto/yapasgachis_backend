@@ -284,7 +284,7 @@ async function main() {
       title: 'Panier Surprise Dejeuner',
       description:
         'Un panier surprise avec les restes du dejeuner. Peut contenir: riz, attieke, poulet, poisson, legumes sautees.',
-      category: ProductCategory.FOOD_PREPARED,
+      category: ProductCategory.PREPARED_MEALS_INDIVIDUAL,
       images: [
         'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800',
         'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800',
@@ -309,7 +309,7 @@ async function main() {
       title: 'Attieke Poisson Braise',
       description:
         'Attieke frais avec poisson braise, tomates, oignons et piment. Portion genereuse!',
-      category: ProductCategory.FOOD_PREPARED,
+      category: ProductCategory.PREPARED_MEALS_INDIVIDUAL,
       images: [
         'https://images.unsplash.com/photo-1580959375944-26d6fc0fa6d0?w=800',
         'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=800',
@@ -335,7 +335,7 @@ async function main() {
       title: 'Garba Special',
       description:
         'Garba avec thon frais, attiéké, oignons, tomates, piment et huile.',
-      category: ProductCategory.FOOD_PREPARED,
+      category: ProductCategory.PREPARED_MEALS_INDIVIDUAL,
       images: [
         'https://images.unsplash.com/photo-1485962398705-ef6a13c41e8f?w=800',
         'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800',

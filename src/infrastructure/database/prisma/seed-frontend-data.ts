@@ -521,7 +521,7 @@ async function main() {
       storeId: otakkosStore.id,
       title: 'Pack Tacos XXL',
       description: 'Tacos XXL, boisson gazeuse, couverts',
-      category: ProductCategory.FOOD_PREPARED,
+      category: ProductCategory.PREPARED_MEALS_INDIVIDUAL,
       images: [
         'https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=800',
       ],
@@ -547,7 +547,7 @@ async function main() {
       storeId: laParisienneStore.id,
       title: 'Panier Surprise',
       description: 'Assortiment de viennoiseries et pâtisseries',
-      category: ProductCategory.BAKERY,
+      category: ProductCategory.BAKERY_PASTRY,
       images: [
         'https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=1000',
       ],
@@ -573,7 +573,7 @@ async function main() {
       storeId: burgerKingStore.id,
       title: 'Menu Burger',
       description: 'Burger, frites, boisson',
-      category: ProductCategory.FOOD_PREPARED,
+      category: ProductCategory.PREPARED_MEALS_INDIVIDUAL,
       images: [
         'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=1000',
       ],
@@ -599,7 +599,7 @@ async function main() {
       storeId: plateauStore.id,
       title: 'Panier Boulangerie',
       description: 'Pain, viennoiseries du jour',
-      category: ProductCategory.BAKERY,
+      category: ProductCategory.BAKERY_PASTRY,
       images: [
         'https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=1000',
       ],

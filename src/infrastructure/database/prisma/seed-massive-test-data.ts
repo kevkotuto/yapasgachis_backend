@@ -230,8 +230,18 @@ const PRODUCTS_BY_CATEGORY = {
       desc: 'Mix de produits frais et secs proches de la date limite',
       price: 3500,
     },
+    {
+      title: 'Fromages Assortis',
+      desc: 'Plateau de fromages variés',
+      price: 3000,
+    },
+    {
+      title: 'Charcuterie',
+      desc: 'Assortiment de charcuterie fine',
+      price: 2500,
+    },
   ],
-  [ProductCategory.SNACKS_SALADS]: [
+  [ProductCategory.OTHER]: [
     {
       title: 'Salade César',
       desc: 'Salade verte, poulet grillé, croûtons et parmesan',
@@ -265,7 +275,7 @@ const PRODUCTS_BY_CATEGORY = {
       price: 1800,
     },
   ],
-  [ProductCategory.RESTAURANT_HOT_MEALS]: [
+  [ProductCategory.RESTAURANT]: [
     {
       title: 'Plat du Jour - Poulet Rôti',
       desc: 'Poulet rôti avec frites et salade',
@@ -299,7 +309,7 @@ const PRODUCTS_BY_CATEGORY = {
       price: 3000,
     },
   ],
-  [ProductCategory.BAKERY]: [
+  [ProductCategory.BAKERY_PASTRY]: [
     {
       title: 'Pain Baguette x3',
       desc: 'Lot de 3 baguettes fraîches du jour',
@@ -315,8 +325,6 @@ const PRODUCTS_BY_CATEGORY = {
       desc: 'Lot de 4 pains au chocolat',
       price: 1000,
     },
-  ],
-  [ProductCategory.PASTRY]: [
     {
       title: 'Assortiment Viennoiseries',
       desc: 'Croissants, pains au chocolat, chaussons aux pommes',
@@ -326,18 +334,6 @@ const PRODUCTS_BY_CATEGORY = {
       title: 'Gâteau Part',
       desc: 'Part de gâteau au chocolat ou vanille',
       price: 800,
-    },
-  ],
-  [ProductCategory.DAIRY_DELI]: [
-    {
-      title: 'Fromages Assortis',
-      desc: 'Plateau de fromages variés',
-      price: 3000,
-    },
-    {
-      title: 'Charcuterie',
-      desc: 'Assortiment de charcuterie fine',
-      price: 2500,
     },
   ],
 };

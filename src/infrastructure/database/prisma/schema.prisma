@@ -49,24 +49,14 @@ enum SubscriptionTier {
 }
 
 enum ProductCategory {
-  // Catégories Produits YapaGachis
-  PREPARED_MEALS_INDIVIDUAL // Plats preparés et repas (particuliers)
-  GROCERY_BASKET // Paniers supermarche / Produits d'épicerie / Produits frais
-  SNACKS_SALADS // Snacks/ salades & autres
-  LOCAL_TRADITIONAL // Plats locaux ou tradi (placali, alloco, riz Gras, etc)
-  RESTAURANT_HOT_MEALS // Restaurants/ plats du jours/ plats chauds
-  INTERNATIONAL_CUISINE // Cuisine Internationale (tacos, pizza, sushis)
-  DAIRY_DELI // Produits laitiers et charcuteries
-
-  // Anciennes catégories (pour compatibilité)
-  FOOD_PREPARED
-  BAKERY
-  PASTRY
-  GROCERIES
-  FRUITS_VEGETABLES
-  MEAT_FISH
-  DAIRY
-  OTHER
+  BAKERY_PASTRY // 1) Boulangeries - Pâtisseries
+  GROCERY_BASKET // 2) Paniers supermarchés / fruits-légumes / épicerie / produits laitiers
+  INTERNATIONAL_CUISINE // 3) Cuisine Internationale
+  LOCAL_TRADITIONAL // 4) Plats locaux et traditionnels
+  RESTAURANT // 5) Restaurants
+  PREPARED_MEALS_INDIVIDUAL // 6) Plats préparés (Particuliers)
+  MEAT_FISH // 7) Viandes & poissons
+  OTHER // 8) Autres
 }
 
 enum ProductStatus {

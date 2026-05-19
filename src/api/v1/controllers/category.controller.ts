@@ -2,38 +2,21 @@ import { Request, Response } from 'express';
 import { ProductCategory, DealCategory } from '@prisma/client';
 
 /**
- * Mapping des catégories de produits avec leurs labels en français
+ * Catégories de produits (8) — refonte mai 2026
  */
 const PRODUCT_CATEGORIES = [
   {
-    value: 'PREPARED_MEALS_INDIVIDUAL',
-    label: '🍱 Plats préparés et repas (particuliers)',
-    description: 'Repas préparés par des particuliers',
-    icon: '🍱',
+    value: 'BAKERY_PASTRY',
+    label: '🥐 Boulangeries - Pâtisseries',
+    description: 'Pains, viennoiseries, gâteaux et desserts',
+    icon: '🥐',
   },
   {
     value: 'GROCERY_BASKET',
-    label: "🛒 Paniers supermarché / Produits d'épicerie",
-    description: "Produits d'épicerie variés et produits frais",
+    label: '🛒 Paniers supermarchés / Épicerie',
+    description:
+      "Paniers supermarché, fruits & légumes, produits d'épicerie et produits laitiers",
     icon: '🛒',
-  },
-  {
-    value: 'SNACKS_SALADS',
-    label: '🥗 Snacks / Salades & autres',
-    description: 'Collations, salades et autres snacks',
-    icon: '🥗',
-  },
-  {
-    value: 'LOCAL_TRADITIONAL',
-    label: '🍲 Plats locaux ou traditionnels',
-    description: 'Placali, alloco, riz gras, etc.',
-    icon: '🍲',
-  },
-  {
-    value: 'RESTAURANT_HOT_MEALS',
-    label: '🍽️ Restaurants / Plats du jour',
-    description: 'Plats chauds de restaurants',
-    icon: '🍽️',
   },
   {
     value: 'INTERNATIONAL_CUISINE',
@@ -42,57 +25,32 @@ const PRODUCT_CATEGORIES = [
     icon: '🍕',
   },
   {
-    value: 'DAIRY_DELI',
-    label: '🧀 Produits laitiers et charcuteries',
-    description: 'Fromages, yaourts, charcuterie',
-    icon: '🧀',
-  },
-  // Anciennes catégories (compatibilité)
-  {
-    value: 'FOOD_PREPARED',
-    label: '🍴 Plats préparés',
-    description: 'Plats cuisinés prêts à consommer',
-    icon: '🍴',
+    value: 'LOCAL_TRADITIONAL',
+    label: '🍲 Plats locaux et traditionnels',
+    description: 'Placali, alloco, riz gras, attiéké, etc.',
+    icon: '🍲',
   },
   {
-    value: 'BAKERY',
-    label: '🥖 Boulangerie',
-    description: 'Pains et viennoiseries',
-    icon: '🥖',
+    value: 'RESTAURANT',
+    label: '🍽️ Restaurants',
+    description: 'Plats du jour, plats chauds de restaurants',
+    icon: '🍽️',
   },
   {
-    value: 'PASTRY',
-    label: '🍰 Pâtisserie',
-    description: 'Gâteaux et desserts',
-    icon: '🍰',
-  },
-  {
-    value: 'GROCERIES',
-    label: '🥫 Épicerie',
-    description: "Produits d'épicerie sèche",
-    icon: '🥫',
-  },
-  {
-    value: 'FRUITS_VEGETABLES',
-    label: '🥬 Fruits et Légumes',
-    description: 'Produits frais',
-    icon: '🥬',
+    value: 'PREPARED_MEALS_INDIVIDUAL',
+    label: '🍱 Plats préparés (Particuliers)',
+    description: 'Repas préparés par des particuliers',
+    icon: '🍱',
   },
   {
     value: 'MEAT_FISH',
-    label: '🥩 Viandes et Poissons',
+    label: '🥩 Viandes & Poissons',
     description: 'Produits carnés et poissonnerie',
     icon: '🥩',
   },
   {
-    value: 'DAIRY',
-    label: '🥛 Produits laitiers',
-    description: 'Lait, fromages, yaourts',
-    icon: '🥛',
-  },
-  {
     value: 'OTHER',
-    label: '📦 Autre',
+    label: '📦 Autres',
     description: 'Autres produits',
     icon: '📦',
   },

@@ -173,7 +173,7 @@ async function seedCompleteData() {
       storeId: otakkosStore.id,
       title: 'Pack Tacos XXL',
       description: 'Un tacos taille XXL, une boisson gazeuse et des couverts',
-      category: 'FOOD_PREPARED',
+      category: 'PREPARED_MEALS_INDIVIDUAL',
       images: [
         'https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=800&auto=format&fit=crop&q=80',
         'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800&auto=format&fit=crop&q=80',
@@ -203,7 +203,7 @@ async function seedCompleteData() {
       storeId: otakkosStore.id,
       title: 'Panier surprise Pain & Viennoiseries',
       description: 'Assortiment de pains et viennoiseries de la journée',
-      category: 'BAKERY',
+      category: 'BAKERY_PASTRY',
       images: [
         'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&auto=format&fit=crop&q=80',
       ],
