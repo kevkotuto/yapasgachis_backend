@@ -146,6 +146,7 @@ interface Config {
     clientSecret: string;
     iosClientId: string;
     androidClientId: string;
+    webClientId: string;
   };
   apple: {
     bundleId: string;
@@ -153,6 +154,8 @@ interface Config {
     teamId: string;
     keyId: string;
     privateKeyPath: string;
+    webKeyId: string;
+    webPrivateKeyPath: string;
   };
   sentry: {
     dsn: string;
@@ -374,6 +377,7 @@ const config: Config = {
     clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     iosClientId: process.env.GOOGLE_IOS_CLIENT_ID || '',
     androidClientId: process.env.GOOGLE_ANDROID_CLIENT_ID || '',
+    webClientId: process.env.GOOGLE_WEB_CLIENT_ID || '',
   },
   apple: {
     bundleId: process.env.APPLE_BUNDLE_ID || 'com.yapasgachis.app',
@@ -381,6 +385,8 @@ const config: Config = {
     teamId: process.env.APPLE_TEAM_ID || '',
     keyId: process.env.APPLE_KEY_ID || '',
     privateKeyPath: process.env.APPLE_PRIVATE_KEY_PATH || '',
+    webKeyId: process.env.APPLE_WEB_KEY_ID || '',
+    webPrivateKeyPath: process.env.APPLE_WEB_PRIVATE_KEY_PATH || '',
   },
   sentry: {
     dsn: process.env.SENTRY_DSN || '',

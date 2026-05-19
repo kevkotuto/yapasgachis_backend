@@ -15,11 +15,14 @@ import logger from '@/infrastructure/monitoring/logger';
 import { AppError } from '@/middleware/error-handler.middleware';
 import { APP_CONSTANTS } from '@/utils/constants';
 
+export type ApplePlatform = 'mobile' | 'web';
+
 interface AppleUserInfo {
   appleId: string;
   email: string | null;
   emailVerified: boolean;
   isPrivateEmail: boolean;
+  platform: ApplePlatform;
 }
 
 export type AppleNotificationType =
@@ -57,8 +60,11 @@ const CLIENT_SECRET_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
 
 export class AppleAuthService {
   private jwks: ReturnType<typeof createRemoteJWKSet>;
-  private cachedPrivateKey: ApplePrivateKey | null = null;
-  private cachedClientSecret: { jwt: string; expiresAt: number } | null = null;
+  private cachedPrivateKeys: Partial<Record<ApplePlatform, ApplePrivateKey>> =
+    {};
+  private cachedClientSecrets: Partial<
+    Record<ApplePlatform, { jwt: string; expiresAt: number }>
+  > = {};
 
   constructor() {
     this.jwks = createRemoteJWKSet(new URL(APPLE_JWKS_URL));
@@ -104,11 +110,15 @@ export class AppleAuthService {
     const emailVerified = this.parseAppleBoolean(payload.email_verified);
     const isPrivateEmail = this.parseAppleBoolean(payload.is_private_email);
 
+    const platform: ApplePlatform =
+      payload.aud === config.apple.serviceId ? 'web' : 'mobile';
+
     return {
       appleId: payload.sub,
       email,
       emailVerified,
       isPrivateEmail,
+      platform,
     };
   }
 
@@ -194,15 +204,16 @@ export class AppleAuthService {
    * Returns null if revocation is not configured (no .p8 / teamId / keyId).
    */
   async exchangeAuthorizationCode(
-    authorizationCode: string
+    authorizationCode: string,
+    platform: ApplePlatform = 'mobile'
   ): Promise<AppleTokenResponse | null> {
-    if (!this.isRevocationConfigured()) {
+    if (!this.isRevocationConfigured(platform)) {
       return null;
     }
 
-    const clientSecret = await this.getClientSecret();
+    const clientSecret = await this.getClientSecret(platform);
     const body = new URLSearchParams({
-      client_id: config.apple.bundleId,
+      client_id: this.getClientId(platform),
       client_secret: clientSecret,
       code: authorizationCode,
       grant_type: 'authorization_code',
@@ -237,19 +248,21 @@ export class AppleAuthService {
    */
   async revokeToken(
     token: string,
-    tokenType: 'refresh_token' | 'access_token' = 'refresh_token'
+    tokenType: 'refresh_token' | 'access_token' = 'refresh_token',
+    platform: ApplePlatform = 'mobile'
   ): Promise<boolean> {
-    if (!this.isRevocationConfigured()) {
+    if (!this.isRevocationConfigured(platform)) {
       logger.warn(
-        'Apple token revocation skipped: revocation not configured (missing teamId/keyId/privateKey)'
+        'Apple token revocation skipped: revocation not configured (missing teamId/keyId/privateKey)',
+        { platform }
       );
       return false;
     }
 
     try {
-      const clientSecret = await this.getClientSecret();
+      const clientSecret = await this.getClientSecret(platform);
       const body = new URLSearchParams({
-        client_id: config.apple.bundleId,
+        client_id: this.getClientId(platform),
         client_secret: clientSecret,
         token,
         token_type_hint: tokenType,
@@ -281,58 +294,80 @@ export class AppleAuthService {
   }
 
   /**
-   * Returns true when all revocation prerequisites are configured.
+   * Returns true when all revocation prerequisites are configured for the
+   * given platform (separate .p8 keys are used for native vs web flows).
    */
-  private isRevocationConfigured(): boolean {
+  private isRevocationConfigured(platform: ApplePlatform): boolean {
+    if (!config.apple.teamId) return false;
+    if (platform === 'web') {
+      return Boolean(
+        config.apple.serviceId &&
+        config.apple.webKeyId &&
+        config.apple.webPrivateKeyPath
+      );
+    }
     return Boolean(
-      config.apple.teamId &&
-      config.apple.keyId &&
-      config.apple.privateKeyPath &&
-      config.apple.bundleId
+      config.apple.bundleId && config.apple.keyId && config.apple.privateKeyPath
     );
+  }
+
+  /**
+   * client_id used in Apple OAuth token exchange / revoke endpoints. For the
+   * native (mobile) flow this is the app Bundle ID; for the web flow this is
+   * the Services ID configured in Apple Developer.
+   */
+  private getClientId(platform: ApplePlatform): string {
+    return platform === 'web' ? config.apple.serviceId : config.apple.bundleId;
   }
 
   /**
    * Build (and cache) the client_secret JWT signed with the Apple .p8 key.
    *
-   * iss = TEAM_ID, aud = https://appleid.apple.com, sub = bundleId,
+   * iss = TEAM_ID, aud = https://appleid.apple.com, sub = clientId,
    * kid header = KEY_ID, alg = ES256.
    */
-  private async getClientSecret(): Promise<string> {
+  private async getClientSecret(platform: ApplePlatform): Promise<string> {
     const now = Math.floor(Date.now() / 1000);
 
-    if (
-      this.cachedClientSecret &&
-      this.cachedClientSecret.expiresAt - now > 5 * 60
-    ) {
-      return this.cachedClientSecret.jwt;
+    const cached = this.cachedClientSecrets[platform];
+    if (cached && cached.expiresAt - now > 5 * 60) {
+      return cached.jwt;
     }
 
-    const privateKey = await this.getPrivateKey();
+    const privateKey = await this.getPrivateKey(platform);
     const exp = now + CLIENT_SECRET_TTL_SECONDS;
+    const kid = platform === 'web' ? config.apple.webKeyId : config.apple.keyId;
 
     const jwt = await new SignJWT({})
-      .setProtectedHeader({ alg: 'ES256', kid: config.apple.keyId })
+      .setProtectedHeader({ alg: 'ES256', kid })
       .setIssuer(config.apple.teamId)
       .setIssuedAt(now)
       .setExpirationTime(exp)
       .setAudience(APPLE_ISSUER)
-      .setSubject(config.apple.bundleId)
+      .setSubject(this.getClientId(platform))
       .sign(privateKey);
 
-    this.cachedClientSecret = { jwt, expiresAt: exp };
+    this.cachedClientSecrets[platform] = { jwt, expiresAt: exp };
     return jwt;
   }
 
   /**
-   * Load and cache the Apple .p8 private key from disk.
+   * Load and cache the Apple .p8 private key from disk for the given platform.
    */
-  private async getPrivateKey(): Promise<ApplePrivateKey> {
-    if (this.cachedPrivateKey) return this.cachedPrivateKey;
+  private async getPrivateKey(
+    platform: ApplePlatform
+  ): Promise<ApplePrivateKey> {
+    const cached = this.cachedPrivateKeys[platform];
+    if (cached) return cached;
 
-    const pem = await readFile(config.apple.privateKeyPath, 'utf8');
-    this.cachedPrivateKey = await importPKCS8(pem, 'ES256');
-    return this.cachedPrivateKey;
+    const path =
+      platform === 'web'
+        ? config.apple.webPrivateKeyPath
+        : config.apple.privateKeyPath;
+    const pem = await readFile(path, 'utf8');
+    const key = await importPKCS8(pem, 'ES256');
+    this.cachedPrivateKeys[platform] = key;
+    return key;
   }
 
   /**

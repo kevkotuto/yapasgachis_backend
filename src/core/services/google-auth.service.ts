@@ -37,6 +37,7 @@ export class GoogleAuthService {
           config.google.clientId,
           config.google.iosClientId,
           config.google.androidClientId,
+          config.google.webClientId,
         ].filter(Boolean),
       });
 
