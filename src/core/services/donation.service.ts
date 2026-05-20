@@ -162,6 +162,87 @@ export class DonationService {
   }
 
   /**
+   * Create an in-kind donation (open to any user, no catalog product)
+   * The goods category is stored in the `unit` field.
+   */
+  async createInKindDonation(
+    donorId: string,
+    data: {
+      associationId: string;
+      category: string;
+      quantity: number;
+      pickupScheduled?: Date;
+    }
+  ): Promise<Donation> {
+    try {
+      const donor = await this.userRepo.findById(donorId);
+      if (!donor) {
+        throw new AppError(404, 'Utilisateur non trouvé', 'USER_NOT_FOUND');
+      }
+
+      const association = await this.associationRepo.findById(
+        data.associationId
+      );
+      if (!association) {
+        throw new AppError(
+          404,
+          'Association non trouvée',
+          'ASSOCIATION_NOT_FOUND'
+        );
+      }
+      if (!association.verified) {
+        throw new AppError(
+          400,
+          "Cette association n'est pas encore vérifiée",
+          'ASSOCIATION_NOT_VERIFIED'
+        );
+      }
+
+      const donation = await this.donationRepo.create({
+        donorId,
+        associationId: data.associationId,
+        type: DonationType.FOOD,
+        quantity: data.quantity,
+        unit: data.category,
+        pickupScheduled: data.pickupScheduled,
+      });
+
+      // Grant donor badge if first donation
+      const donorStats = await this.donationRepo.getDonorStats(donorId);
+      if (donorStats.totalDonations === 1) {
+        await prisma.user.update({
+          where: { id: donorId },
+          data: { donorBadge: true },
+        });
+      }
+
+      eventService.emit(AppEvent.DONATION_CREATED, {
+        donationId: donation.id,
+        donorId,
+        associationId: data.associationId,
+        type: DonationType.FOOD,
+      });
+
+      logger.info('In-kind donation created', {
+        donationId: donation.id,
+        donorId,
+        associationId: data.associationId,
+        category: data.category,
+        quantity: data.quantity,
+      });
+
+      return donation;
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      logger.error('Error creating in-kind donation', {
+        donorId,
+        error: (error as Error).message,
+      });
+      throw new AppError(500, 'Erreur lors de la création du don');
+    }
+  }
+
+  /**
    * Create a financial donation
    */
   async createFinancialDonation(

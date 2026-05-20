@@ -27,6 +27,23 @@ export const createFinancialDonationSchema = z.object({
   }),
 });
 
+// Don en nature : ouvert à tout utilisateur (sans produit du catalogue).
+// La catégorie de biens est stockée dans le champ `unit` de la donation.
+export const createInKindDonationSchema = z.object({
+  body: z.object({
+    associationId: z.string().uuid('ID association invalide'),
+    category: z
+      .string()
+      .min(2, 'La catégorie est requise')
+      .max(50, 'La catégorie ne peut pas dépasser 50 caractères'),
+    quantity: z.number().positive('La quantité doit être positive'),
+    pickupScheduled: z
+      .string()
+      .datetime('Date de collecte invalide')
+      .optional(),
+  }),
+});
+
 export const donationIdParamSchema = z.object({
   params: z.object({
     donationId: z.string().uuid('ID donation invalide'),

@@ -42,6 +42,33 @@ export class DonationController {
   });
 
   /**
+   * Create an in-kind donation (open to any authenticated user)
+   * POST /api/v1/donations/in-kind
+   */
+  createInKindDonation = asyncHandler(async (req: Request, res: Response) => {
+    const donorId = req.user.id;
+    const { associationId, category, quantity, pickupScheduled } = req.body as {
+      associationId: string;
+      category: string;
+      quantity: number;
+      pickupScheduled?: string;
+    };
+
+    const donation = await donationService.createInKindDonation(donorId, {
+      associationId,
+      category,
+      quantity,
+      pickupScheduled: pickupScheduled ? new Date(pickupScheduled) : undefined,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Don en nature enregistré avec succès',
+      data: donation,
+    });
+  });
+
+  /**
    * Create a financial donation
    * POST /api/v1/donations/financial
    */

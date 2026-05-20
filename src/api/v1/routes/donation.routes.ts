@@ -4,6 +4,7 @@ import donationController from '@/api/v1/controllers/donation.controller';
 import {
   createFoodDonationSchema,
   createFinancialDonationSchema,
+  createInKindDonationSchema,
   donationIdParamSchema,
   updateDonationStatusSchema,
   schedulePickupSchema,
@@ -33,6 +34,14 @@ router.post(
   authenticate,
   validate(createFinancialDonationSchema),
   donationController.createFinancialDonation
+);
+
+// Create an in-kind donation (any authenticated user)
+router.post(
+  '/in-kind',
+  authenticate,
+  validate(createInKindDonationSchema),
+  donationController.createInKindDonation
 );
 
 // Get my donations (as donor)
