@@ -451,7 +451,15 @@ export class ProductService {
     sortBy?: 'price' | 'discount' | 'expiry' | 'createdAt' | 'distance';
     sortOrder?: 'asc' | 'desc';
   }): Promise<{ products: Product[]; total: number; pages: number }> {
-    const { products, total } = await this.productRepo.search(params);
+    // Recherche publique (marketplace) : par défaut, ne renvoyer que les
+    // produits ACTIFS. Les brouillons (DRAFT), expirés (EXPIRED) ou archivés
+    // (ARCHIVED) ne doivent jamais apparaître publiquement. Un filtre `status`
+    // explicite (ex. côté admin) reste prioritaire.
+    const searchParams = {
+      ...params,
+      status: params.status ?? ProductStatus.ACTIVE,
+    };
+    const { products, total } = await this.productRepo.search(searchParams);
     const limit = params.limit || 20;
     const pages = Math.ceil(total / limit);
 
